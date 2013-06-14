@@ -7,6 +7,8 @@ import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 import static com.google.common.base.Preconditions.checkPositionIndex;
+import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
+import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
@@ -110,6 +112,22 @@ public final class BasicSliceInput
     {
         long v = slice.getLong(position);
         position += SIZE_OF_LONG;
+        return v;
+    }
+
+    @Override
+    public float readFloat()
+    {
+        float v = slice.getFloat(position);
+        position += SIZE_OF_FLOAT;
+        return v;
+    }
+
+    @Override
+    public double readDouble()
+    {
+        double v = slice.getDouble(position);
+        position += SIZE_OF_DOUBLE;
         return v;
     }
 
