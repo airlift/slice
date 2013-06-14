@@ -239,16 +239,10 @@ public abstract class SliceInput
     }
 
     @Override
-    public final float readFloat()
-    {
-        throw new UnsupportedOperationException();
-    }
+    public abstract float readFloat();
 
     @Override
-    public final double readDouble()
-    {
-        throw new UnsupportedOperationException();
-    }
+    public abstract double readDouble();
 
     @Override
     public final String readLine()

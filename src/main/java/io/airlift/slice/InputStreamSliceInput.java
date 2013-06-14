@@ -64,6 +64,28 @@ public final class InputStreamSliceInput
     }
 
     @Override
+    public float readFloat()
+    {
+        try {
+            return dataInputStream.readFloat();
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
+    }
+
+    @Override
+    public double readDouble()
+    {
+        try {
+            return dataInputStream.readDouble();
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
+    }
+
+    @Override
     public int readUnsignedByte()
     {
         try {
