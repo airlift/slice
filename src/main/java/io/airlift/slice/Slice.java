@@ -33,6 +33,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.lang.String.format;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
 
@@ -137,8 +138,12 @@ public final class Slice
      */
     Slice(@Nullable Object base, long address, int size, @Nullable Object reference)
     {
-        checkArgument(address > 0, "Invalid address: %s", address);
-        checkArgument(size > 0, "Invalid size: %s", size);
+        if (address <= 0) {
+            throw new IllegalArgumentException(format("Invalid address: %s", address));
+        }
+        if (size <= 0) {
+            throw new IllegalArgumentException(format("Invalid size: %s", size));
+        }
         checkArgument((address + size) >= size, "Address + size is greater than 64 bits");
 
         this.reference = reference;
