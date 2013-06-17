@@ -15,6 +15,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class Slices
 {
@@ -90,6 +91,11 @@ public final class Slices
         checkNotNull(charset, "charset is null");
 
         return wrappedBuffer(string.getBytes(charset));
+    }
+
+    public static Slice utf8Slice(String string)
+    {
+        return copiedBuffer(string, UTF_8);
     }
 
     @SuppressWarnings("ObjectToString")
