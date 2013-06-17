@@ -34,6 +34,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static java.lang.String.format;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
 
@@ -844,6 +845,15 @@ public final class Slice
     public String toString(Charset charset)
     {
         return toString(0, length(), charset);
+    }
+
+    /**
+     * Decodes the contents of this slice into a string using the UTF-8
+     * character set.
+     */
+    public String toStringUtf8()
+    {
+        return toString(UTF_8);
     }
 
     /**

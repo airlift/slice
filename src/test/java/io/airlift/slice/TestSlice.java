@@ -177,6 +177,17 @@ public class TestSlice
         }
     }
 
+    @Test
+    public void testUtf8Conversion()
+    {
+        String s = "apple \u2603 snowman";
+        Slice slice = Slices.copiedBuffer(s, UTF_8);
+
+        assertEquals(Slices.utf8Slice(s), slice);
+        assertEquals(slice.toStringUtf8(), s);
+        assertEquals(Slices.utf8Slice(s).toStringUtf8(), s);
+    }
+
     @SuppressWarnings("CharUsedInArithmeticContext")
     private static void assertToStrings(Slice slice, int index)
     {
