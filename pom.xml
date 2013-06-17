@@ -4,7 +4,7 @@
 
     <groupId>io.airlift</groupId>
     <artifactId>slice</artifactId>
-    <version>0.2</version>
+    <version>0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>slice</name>
@@ -43,8 +43,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-  <scm>
-    <tag>0.2</tag>
-  </scm>
 </project>
