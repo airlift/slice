@@ -2,7 +2,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.airlift</groupId>
     <artifactId>slice</artifactId>
     <version>0.3-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -14,15 +13,14 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>6</version>
+        <version>11</version>
     </parent>
 
     <inceptionYear>2012</inceptionYear>
 
     <properties>
         <air.check.skip-extended>true</air.check.skip-extended>
-        <air.check.fail-all>false</air.check.fail-all>
-        <air.check.fail-basic>true</air.check.fail-basic>
+        <air.check.skip-license>false</air.check.skip-license>
     </properties>
 
     <dependencies>
