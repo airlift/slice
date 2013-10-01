@@ -23,6 +23,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 public class OutputStreamSliceOutput
         extends SliceOutput
 {
@@ -32,6 +34,7 @@ public class OutputStreamSliceOutput
     @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
     public OutputStreamSliceOutput(OutputStream outputStream)
     {
+        checkNotNull(outputStream, "outputStream is null");
         countingOutputStream = new CountingOutputStream(outputStream);
         dataOutputStream = new LittleEndianDataOutputStream(countingOutputStream);
     }

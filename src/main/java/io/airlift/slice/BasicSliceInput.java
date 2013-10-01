@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkPositionIndex;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
@@ -35,7 +36,7 @@ public final class BasicSliceInput
 
     public BasicSliceInput(Slice slice)
     {
-        this.slice = slice;
+        this.slice = checkNotNull(slice, "slice is null");
     }
 
     @Override
