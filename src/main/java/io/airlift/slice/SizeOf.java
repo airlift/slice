@@ -21,6 +21,8 @@ import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_CHAR_BASE_OFFSET;
+import static sun.misc.Unsafe.ARRAY_CHAR_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_DOUBLE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_FLOAT_BASE_OFFSET;
@@ -81,6 +83,14 @@ public final class SizeOf
             return 0;
         }
         return ARRAY_SHORT_BASE_OFFSET + ((long) ARRAY_SHORT_INDEX_SCALE * array.length);
+    }
+
+    public static long sizeOf(char[] array)
+    {
+        if (array == null) {
+            return 0;
+        }
+        return ARRAY_CHAR_BASE_OFFSET + ((long) ARRAY_CHAR_INDEX_SCALE * array.length);
     }
 
     public static long sizeOf(int[] array)
