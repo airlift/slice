@@ -13,10 +13,6 @@
  */
 package io.airlift.slice;
 
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
-
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -44,22 +40,6 @@ public final class SizeOf
     public static final byte SIZE_OF_LONG = 8;
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
-
-    private static final Unsafe UNSAFE;
-    static {
-        try {
-            // fetch theUnsafe object
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            UNSAFE = (Unsafe) field.get(null);
-            if (UNSAFE == null) {
-                throw new RuntimeException("Unsafe access not available");
-            }
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     public static long sizeOf(boolean[] array)
     {
