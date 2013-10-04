@@ -659,7 +659,7 @@ public final class Slice
             compareLength--;
         }
 
-        return Integer.compare(size, that.size);
+        return Integer.compare(length, otherLength);
     }
 
     /**
