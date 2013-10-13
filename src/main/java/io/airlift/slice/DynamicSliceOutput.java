@@ -203,6 +203,12 @@ public class DynamicSliceOutput
     }
 
     @Override
+    public Slice getUnderlyingSlice()
+    {
+        return slice;
+    }
+
+    @Override
     public String toString()
     {
         return Objects.toStringHelper(this)
