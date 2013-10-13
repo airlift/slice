@@ -247,7 +247,12 @@ public final class InputStreamSliceInput
     @Override
     public void readBytes(byte[] destination, int destinationIndex, int length)
     {
-        readFully(destination, destinationIndex, length);
+        try {
+            dataInputStream.read(destination, destinationIndex, length);
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
     }
 
     @Override
