@@ -282,6 +282,29 @@ public final class Slice
     }
 
     /**
+     * Gets a 64-bit long integer stored in a lexicographically sortable format
+     * at the specified absolute {@code index} in
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + 8} is greater than {@code this.length()}
+     */
+    public long getLexicographicallySortableLong(int index)
+    {
+        checkIndexLength(index, SIZE_OF_LONG);
+        return bitsToLong(Long.reverseBytes(getLong(index)));
+    }
+
+    /**
+     *  Converts a 64-bit lexicographically-sortable binary to
+     *  a java long (two's complement representation)
+     */
+    public static long bitsToLong(long bits)
+    {
+        return bits ^ 0x8000_0000_0000_0000L;
+    }
+
+    /**
      * Gets a 32-bit float at the specified absolute {@code index} in
      * this buffer.
      *
@@ -469,6 +492,28 @@ public final class Slice
     {
         checkIndexLength(index, SIZE_OF_LONG);
         unsafe.putLong(base, address + index, value);
+    }
+
+    /**
+     * Sets the specified 64-bit long integer in a lexicographically sortable format
+     * at the specified absolute {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + 8} is greater than {@code this.length()}
+     */
+    public void setLexicographicallySortableLong(int index, long value)
+    {
+        checkIndexLength(index, SIZE_OF_LONG);
+        setLong(index, Long.reverseBytes(longToBits(value)));
+    }
+
+    /**
+     * Converts a java long (two's complement representation) to a
+     * 64-bit lexicographically-sortable binary representation
+     */
+    private static long longToBits(long value)
+    {
+        return value ^ 0x8000_0000_0000_0000L;
     }
 
     /**

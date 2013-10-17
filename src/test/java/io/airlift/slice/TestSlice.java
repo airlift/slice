@@ -421,6 +421,54 @@ public class TestSlice
     }
 
     @Test
+    public void testLexicographicallySortableLong()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < (size - SIZE_OF_LONG); index++) {
+                assertLexicographicallySortableLong(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertLexicographicallySortableLong(Slice slice, int index)
+    {
+        // fill slice with FF
+        slice.fill((byte) 0xFF);
+
+        // set and get the value
+        slice.setLexicographicallySortableLong(index, 0xAAAA_AAAA_5555_5555L);
+        assertEquals(slice.getLexicographicallySortableLong(index), 0xAAAA_AAAA_5555_5555L);
+
+        try {
+            slice.getLexicographicallySortableLong(-1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getLexicographicallySortableLong((slice.length() - SIZE_OF_LONG) + 1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getLexicographicallySortableLong(slice.length());
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getLexicographicallySortableLong(slice.length() + 1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+    }
+
+    @Test
     public void testFloat()
     {
         for (int size = 0; size < 100; size++) {
