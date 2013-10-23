@@ -34,6 +34,7 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -87,6 +88,7 @@ public final class Slice
     {
         checkNotNull(byteBuffer, "byteBuffer is null");
         checkArgument(byteBuffer instanceof DirectBuffer, "byteBuffer is not an instance of %s", DirectBuffer.class.getName());
+        checkArgument(ByteOrder.nativeOrder().equals(byteBuffer.order()), "byteBuffer is byte order %s, must be native order %s", byteBuffer.order(), ByteOrder.nativeOrder());
         DirectBuffer directBuffer = (DirectBuffer) byteBuffer;
         long address = directBuffer.address();
         int capacity = byteBuffer.capacity();

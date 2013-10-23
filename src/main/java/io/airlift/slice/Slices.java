@@ -18,6 +18,7 @@ import com.google.common.io.Files;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -35,7 +36,7 @@ public final class Slices
     public static Slice mapFileReadOnly(File file)
             throws IOException
     {
-        return Slice.toUnsafeSlice(Files.map(file));
+        return Slice.toUnsafeSlice(Files.map(file).order(ByteOrder.nativeOrder()));
     }
 
     /**

@@ -16,15 +16,20 @@ package io.airlift.slice;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class TestDirectSlice
-        extends TestSlice
+import org.testng.annotations.Test;
+
+public class TestByteOrder
 {
-    @Override
-    protected Slice allocate(int size)
+    @Test
+    public void testCorrectOrder() throws Exception
     {
-        if (size == 0) {
-            return Slices.EMPTY_SLICE;
-        }
-        return Slice.toUnsafeSlice(ByteBuffer.allocateDirect(size).order(ByteOrder.nativeOrder()));
+        Slice.toUnsafeSlice(ByteBuffer.allocateDirect(100).order(ByteOrder.nativeOrder()));
+    }
+
+    @Test(expectedExceptions = { IllegalArgumentException.class } )
+    public void testWrongOrder() throws Exception
+    {
+        ByteOrder order = ByteOrder.BIG_ENDIAN.equals(ByteOrder.nativeOrder()) ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN;
+        Slice.toUnsafeSlice(ByteBuffer.allocateDirect(100).order(order));
     }
 }
