@@ -18,6 +18,7 @@ import sun.nio.ch.DirectBuffer;
 
 import java.lang.reflect.Field;
 import java.nio.Buffer;
+import java.nio.ByteOrder;
 
 import static io.airlift.slice.Preconditions.checkArgument;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
@@ -33,6 +34,10 @@ final class JvmUtils
     static final Unsafe unsafe;
 
     static {
+        if (!ByteOrder.LITTLE_ENDIAN.equals(ByteOrder.nativeOrder())) {
+            throw new UnsupportedOperationException("Slice only supports little endian machines.");
+        }
+
         try {
             // fetch theUnsafe object
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
