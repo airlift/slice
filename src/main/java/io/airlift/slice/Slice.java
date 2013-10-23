@@ -59,6 +59,10 @@ public final class Slice
     private static final MethodHandle newByteBuffer;
 
     static {
+        if (!ByteOrder.LITTLE_ENDIAN.equals(ByteOrder.nativeOrder())) {
+            throw new UnsupportedOperationException("Slice currently only supports little endian machines.  " +
+                    "This restriction may be relaxed in a future release.");
+        }
         try {
             // fetch theUnsafe object
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
