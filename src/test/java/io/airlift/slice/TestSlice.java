@@ -128,29 +128,29 @@ public class TestSlice
                 try {
                     //noinspection ResultOfMethodCallIgnored
                     slice.equals(0, size, EMPTY_SLICE, 0, size);
-                    fail("expected IndexOutOfBoundsException");
+                    fail("expected AssertionError");
                 }
-                catch (IndexOutOfBoundsException expected) {
+                catch (AssertionError expected) {
                 }
                 try {
                     //noinspection ResultOfMethodCallIgnored
                     EMPTY_SLICE.equals(0, size, slice, 0, size);
-                    fail("expected IndexOutOfBoundsException");
+                    fail("expected AssertionError");
                 }
-                catch (IndexOutOfBoundsException expected) {
+                catch (AssertionError expected) {
                 }
 
                 try {
                     slice.compareTo(0, size, EMPTY_SLICE, 0, size);
-                    fail("expected IndexOutOfBoundsException");
+                    fail("expected AssertionError");
                 }
-                catch (IndexOutOfBoundsException expected) {
+                catch (AssertionError expected) {
                 }
                 try {
                     EMPTY_SLICE.compareTo(0, size, slice, 0, size);
-                    fail("expected IndexOutOfBoundsException");
+                    fail("expected AssertionError");
                 }
-                catch (IndexOutOfBoundsException expected) {
+                catch (AssertionError expected) {
                 }
             }
         }
@@ -249,30 +249,30 @@ public class TestSlice
 
         try {
             slice.getByte(-1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getByte((slice.length() - SIZE_OF_BYTE) + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getByte(slice.length());
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getByte(slice.length() + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
     }
 
@@ -297,30 +297,30 @@ public class TestSlice
 
         try {
             slice.getShort(-1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getShort((slice.length() - SIZE_OF_SHORT) + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getShort(slice.length());
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getShort(slice.length() + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
     }
 
@@ -345,30 +345,30 @@ public class TestSlice
 
         try {
             slice.getInt(-1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getInt((slice.length() - SIZE_OF_INT) + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getInt(slice.length());
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getInt(slice.length() + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
     }
 
@@ -393,30 +393,30 @@ public class TestSlice
 
         try {
             slice.getLong(-1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getLong((slice.length() - SIZE_OF_LONG) + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getLong(slice.length());
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getLong(slice.length() + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
     }
 
@@ -441,30 +441,30 @@ public class TestSlice
 
         try {
             slice.getFloat(-1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getFloat((slice.length() - SIZE_OF_FLOAT) + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getFloat(slice.length());
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getFloat(slice.length() + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
     }
 
@@ -489,30 +489,30 @@ public class TestSlice
 
         try {
             slice.getDouble(-1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getDouble((slice.length() - SIZE_OF_DOUBLE) + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getDouble(slice.length());
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
 
         try {
             slice.getDouble(slice.length() + 1);
-            fail("expected IndexOutOfBoundsException");
+            fail("expected AssertionError");
         }
-        catch (IndexOutOfBoundsException e) {
+        catch (AssertionError e) {
         }
     }
 

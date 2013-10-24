@@ -940,6 +940,6 @@ public final class Slice
 
     private void checkIndexLength(int index, int length)
     {
-        checkPositionIndexes(index, index + length, length());
+        assert index >= 0 && length >= 0 && index + length <= length() : index + " bytes " + length + " length is out of bounds: " + length();
     }
 }
