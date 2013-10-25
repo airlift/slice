@@ -167,6 +167,24 @@ public final class Slice
     }
 
     /**
+     * Returns the base object of this Slice, or null.  This is appropriate for use
+     * with {@link Unsafe} if you wish to avoid all the safety belts e.g. bounds checks.
+     */
+    public Object getBase()
+    {
+        return base;
+    }
+
+    /**
+     * Return the address offset of this Slice.  This is appropriate for use
+     * with {@link Unsafe} if you wish to avoid all the safety belts e.g. bounds checks.
+     */
+    public long getAddress()
+    {
+        return address;
+    }
+
+    /**
      * Length of this slice.
      */
     public int length()
