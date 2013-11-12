@@ -938,22 +938,11 @@ public final class Slice
 
     private static void copyMemory(Object src, long srcAddress, Object dest, long destAddress, int length)
     {
-        int offset = 0;
-        while (length >= SIZE_OF_LONG) {
-            long srcLong = unsafe.getLong(src, srcAddress + offset);
-            unsafe.putLong(dest, destAddress + offset, srcLong);
-
-            offset += SIZE_OF_LONG;
-            length -= SIZE_OF_LONG;
-        }
-
-        while (length > 0) {
-            byte srcByte = unsafe.getByte(src, srcAddress + offset);
-            unsafe.putByte(dest, destAddress + offset, srcByte);
-
-            offset++;
-            length--;
-        }
+        // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
+        // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
+        final int bytesToCopy = length - (length % 8);
+        unsafe.copyMemory(src, srcAddress, dest, destAddress, bytesToCopy);
+        unsafe.copyMemory(src, srcAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
     }
 
     private void checkIndexLength(int index, int length)
