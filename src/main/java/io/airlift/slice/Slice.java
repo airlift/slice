@@ -960,4 +960,12 @@ public final class Slice
     {
         checkPositionIndexes(index, index + length, length());
     }
+
+    /**
+     * Convenience getter so we don't have to do reflection hackery in other places too.
+     */
+    static Unsafe getUnsafe()
+    {
+        return unsafe;
+    }
 }
