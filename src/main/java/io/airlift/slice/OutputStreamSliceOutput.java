@@ -239,6 +239,12 @@ public class OutputStreamSliceOutput
     }
 
     @Override
+    public Slice getUnderlyingSlice()
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public String toString(Charset charset)
     {
         return toString();

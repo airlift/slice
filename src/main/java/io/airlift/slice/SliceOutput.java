@@ -232,6 +232,12 @@ public abstract class SliceOutput
     public abstract Slice slice();
 
     /**
+     * Returns the raw underlying slice of this output stream.  The slice may
+     * be larger than the size of this stream.
+     */
+    public abstract Slice getUnderlyingSlice();
+
+    /**
      * Decodes this buffer's readable bytes into a string with the specified
      * character set name.  This method is identical to
      * {@code buf.toString(buf.readerIndex(), buf.readableBytes(), charsetName)}.
