@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Throwables;
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
@@ -904,7 +903,16 @@ public final class Slice
             return (ByteBuffer) newByteBuffer.invokeExact(address + index, length, (Object) reference);
         }
         catch (Throwable throwable) {
-            throw Throwables.propagate(throwable);
+            if (throwable instanceof Error) {
+                throw (Error) throwable;
+            }
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            }
+            if (throwable instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new RuntimeException(throwable);
         }
     }
 
