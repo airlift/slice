@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Objects;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
 import com.google.common.primitives.Ints;
@@ -253,9 +252,10 @@ public class OutputStreamSliceOutput
     @Override
     public String toString()
     {
-        return Objects.toStringHelper(this)
-                .add("countingOutputStream", countingOutputStream)
-                .add("dataOutputStream", dataOutputStream)
-                .toString();
+        StringBuilder builder = new StringBuilder("BasicSliceOutput{");
+        builder.append("countingOutputStream=").append(countingOutputStream);
+        builder.append(", dataOutputStream=").append(dataOutputStream);
+        builder.append('}');
+        return builder.toString();
     }
 }

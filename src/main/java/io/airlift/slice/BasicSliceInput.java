@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Objects;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
@@ -214,9 +212,10 @@ public final class BasicSliceInput
     @Override
     public String toString()
     {
-        return Objects.toStringHelper(this)
-                .add("position", position)
-                .add("capacity", slice.length())
-                .toString();
+        StringBuilder builder = new StringBuilder("BasicSliceInput{");
+        builder.append("position=").append(position);
+        builder.append(", capacity=").append(slice.length());
+        builder.append('}');
+        return builder.toString();
     }
 }

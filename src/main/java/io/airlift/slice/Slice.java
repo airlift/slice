@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
@@ -917,15 +916,21 @@ public final class Slice
         }
     }
 
+    /**
+     * Decodes the a portion of this slice into a string with the specified
+     * character set name.
+     */
     @Override
     public String toString()
     {
-        return Objects.toStringHelper(this)
-                .add("base", identityToString(base))
-                .add("address", address)
-                .add("length", length())
-                .omitNullValues()
-                .toString();
+        StringBuilder builder = new StringBuilder("Slice{");
+        if (base != null) {
+            builder.append("base=").append(identityToString(base)).append(", ");
+        }
+        builder.append("address=").append(address);
+        builder.append(", length=").append(length());
+        builder.append('}');
+        return builder.toString();
     }
 
     private static String identityToString(Object o)
