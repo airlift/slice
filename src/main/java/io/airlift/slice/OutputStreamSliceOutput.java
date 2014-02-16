@@ -15,13 +15,13 @@ package io.airlift.slice;
 
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
-import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
+import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkNotNull;
 
 public class OutputStreamSliceOutput
@@ -61,7 +61,7 @@ public class OutputStreamSliceOutput
     @Override
     public int size()
     {
-        return Ints.checkedCast(countingOutputStream.getCount());
+        return checkedCast(countingOutputStream.getCount());
     }
 
     @Override
@@ -257,5 +257,12 @@ public class OutputStreamSliceOutput
         builder.append(", dataOutputStream=").append(dataOutputStream);
         builder.append('}');
         return builder.toString();
+    }
+
+    private static int checkedCast(long value)
+    {
+        int result = (int) value;
+        checkArgument(result == value, "Size is greater than maximum int value");
+        return result;
     }
 }

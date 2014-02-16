@@ -16,9 +16,6 @@ package io.airlift.slice;
 import com.google.common.base.Throwables;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
-import com.google.common.primitives.Longs;
-import com.google.common.primitives.UnsignedBytes;
-import com.google.common.primitives.UnsignedLongs;
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
@@ -38,7 +35,6 @@ import java.nio.charset.Charset;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
-import static com.google.common.primitives.UnsignedBytes.toInt;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
@@ -198,7 +194,7 @@ public final class Slice
     {
         int offset = 0;
         int length = size;
-        long longValue = Longs.fromBytes(value, value, value, value, value, value, value, value);
+        long longValue = fillLong(value);
         while (length >= SIZE_OF_LONG) {
             unsafe.putLong(base, address + offset, longValue);
             offset += SIZE_OF_LONG;
@@ -653,7 +649,7 @@ public final class Slice
             long thatLong = unsafe.getLong(that.base, that.address + otherOffset);
             thatLong = Long.reverseBytes(thatLong);
 
-            int v = UnsignedLongs.compare(thisLong, thatLong);
+            int v = compareUnsignedLongs(thisLong, thatLong);
             if (v != 0) {
                 return v;
             }
@@ -667,7 +663,7 @@ public final class Slice
             byte thisByte = unsafe.getByte(base, address + offset);
             byte thatByte = unsafe.getByte(that.base, that.address + otherOffset);
 
-            int v = UnsignedBytes.compare(thisByte, thatByte);
+            int v = compareUnsignedBytes(thisByte, thatByte);
             if (v != 0) {
                 return v;
             }
@@ -776,13 +772,13 @@ public final class Slice
         int k1 = 0;
         switch (length) {
             case 3:
-                k1 ^= toInt(unsafe.getByte(base, address + offset + 2)) << 16;
+                k1 ^= unsignedByteToInt(unsafe.getByte(base, address + offset + 2)) << 16;
                 //noinspection fallthrough
             case 2:
-                k1 ^= toInt(unsafe.getByte(base, address + offset + 1)) << 8;
+                k1 ^= unsignedByteToInt(unsafe.getByte(base, address + offset + 1)) << 8;
                 //noinspection fallthrough
             case 1:
-                k1 ^= toInt(unsafe.getByte(base, address + offset));
+                k1 ^= unsignedByteToInt(unsafe.getByte(base, address + offset));
                 //noinspection fallthrough
             default:
                 k1 *= c1;
@@ -961,5 +957,41 @@ public final class Slice
     static Unsafe getUnsafe()
     {
         return unsafe;
+    }
+
+    //
+    // The following methods were forked from Guava primitives
+    //
+
+    private static long fillLong(byte value)
+    {
+        return (value & 0xFFL) << 56
+            | (value & 0xFFL) << 48
+            | (value & 0xFFL) << 40
+            | (value & 0xFFL) << 32
+            | (value & 0xFFL) << 24
+            | (value & 0xFFL) << 16
+            | (value & 0xFFL) << 8
+            | (value & 0xFFL);
+    }
+
+    private static int compareUnsignedBytes(byte thisByte, byte thatByte)
+    {
+        return unsignedByteToInt(thisByte) - unsignedByteToInt(thatByte);
+    }
+
+    private static int unsignedByteToInt(byte thisByte)
+    {
+        return thisByte & 0xFF;
+    }
+
+    private static int compareUnsignedLongs(long thisLong, long thatLong)
+    {
+        return Long.compare(flipUnsignedLong(thisLong), flipUnsignedLong(thatLong));
+    }
+
+    private static long flipUnsignedLong(long thisLong)
+    {
+        return thisLong ^ Long.MIN_VALUE;
     }
 }
