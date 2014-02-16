@@ -14,8 +14,6 @@
 package io.airlift.slice;
 
 import com.google.common.base.Throwables;
-import com.google.common.io.InputSupplier;
-import com.google.common.io.OutputSupplier;
 import sun.misc.Unsafe;
 import sun.nio.ch.DirectBuffer;
 
@@ -47,7 +45,7 @@ import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
 
 public final class Slice
-        implements Comparable<Slice>, InputSupplier<SliceInput>, OutputSupplier<SliceOutput>
+        implements Comparable<Slice>
 {
     private static final Unsafe unsafe;
     private static final MethodHandle newByteBuffer;
@@ -848,7 +846,6 @@ public final class Slice
      * Creates a slice input backed by this slice.  Any changes to this slice
      * will be immediately visible to the slice input.
      */
-    @Override
     public BasicSliceInput getInput()
     {
         return new BasicSliceInput(this);
@@ -858,7 +855,6 @@ public final class Slice
      * Creates a slice output backed by this slice.  Any data written to the
      * slice output will be immediately visible in this slice.
      */
-    @Override
     public SliceOutput getOutput()
     {
         return new BasicSliceOutput(this);
