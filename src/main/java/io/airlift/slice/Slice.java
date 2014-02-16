@@ -35,9 +35,9 @@ import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkPositionIndexes;
+import static io.airlift.slice.Preconditions.checkArgument;
+import static io.airlift.slice.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static com.google.common.primitives.UnsignedBytes.toInt;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
