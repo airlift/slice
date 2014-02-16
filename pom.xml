@@ -57,6 +57,8 @@
                 <configuration>
                     <excludes combine.children="append">
                         <exclude>src/main/java/io/airlift/slice/Preconditions.java</exclude>
+                        <exclude>src/main/java/io/airlift/slice/CountingInputStream.java</exclude>
+                        <exclude>src/main/java/io/airlift/slice/CountingOutputStream.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

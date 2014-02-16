@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.io.CountingOutputStream;
 import com.google.common.io.LittleEndianDataOutputStream;
 
 import java.io.IOException;
@@ -169,17 +168,7 @@ public class OutputStreamSliceOutput
     public int writeBytes(InputStream in, int length)
             throws IOException
     {
-        int bytesRead = 0;
-        byte[] bytes = new byte[4096];
-        while (bytesRead < length) {
-            int newBytes = in.read(bytes);
-            if (newBytes < 0) {
-                break;
-            }
-            dataOutputStream.write(bytes, 0, Math.min(newBytes, length - bytesRead));
-            bytesRead += newBytes;
-        }
-        return bytesRead;
+        return SliceStreamUtils.copyStream(in, this, length);
     }
 
     @Override
