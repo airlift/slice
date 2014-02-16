@@ -13,12 +13,12 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Charsets;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 
 public class TestInputStreamSliceInput
@@ -27,7 +27,7 @@ public class TestInputStreamSliceInput
     public void testReadBytes()
             throws Exception
     {
-        byte[] testBytes = "This is a test".getBytes(Charsets.UTF_8);
+        byte[] testBytes = "This is a test".getBytes(UTF_8);
         InputStreamSliceInput in = new InputStreamSliceInput(new ByteArrayInputStream(testBytes));
 
         byte[] buffer = new byte[testBytes.length + 20];
