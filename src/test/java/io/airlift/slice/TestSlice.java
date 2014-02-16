@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.collect.ImmutableList;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -21,7 +20,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
@@ -652,7 +654,7 @@ public class TestSlice
             throws IOException
     {
         Path path = Files.createTempFile("longs", null);
-        ImmutableList<Long> values = createRandomLongs(20000);
+        List<Long> values = createRandomLongs(20000);
 
         Slice output = allocate(values.size() * (int) SIZE_OF_LONG);
         for (int i = 0; i < values.size(); i++) {
@@ -671,14 +673,14 @@ public class TestSlice
         assertEquals(slice.getBytes(), output.getBytes());
     }
 
-    private static ImmutableList<Long> createRandomLongs(int count)
+    private static List<Long> createRandomLongs(int count)
     {
         Random random = new Random();
-        ImmutableList.Builder<Long> list = ImmutableList.builder();
+        List<Long> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             list.add(random.nextLong());
         }
-        return list.build();
+        return Collections.unmodifiableList(list);
     }
 
     protected Slice allocate(int size)
