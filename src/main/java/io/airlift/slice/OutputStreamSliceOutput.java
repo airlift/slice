@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.io.LittleEndianDataOutputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
