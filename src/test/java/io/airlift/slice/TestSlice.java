@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.primitives.Longs;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -22,7 +20,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
@@ -32,11 +33,11 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
-import static com.google.common.base.Charsets.UTF_8;
 import static java.lang.Double.doubleToLongBits;
 import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.floatToIntBits;
 import static java.lang.Float.intBitsToFloat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
@@ -653,18 +654,18 @@ public class TestSlice
             throws IOException
     {
         Path path = Files.createTempFile("longs", null);
-        ImmutableList<Long> values = createRandomLongs(20000);
+        List<Long> values = createRandomLongs(20000);
 
-        Slice output = allocate(values.size() * Longs.BYTES);
+        Slice output = allocate(values.size() * (int) SIZE_OF_LONG);
         for (int i = 0; i < values.size(); i++) {
-            output.setLong(i * Longs.BYTES, values.get(i));
+            output.setLong(i * SIZE_OF_LONG, values.get(i));
         }
 
         Files.write(path, output.getBytes());
 
         Slice slice = Slices.mapFileReadOnly(path.toFile());
         for (int i = 0; i < values.size(); i++) {
-            long actual = slice.getLong(i * Longs.BYTES);
+            long actual = slice.getLong(i * SIZE_OF_LONG);
             long expected = values.get(i);
             assertEquals(actual, expected);
         }
@@ -672,14 +673,14 @@ public class TestSlice
         assertEquals(slice.getBytes(), output.getBytes());
     }
 
-    private static ImmutableList<Long> createRandomLongs(int count)
+    private static List<Long> createRandomLongs(int count)
     {
         Random random = new Random();
-        ImmutableList.Builder<Long> list = ImmutableList.builder();
+        List<Long> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             list.add(random.nextLong());
         }
-        return list.build();
+        return Collections.unmodifiableList(list);
     }
 
     protected Slice allocate(int size)

@@ -13,14 +13,12 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Objects;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkPositionIndex;
+import static io.airlift.slice.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkPositionIndex;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
@@ -214,9 +212,10 @@ public final class BasicSliceInput
     @Override
     public String toString()
     {
-        return Objects.toStringHelper(this)
-                .add("position", position)
-                .add("capacity", slice.length())
-                .toString();
+        StringBuilder builder = new StringBuilder("BasicSliceInput{");
+        builder.append("position=").append(position);
+        builder.append(", capacity=").append(slice.length());
+        builder.append('}');
+        return builder.toString();
     }
 }

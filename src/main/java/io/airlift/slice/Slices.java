@@ -13,12 +13,15 @@
  */
 package io.airlift.slice;
 
-import com.google.common.io.Files;
-
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
@@ -27,7 +30,7 @@ import java.nio.charset.CodingErrorAction;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkNotNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class Slices
@@ -35,7 +38,17 @@ public final class Slices
     public static Slice mapFileReadOnly(File file)
             throws IOException
     {
-        return Slice.toUnsafeSlice(Files.map(file));
+        checkNotNull(file, "file is null");
+
+        if (!file.exists()) {
+            throw new FileNotFoundException(file.toString());
+        }
+
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+                FileChannel channel = randomAccessFile.getChannel()) {
+            MappedByteBuffer byteBuffer = channel.map(MapMode.READ_ONLY, 0, file.length());
+            return Slice.toUnsafeSlice(byteBuffer);
+        }
     }
 
     /**

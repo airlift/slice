@@ -13,16 +13,12 @@
  */
 package io.airlift.slice;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.io.CountingInputStream;
-import com.google.common.io.LittleEndianDataInputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkNotNull;
 
 public final class InputStreamSliceInput
         extends SliceInput
@@ -286,6 +282,6 @@ public final class InputStreamSliceInput
     public void readBytes(OutputStream out, int length)
             throws IOException
     {
-        ByteStreams.copy(ByteStreams.limit(countingInputStream, length), out);
+        SliceStreamUtils.copyStream(this, out, length);
     }
 }

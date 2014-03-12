@@ -13,17 +13,13 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Objects;
-import com.google.common.io.CountingOutputStream;
-import com.google.common.io.LittleEndianDataOutputStream;
-import com.google.common.primitives.Ints;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkArgument;
+import static io.airlift.slice.Preconditions.checkNotNull;
 
 public class OutputStreamSliceOutput
         extends SliceOutput
@@ -62,7 +58,7 @@ public class OutputStreamSliceOutput
     @Override
     public int size()
     {
-        return Ints.checkedCast(countingOutputStream.getCount());
+        return checkedCast(countingOutputStream.getCount());
     }
 
     @Override
@@ -170,17 +166,7 @@ public class OutputStreamSliceOutput
     public int writeBytes(InputStream in, int length)
             throws IOException
     {
-        int bytesRead = 0;
-        byte[] bytes = new byte[4096];
-        while (bytesRead < length) {
-            int newBytes = in.read(bytes);
-            if (newBytes < 0) {
-                break;
-            }
-            dataOutputStream.write(bytes, 0, Math.min(newBytes, length - bytesRead));
-            bytesRead += newBytes;
-        }
-        return bytesRead;
+        return SliceStreamUtils.copyStream(in, this, length);
     }
 
     @Override
@@ -253,9 +239,17 @@ public class OutputStreamSliceOutput
     @Override
     public String toString()
     {
-        return Objects.toStringHelper(this)
-                .add("countingOutputStream", countingOutputStream)
-                .add("dataOutputStream", dataOutputStream)
-                .toString();
+        StringBuilder builder = new StringBuilder("BasicSliceOutput{");
+        builder.append("countingOutputStream=").append(countingOutputStream);
+        builder.append(", dataOutputStream=").append(dataOutputStream);
+        builder.append('}');
+        return builder.toString();
+    }
+
+    private static int checkedCast(long value)
+    {
+        int result = (int) value;
+        checkArgument(result == value, "Size is greater than maximum int value");
+        return result;
     }
 }

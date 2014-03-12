@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.primitives.Ints;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
@@ -40,9 +39,9 @@ import static io.airlift.slice.Slice.getUnsafe;
 @Measurement(iterations = 10)
 public class MemoryCopyBenchmark
 {
-    static final long PAGE_SIZE = 4 * 1024;
+    static final int PAGE_SIZE = 4 * 1024;
     static final int N_PAGES = 256 * 1024;
-    static final long ALLOC_SIZE = PAGE_SIZE * N_PAGES;
+    static final int ALLOC_SIZE = PAGE_SIZE * N_PAGES;
 
     @State(Scope.Thread)
     public static class Buffers
@@ -54,7 +53,7 @@ public class MemoryCopyBenchmark
         @Setup
         public void fillWithBogusData()
         {
-            data = Slices.allocate(Ints.checkedCast(ALLOC_SIZE));
+            data = Slices.allocate(ALLOC_SIZE);
             for (int idx = 0; idx < data.length() / 8; idx++) {
                 data.setLong(idx, ThreadLocalRandom.current().nextLong());
             }

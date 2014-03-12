@@ -13,13 +13,11 @@
  */
 package io.airlift.slice;
 
-import com.google.common.base.Objects;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
@@ -197,10 +195,11 @@ public class BasicSliceOutput
     @Override
     public String toString()
     {
-        return Objects.toStringHelper(this)
-                .add("size", size)
-                .add("capacity", slice.length())
-                .toString();
+        StringBuilder builder = new StringBuilder("BasicSliceOutput{");
+        builder.append("size=").append(size);
+        builder.append(", capacity=").append(slice.length());
+        builder.append('}');
+        return builder.toString();
     }
 
     @Override
