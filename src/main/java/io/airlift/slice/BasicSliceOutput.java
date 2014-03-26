@@ -160,6 +160,13 @@ public class BasicSliceOutput
     }
 
     @Override
+    public BasicSliceOutput appendByte(int value)
+    {
+        writeByte(value);
+        return this;
+    }
+
+    @Override
     public BasicSliceOutput appendBytes(byte[] source, int sourceIndex, int length)
     {
         write(source, sourceIndex, length);
