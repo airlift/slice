@@ -174,6 +174,13 @@ public class DynamicSliceOutput
     }
 
     @Override
+    public DynamicSliceOutput appendByte(int value)
+    {
+        writeByte(value);
+        return this;
+    }
+
+    @Override
     public DynamicSliceOutput appendBytes(byte[] source, int sourceIndex, int length)
     {
         write(source, sourceIndex, length);

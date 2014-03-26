@@ -198,6 +198,13 @@ public class OutputStreamSliceOutput
     }
 
     @Override
+    public SliceOutput appendByte(int value)
+    {
+        writeByte(value);
+        return this;
+    }
+
+    @Override
     public SliceOutput appendBytes(byte[] source, int sourceIndex, int length)
     {
         writeBytes(source, sourceIndex, length);

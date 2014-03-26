@@ -254,6 +254,8 @@ public abstract class SliceOutput
 
     public abstract SliceOutput appendShort(int value);
 
+    public abstract SliceOutput appendByte(int value);
+
     public abstract SliceOutput appendBytes(byte[] source, int sourceIndex, int length);
 
     public abstract SliceOutput appendBytes(byte[] source);
