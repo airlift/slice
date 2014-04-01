@@ -103,6 +103,19 @@ public final class Slices
         return new Slice(new byte[capacity]);
     }
 
+    public static Slice copyOf(Slice slice)
+    {
+        return copyOf(slice, 0, slice.length());
+    }
+
+    public static Slice copyOf(Slice slice, int offset, int length)
+    {
+        Slice copy = Slices.allocate(length);
+        copy.setBytes(0, slice, offset, length);
+
+        return copy;
+    }
+
     public static Slice wrappedBuffer(byte[] array)
     {
         if (array.length == 0) {
