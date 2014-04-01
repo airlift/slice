@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -33,6 +34,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
+import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Double.doubleToLongBits;
 import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.floatToIntBits;
@@ -41,6 +43,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -671,6 +674,52 @@ public class TestSlice
         }
 
         assertEquals(slice.getBytes(), output.getBytes());
+    }
+
+    @Test
+    public void testCopyOf()
+            throws Exception
+    {
+        // slightly stronger guarantees for empty slice
+        assertSame(Slices.copyOf(EMPTY_SLICE), EMPTY_SLICE);
+        assertSame(Slices.copyOf(Slices.utf8Slice("hello world"), 1, 0), EMPTY_SLICE);
+
+        Slice slice = Slices.utf8Slice("hello world");
+        assertEquals(Slices.copyOf(slice), slice);
+        assertEquals(Slices.copyOf(slice, 1, 3), slice.slice(1, 3));
+
+        // verify it's an actual copy
+        Slice original = Slices.utf8Slice("hello world");
+        Slice copy = Slices.copyOf(original);
+
+        original.fill((byte) 0);
+        assertEquals(copy, Slices.utf8Slice("hello world"));
+
+        // read before beginning
+        try {
+            Slices.copyOf(slice, -1, slice.length());
+            Assert.fail();
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        // read after end
+        try {
+            Slices.copyOf(slice, slice.length() + 1, 1);
+            Assert.fail();
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        // start before but extend past end
+        try {
+            Slices.copyOf(slice, 1, slice.length());
+            Assert.fail();
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+
     }
 
     private static List<Long> createRandomLongs(int count)

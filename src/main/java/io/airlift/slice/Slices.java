@@ -31,6 +31,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import static io.airlift.slice.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class Slices
@@ -101,6 +102,21 @@ public final class Slices
             return EMPTY_SLICE;
         }
         return new Slice(new byte[capacity]);
+    }
+
+    public static Slice copyOf(Slice slice)
+    {
+        return copyOf(slice, 0, slice.length());
+    }
+
+    public static Slice copyOf(Slice slice, int offset, int length)
+    {
+        checkPositionIndexes(offset, offset + length, slice.length());
+
+        Slice copy = Slices.allocate(length);
+        copy.setBytes(0, slice, offset, length);
+
+        return copy;
     }
 
     public static Slice wrappedBuffer(byte[] array)
