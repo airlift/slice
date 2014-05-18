@@ -859,12 +859,19 @@ public final class Slice
         return decodeString(toByteBuffer(index, length), charset);
     }
 
-    private ByteBuffer toByteBuffer(int index, int length)
+    public ByteBuffer toByteBuffer()
     {
+        return toByteBuffer(0, size);
+    }
+
+    public ByteBuffer toByteBuffer(int index, int length)
+    {
+        checkIndexLength(index, length);
+
         if (base instanceof byte[]) {
             return ByteBuffer.wrap((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
         }
-        checkIndexLength(index, length);
+
         try {
             return (ByteBuffer) newByteBuffer.invokeExact(address + index, length, (Object) reference);
         }
