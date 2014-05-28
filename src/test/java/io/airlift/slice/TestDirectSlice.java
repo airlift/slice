@@ -24,6 +24,6 @@ public class TestDirectSlice
         if (size == 0) {
             return Slices.EMPTY_SLICE;
         }
-        return Slice.toUnsafeSlice(ByteBuffer.allocateDirect(size));
+        return Slices.wrappedBuffer(ByteBuffer.allocateDirect(size));
     }
 }

@@ -14,7 +14,6 @@
 package io.airlift.slice;
 
 import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
 
 import javax.annotation.Nullable;
 
@@ -75,14 +74,13 @@ public final class Slice
         }
     }
 
+    /**
+     * @deprecated use {@link Slices#wrappedBuffer(java.nio.ByteBuffer)}
+     */
+    @Deprecated
     public static Slice toUnsafeSlice(ByteBuffer byteBuffer)
     {
-        checkNotNull(byteBuffer, "byteBuffer is null");
-        checkArgument(byteBuffer instanceof DirectBuffer, "byteBuffer is not an instance of %s", DirectBuffer.class.getName());
-        DirectBuffer directBuffer = (DirectBuffer) byteBuffer;
-        long address = directBuffer.address();
-        int capacity = byteBuffer.capacity();
-        return new Slice(null, address, capacity, byteBuffer);
+        return Slices.wrappedBuffer(byteBuffer);
     }
 
     /**

@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import sun.nio.ch.DirectBuffer;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -33,6 +35,7 @@ import java.util.Map;
 import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class Slices
 {
@@ -48,7 +51,7 @@ public final class Slices
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
                 FileChannel channel = randomAccessFile.getChannel()) {
             MappedByteBuffer byteBuffer = channel.map(MapMode.READ_ONLY, 0, file.length());
-            return Slice.toUnsafeSlice(byteBuffer);
+            return wrappedBuffer(byteBuffer);
         }
     }
 
@@ -117,6 +120,24 @@ public final class Slices
         copy.setBytes(0, slice, offset, length);
 
         return copy;
+    }
+
+    /**
+     * Wrap the entire capacity of a {@link java.nio.ByteBuffer}.
+     */
+    public static Slice wrappedBuffer(ByteBuffer buffer)
+    {
+        if (buffer instanceof DirectBuffer) {
+            DirectBuffer direct = (DirectBuffer) buffer;
+            return new Slice(null, direct.address(), buffer.capacity(), direct);
+        }
+
+        if (buffer.hasArray()) {
+            int address = ARRAY_BYTE_BASE_OFFSET + buffer.arrayOffset();
+            return new Slice(buffer.array(), address, buffer.capacity(), null);
+        }
+
+        throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
     }
 
     public static Slice wrappedBuffer(byte[] array)
