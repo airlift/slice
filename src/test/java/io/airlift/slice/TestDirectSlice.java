@@ -13,17 +13,12 @@
  */
 package io.airlift.slice;
 
-import java.nio.ByteBuffer;
-
 public class TestDirectSlice
         extends TestSlice
 {
     @Override
     protected Slice allocate(int size)
     {
-        if (size == 0) {
-            return Slices.EMPTY_SLICE;
-        }
-        return Slices.wrappedBuffer(ByteBuffer.allocateDirect(size));
+        return Slices.allocateDirect(size);
     }
 }

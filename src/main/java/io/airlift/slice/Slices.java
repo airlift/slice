@@ -107,6 +107,14 @@ public final class Slices
         return new Slice(new byte[capacity]);
     }
 
+    public static Slice allocateDirect(int capacity)
+    {
+        if (capacity == 0) {
+            return EMPTY_SLICE;
+        }
+        return wrappedBuffer(ByteBuffer.allocateDirect(capacity));
+    }
+
     public static Slice copyOf(Slice slice)
     {
         return copyOf(slice, 0, slice.length());
