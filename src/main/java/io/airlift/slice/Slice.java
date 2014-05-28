@@ -20,14 +20,11 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
+import static io.airlift.slice.JvmUtils.newByteBuffer;
+import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
@@ -40,40 +37,10 @@ import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
 
 public final class Slice
         implements Comparable<Slice>
 {
-    private static final Unsafe unsafe;
-    private static final MethodHandle newByteBuffer;
-
-    static {
-        try {
-            // fetch theUnsafe object
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            unsafe = (Unsafe) field.get(null);
-            if (unsafe == null) {
-                throw new RuntimeException("Unsafe access not available");
-            }
-
-            // make sure the VM thinks bytes are only one byte wide
-            if (ARRAY_BYTE_INDEX_SCALE != 1) {
-                throw new IllegalStateException("Byte array index scale must be 1, but is " + ARRAY_BYTE_INDEX_SCALE);
-            }
-
-            // fetch a method handle for the hidden constructor for DirectByteBuffer
-            Class<?> directByteBufferClass = ClassLoader.getSystemClassLoader().loadClass("java.nio.DirectByteBuffer");
-            Constructor<?> constructor = directByteBufferClass.getDeclaredConstructor(long.class, int.class, Object.class);
-            constructor.setAccessible(true);
-            newByteBuffer = MethodHandles.lookup().unreflectConstructor(constructor).asType(MethodType.methodType(ByteBuffer.class, long.class, int.class, Object.class));
-        }
-        catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
      * @deprecated use {@link Slices#wrappedBuffer(java.nio.ByteBuffer)}
      */
@@ -951,14 +918,6 @@ public final class Slice
     private void checkIndexLength(int index, int length)
     {
         checkPositionIndexes(index, index + length, length());
-    }
-
-    /**
-     * Convenience getter so we don't have to do reflection hackery in other places too.
-     */
-    static Unsafe getUnsafe()
-    {
-        return unsafe;
     }
 
     //

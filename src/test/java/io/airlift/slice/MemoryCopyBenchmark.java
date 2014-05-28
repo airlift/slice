@@ -30,7 +30,7 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import static io.airlift.slice.Slice.getUnsafe;
+import static io.airlift.slice.JvmUtils.unsafe;
 
 @SuppressWarnings("restriction")
 @BenchmarkMode(Mode.Throughput)
@@ -222,16 +222,16 @@ public class MemoryCopyBenchmark
                         Object base = data.getBase();
                         long offset = data.getAddress();
                         while (length >= SizeOf.SIZE_OF_LONG) {
-                            long srcLong = getUnsafe().getLong(base, src + offset);
-                            getUnsafe().putLong(base, dest + offset, srcLong);
+                            long srcLong = unsafe.getLong(base, src + offset);
+                            unsafe.putLong(base, dest + offset, srcLong);
 
                             offset += SizeOf.SIZE_OF_LONG;
                             length -= SizeOf.SIZE_OF_LONG;
                         }
 
                         while (length > 0) {
-                            byte srcByte = getUnsafe().getByte(base, src + offset);
-                            getUnsafe().putByte(base, dest + offset, srcByte);
+                            byte srcByte = unsafe.getByte(base, src + offset);
+                            unsafe.putByte(base, dest + offset, srcByte);
 
                             offset++;
                             length--;
@@ -248,8 +248,8 @@ public class MemoryCopyBenchmark
                         srcOffset += data.getAddress();
                         destOffset += data.getAddress();
                         int bytesToCopy = length - (length % 8);
-                        getUnsafe().copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
-                        getUnsafe().copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);
+                        unsafe.copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
+                        unsafe.copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);
                     }
                 };
 
