@@ -39,33 +39,15 @@ import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class Slices
 {
-    public static Slice mapFileReadOnly(File file)
-            throws IOException
-    {
-        checkNotNull(file, "file is null");
-
-        if (!file.exists()) {
-            throw new FileNotFoundException(file.toString());
-        }
-
-        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
-                FileChannel channel = randomAccessFile.getChannel()) {
-            MappedByteBuffer byteBuffer = channel.map(MapMode.READ_ONLY, 0, file.length());
-            return wrappedBuffer(byteBuffer);
-        }
-    }
-
     /**
      * A slice with size {@code 0}.
      */
     public static final Slice EMPTY_SLICE = new Slice();
 
-    private Slices()
-    {
-    }
-
     private static final int SLICE_ALLOC_THRESHOLD = 524_288; // 2^19
     private static final double SLICE_ALLOW_SKEW = 1.25; // must be > 1!
+
+    private Slices() {}
 
     public static Slice ensureSize(Slice existingSlice, int minWritableBytes)
     {
@@ -167,6 +149,22 @@ public final class Slices
     public static Slice utf8Slice(String string)
     {
         return copiedBuffer(string, UTF_8);
+    }
+
+    public static Slice mapFileReadOnly(File file)
+            throws IOException
+    {
+        checkNotNull(file, "file is null");
+
+        if (!file.exists()) {
+            throw new FileNotFoundException(file.toString());
+        }
+
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
+                FileChannel channel = randomAccessFile.getChannel()) {
+            MappedByteBuffer byteBuffer = channel.map(MapMode.READ_ONLY, 0, file.length());
+            return wrappedBuffer(byteBuffer);
+        }
     }
 
     @SuppressWarnings("ObjectToString")
