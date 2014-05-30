@@ -945,7 +945,7 @@ public final class Slice
     {
         // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
         // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
-        final int bytesToCopy = length - (length % 8);
+        int bytesToCopy = length - (length % 8);
         unsafe.copyMemory(src, srcAddress, dest, destAddress, bytesToCopy);
         unsafe.copyMemory(src, srcAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
     }
