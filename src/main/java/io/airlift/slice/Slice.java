@@ -34,6 +34,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.StringDecoder.decodeString;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -855,7 +856,7 @@ public final class Slice
             return new String((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length, charset);
         }
         // direct memory can only be converted to a string using a ByteBuffer
-        return Slices.decodeString(toByteBuffer(index, length), charset);
+        return decodeString(toByteBuffer(index, length), charset);
     }
 
     private ByteBuffer toByteBuffer(int index, int length)
