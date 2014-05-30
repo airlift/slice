@@ -131,6 +131,14 @@ public final class Slices
         return new Slice(array);
     }
 
+    public static Slice wrappedBuffer(byte[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
     public static Slice copiedBuffer(String string, Charset charset)
     {
         checkNotNull(string, "string is null");

@@ -106,6 +106,20 @@ public final class Slice
     }
 
     /**
+     * Creates a slice over the specified array range.
+     */
+    Slice(byte[] base, int offset, int length)
+    {
+        checkNotNull(base, "base is null");
+        checkPositionIndexes(offset, offset + length, base.length);
+
+        this.base = base;
+        this.address = ARRAY_BYTE_BASE_OFFSET + offset;
+        this.size = length;
+        this.reference = null;
+    }
+
+    /**
      * Creates a slice for directly accessing the base object.
      */
     Slice(@Nullable Object base, long address, int size, @Nullable Object reference)
