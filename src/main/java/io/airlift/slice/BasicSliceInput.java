@@ -155,6 +155,20 @@ public final class BasicSliceInput
     }
 
     @Override
+    public int read(byte[] destination)
+    {
+        return read(destination, 0, destination.length);
+    }
+
+    @Override
+    public int read(byte[] destination, int destinationIndex, int length)
+    {
+        length = Math.min(length, available());
+        readBytes(destination, destinationIndex, length);
+        return length;
+    }
+
+    @Override
     public void readBytes(byte[] destination, int destinationIndex, int length)
     {
         slice.getBytes(position, destination, destinationIndex, length);
@@ -174,6 +188,14 @@ public final class BasicSliceInput
     {
         slice.getBytes(position, out, length);
         position += length;
+    }
+
+    @Override
+    public long skip(long length)
+    {
+        length = Math.min(length, available());
+        position += length;
+        return length;
     }
 
     @Override
