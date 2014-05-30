@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>17</version>
+        <version>20</version>
     </parent>
 
     <inceptionYear>2012</inceptionYear>
@@ -64,14 +64,6 @@
                         <exclude>src/main/java/io/airlift/slice/LittleEndianDataInputStream.java</exclude>
                         <exclude>src/main/java/io/airlift/slice/LittleEndianDataOutputStream.java</exclude>
                     </excludes>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <excludedGroups>hive</excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
