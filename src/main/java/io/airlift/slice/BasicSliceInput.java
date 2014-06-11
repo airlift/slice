@@ -164,6 +164,9 @@ public final class BasicSliceInput
     public int read(byte[] destination, int destinationIndex, int length)
     {
         length = Math.min(length, available());
+        if (length == 0) {
+            return -1;
+        }
         readBytes(destination, destinationIndex, length);
         return length;
     }
