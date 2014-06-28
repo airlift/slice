@@ -139,6 +139,84 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    public static Slice wrappedBooleanArray(boolean... array)
+    {
+        return wrappedBooleanArray(array, 0, array.length);
+    }
+
+    public static Slice wrappedBooleanArray(boolean[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
+    public static Slice wrappedShortArray(short... array)
+    {
+        return wrappedShortArray(array, 0, array.length);
+    }
+
+    public static Slice wrappedShortArray(short[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
+    public static Slice wrappedIntArray(int... array)
+    {
+        return wrappedIntArray(array, 0, array.length);
+    }
+
+    public static Slice wrappedIntArray(int[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
+    public static Slice wrappedLongArray(long... array)
+    {
+        return wrappedLongArray(array, 0, array.length);
+    }
+
+    public static Slice wrappedLongArray(long[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
+    public static Slice wrappedFloatArray(float... array)
+    {
+        return wrappedFloatArray(array, 0, array.length);
+    }
+
+    public static Slice wrappedFloatArray(float[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
+    public static Slice wrappedDoubleArray(double... array)
+    {
+        return wrappedDoubleArray(array, 0, array.length);
+    }
+
+    public static Slice wrappedDoubleArray(double[] array, int offset, int length)
+    {
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(array, offset, length);
+    }
+
     public static Slice copiedBuffer(String string, Charset charset)
     {
         checkNotNull(string, "string is null");

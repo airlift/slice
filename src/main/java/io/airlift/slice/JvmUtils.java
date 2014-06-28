@@ -22,7 +22,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
+import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_FLOAT_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_INT_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_LONG_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 
 final class JvmUtils
 {
@@ -39,10 +45,14 @@ final class JvmUtils
                 throw new RuntimeException("Unsafe access not available");
             }
 
-            // make sure the VM thinks bytes are only one byte wide
-            if (ARRAY_BYTE_INDEX_SCALE != 1) {
-                throw new IllegalStateException("Byte array index scale must be 1, but is " + ARRAY_BYTE_INDEX_SCALE);
-            }
+            // verify the stride of arrays matches the width of primitives
+            assertArrayIndexScale("Boolean", ARRAY_BOOLEAN_INDEX_SCALE, 1);
+            assertArrayIndexScale("Byte", ARRAY_BYTE_INDEX_SCALE, 1);
+            assertArrayIndexScale("Short", ARRAY_SHORT_INDEX_SCALE, 2);
+            assertArrayIndexScale("Int", ARRAY_INT_INDEX_SCALE, 4);
+            assertArrayIndexScale("Long", ARRAY_LONG_INDEX_SCALE, 8);
+            assertArrayIndexScale("Float", ARRAY_FLOAT_INDEX_SCALE, 4);
+            assertArrayIndexScale("Double", ARRAY_DOUBLE_INDEX_SCALE, 8);
 
             // fetch a method handle for the hidden constructor for DirectByteBuffer
             Class<?> directByteBufferClass = ClassLoader.getSystemClassLoader().loadClass("java.nio.DirectByteBuffer");
@@ -53,6 +63,13 @@ final class JvmUtils
         }
         catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static void assertArrayIndexScale(final String name, int actualIndexScale, int expectedIndexScale)
+    {
+        if (actualIndexScale != expectedIndexScale) {
+            throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
         }
     }
 
