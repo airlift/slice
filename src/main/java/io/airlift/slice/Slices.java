@@ -139,14 +139,6 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
-    public static Slice wrappedBuffer(long address, int length, Object reference)
-    {
-        if(length == 0) {
-            return EMPTY_SLICE;
-        }
-        return new Slice(null, address, length, reference);
-    }
-
     public static Slice wrappedBooleanArray(boolean... array)
     {
         return wrappedBooleanArray(array, 0, array.length);
