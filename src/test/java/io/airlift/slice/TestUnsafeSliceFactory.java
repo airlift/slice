@@ -21,12 +21,40 @@ import java.nio.ByteBuffer;
 import java.security.Permission;
 
 import static io.airlift.slice.JvmUtils.unsafe;
+import static java.lang.Math.max;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class TestUnsafeSliceFactory
 {
+    @SuppressWarnings("PublicField")
+    private static class Foo
+    {
+        public int x;
+        public int y;
+    }
+
+    @Test
+    public void testBaseObject()
+            throws Exception
+    {
+        Foo foo = new Foo();
+        foo.x = 42;
+        foo.y = 0xDEADBEEF;
+
+        UnsafeSliceFactory factory = UnsafeSliceFactory.getInstance();
+
+        int offsetX = factory.objectFieldOffset((Foo.class.getField("x")));
+        int offsetY = factory.objectFieldOffset((Foo.class.getField("y")));
+        int size = max(offsetX, offsetY) + 4;
+
+        Slice slice = factory.newSlice(foo, 0, size);
+
+        assertEquals(slice.getInt(offsetX), 42);
+        assertEquals(slice.getInt(offsetY), 0xDEADBEEF);
+    }
+
     @Test
     public void testRawAddress()
             throws Exception

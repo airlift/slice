@@ -13,8 +13,11 @@
  */
 package io.airlift.slice;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.ReflectPermission;
 import java.security.Permission;
+
+import static io.airlift.slice.JvmUtils.unsafe;
 
 /**
  * A slice factory for creating unsafe slices
@@ -53,6 +56,24 @@ public class UnsafeSliceFactory
     }
 
     private UnsafeSliceFactory() {}
+
+    /**
+     * Creates a slice for directly accessing a base object.
+     * This is inherently unsafe as it may be used to update arbitrary
+     * memory within the object (including object references).
+     *
+     * @param base the base object
+     * @param offset the offset from the start of the object
+     * @param size the size of the slice (should be no larger than the object)
+     * @return the unsafe slice
+     */
+    public Slice newSlice(Object base, long offset, int size)
+    {
+        if (size == 0) {
+            return Slices.EMPTY_SLICE;
+        }
+        return new Slice(base, offset, size, null);
+    }
 
     /**
      * Creates a slice for directly a raw memory address. This is
@@ -96,5 +117,23 @@ public class UnsafeSliceFactory
             return Slices.EMPTY_SLICE;
         }
         return new Slice(null, address, size, reference);
+    }
+
+    /**
+     * Get the offset of a field within an object.
+     *
+     * @param field the field reference
+     * @return the offset for use with an unsafe slice
+     */
+    public int objectFieldOffset(Field field)
+    {
+        long offset = unsafe.objectFieldOffset(field);
+        if (offset < 0) {
+            throw new IllegalArgumentException("Field offset is negative: " + offset);
+        }
+        if (offset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Field offset is larger than an int: " + offset);
+        }
+        return (int) offset;
     }
 }
