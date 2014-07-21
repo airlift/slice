@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import com.google.common.hash.Hashing;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
 import org.openjdk.jmh.annotations.Measurement;
@@ -34,36 +33,18 @@ import java.util.concurrent.TimeUnit;
 @Fork(5)
 @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-public class BenchmarkMurmur3
+public class BenchmarkXxHash64
 {
     @GenerateMicroBenchmark
-    public long hash64(BenchmarkData data)
+    public long xxhash64(BenchmarkData data)
     {
-        return Murmur3.hash64(data.getSlice());
-    }
-
-    @GenerateMicroBenchmark
-    public Slice hash(BenchmarkData data)
-    {
-        return Murmur3.hash(data.getSlice());
-    }
-
-    @GenerateMicroBenchmark
-    public long guava(BenchmarkData data)
-    {
-        return Hashing.murmur3_128().hashBytes(data.getBytes()).asLong();
+        return XxHash64.hash(data.getSlice());
     }
 
     @GenerateMicroBenchmark
     public long specializedHashLong(BenchmarkData data)
     {
-        return Murmur3.hash64(data.getLong());
-    }
-
-    @GenerateMicroBenchmark
-    public long hashLong(BenchmarkData data)
-    {
-        return Murmur3.hash64(data.getSlice(), 0, 8);
+        return XxHash64.hash(data.getLong());
     }
 
     public static void main(String[] args)
@@ -71,10 +52,9 @@ public class BenchmarkMurmur3
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkMurmur3.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkXxHash64.class.getSimpleName() + ".*")
                 .build();
 
         new Runner(options).run();
     }
 }
-
