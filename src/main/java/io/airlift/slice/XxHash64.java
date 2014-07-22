@@ -30,14 +30,8 @@ public class XxHash64
     public static long hash(long value)
     {
         long hash = DEFAULT_SEED + PRIME64_5 + SizeOf.SIZE_OF_LONG;
-        hash ^= mix(value);
-        hash = rotateLeft(hash, 27) * PRIME64_1 + PRIME64_4;
-
-        hash ^= hash >>> 33;
-        hash *= PRIME64_2;
-        hash ^= hash >>> 29;
-        hash *= PRIME64_3;
-        hash ^= hash >>> 32;
+        hash = updateTail(hash, value);
+        hash = finalShuffle(hash);
 
         return hash;
     }
@@ -75,37 +69,33 @@ public class XxHash64
 
             long limit = end - 32;
             do {
-                v1 = readAndMix(base, index, v1);
+                v1 = mix(v1, unsafe.getLong(base, index));
                 index += 8;
 
-                v2 = readAndMix(base, index, v2);
+                v2 = mix(v2, unsafe.getLong(base, index));
                 index += 8;
 
-                v3 = readAndMix(base, index, v3);
+                v3 = mix(v3, unsafe.getLong(base, index));
                 index += 8;
 
-                v4 = readAndMix(base, index, v4);
+                v4 = mix(v4, unsafe.getLong(base, index));
                 index += 8;
             }
             while (index <= limit);
 
             hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
 
-            v1 = mix(v1);
-            hash ^= v1;
-            hash = hash * PRIME64_1 + PRIME64_4;
+            v1 = mix(0, v1);
+            hash = update(hash, v1);
 
-            v2 = mix(v2);
-            hash ^= v2;
-            hash = hash * PRIME64_1 + PRIME64_4;
+            v2 = mix(0, v2);
+            hash = update(hash, v2);
 
-            v3 = mix(v3);
-            hash ^= v3;
-            hash = hash * PRIME64_1 + PRIME64_4;
+            v3 = mix(0, v3);
+            hash = update(hash, v3);
 
-            v4 = mix(v4);
-            hash ^= v4;
-            hash = hash * PRIME64_1 + PRIME64_4;
+            v4 = mix(0, v4);
+            hash = update(hash, v4);
         }
         else {
             hash = seed + PRIME64_5;
@@ -114,47 +104,63 @@ public class XxHash64
         hash += length;
 
         while (index <= end - 8) {
-            long k1 = unsafe.getLong(base, index);
-            k1 = mix(k1);
-            hash ^= k1;
-            hash = rotateLeft(hash, 27) * PRIME64_1 + PRIME64_4;
+            hash = updateTail(hash, unsafe.getLong(base, index));
             index += 8;
         }
 
         if (index <= end - 4) {
-            hash ^= (unsafe.getInt(base, index) & 0xFFFF_FFFFL) * PRIME64_1;
-            hash = rotateLeft(hash, 23) * PRIME64_2 + PRIME64_3;
+            hash = updateTail(hash, unsafe.getInt(base, index));
             index += 4;
         }
 
         while (index < end) {
-            hash ^= (unsafe.getByte(base, index) & 0xFF) * PRIME64_5;
-            hash = rotateLeft(hash, 11) * PRIME64_1;
+            hash = updateTail(hash, unsafe.getByte(base, index));
             index++;
         }
 
+        hash = finalShuffle(hash);
+
+        return hash;
+    }
+
+    private static long mix(long current, long value)
+    {
+        return rotateLeft(current + value * PRIME64_2, 31) * PRIME64_1;
+    }
+
+    private static long update(long hash, long value)
+    {
+        long temp = hash ^ value;
+        return temp * PRIME64_1 + PRIME64_4;
+    }
+
+    private static long updateTail(long hash, long value)
+    {
+        long temp = hash ^ mix(0, value);
+        return rotateLeft(temp, 27) * PRIME64_1 + PRIME64_4;
+    }
+
+    private static long updateTail(long hash, int value)
+    {
+        long unsigned = value & 0xFFFF_FFFFL;
+        long temp = hash ^ (unsigned * PRIME64_1);
+        return rotateLeft(temp, 23) * PRIME64_2 + PRIME64_3;
+    }
+
+    private static long updateTail(long hash, byte value)
+    {
+        int unsigned = value & 0xFF;
+        long temp = hash ^ (unsigned * PRIME64_5);
+        return rotateLeft(temp, 11) * PRIME64_1;
+    }
+
+    private static long finalShuffle(long hash)
+    {
         hash ^= hash >>> 33;
         hash *= PRIME64_2;
         hash ^= hash >>> 29;
         hash *= PRIME64_3;
         hash ^= hash >>> 32;
-
         return hash;
-    }
-
-    private static long mix(long value)
-    {
-        value *= PRIME64_2;
-        value = rotateLeft(value, 31);
-        value *= PRIME64_1;
-        return value;
-    }
-
-    private static long readAndMix(Object base, long index, long value)
-    {
-        value += unsafe.getLong(base, index) * PRIME64_2;
-        value = rotateLeft(value, 31);
-        value *= PRIME64_1;
-        return value;
     }
 }
