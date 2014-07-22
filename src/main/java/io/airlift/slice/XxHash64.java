@@ -85,16 +85,9 @@ public class XxHash64
 
             hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
 
-            v1 = mix(0, v1);
             hash = update(hash, v1);
-
-            v2 = mix(0, v2);
             hash = update(hash, v2);
-
-            v3 = mix(0, v3);
             hash = update(hash, v3);
-
-            v4 = mix(0, v4);
             hash = update(hash, v4);
         }
         else {
@@ -130,7 +123,7 @@ public class XxHash64
 
     private static long update(long hash, long value)
     {
-        long temp = hash ^ value;
+        long temp = hash ^ mix(0, value);
         return temp * PRIME64_1 + PRIME64_4;
     }
 
