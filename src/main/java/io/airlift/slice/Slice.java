@@ -815,61 +815,7 @@ public final class Slice
      */
     public int hashCode(int offset, int length)
     {
-        checkIndexLength(offset, length);
-
-        // this is basically murmur3-32, but the implementation has not been verified
-
-        int seed = 0;
-        int h1;
-        int c1 = 0xcc9e2d51;
-        int c2 = 0x1b873593;
-        int len = length;
-        h1 = seed;
-
-        while (length >= SIZE_OF_INT) {
-            int k1 = unsafe.getInt(base, address + offset);
-
-            k1 *= c1;
-            k1 = Integer.rotateLeft(k1, 15);
-            k1 *= c2;
-
-            h1 ^= k1;
-            h1 = Integer.rotateLeft(h1, 13);
-            h1 = h1 * 5 + 0xe6546b64;
-
-            offset += SIZE_OF_INT;
-            length -= SIZE_OF_INT;
-        }
-
-        // process remaining bytes
-        int k1 = 0;
-        switch (length) {
-            case 3:
-                k1 ^= unsignedByteToInt(unsafe.getByte(base, address + offset + 2)) << 16;
-                //noinspection fallthrough
-            case 2:
-                k1 ^= unsignedByteToInt(unsafe.getByte(base, address + offset + 1)) << 8;
-                //noinspection fallthrough
-            case 1:
-                k1 ^= unsignedByteToInt(unsafe.getByte(base, address + offset));
-                //noinspection fallthrough
-            default:
-                k1 *= c1;
-                k1 = Integer.rotateLeft(k1, 15);
-                k1 *= c2;
-                h1 ^= k1;
-        }
-
-        // make hash
-        h1 ^= len;
-
-        h1 ^= h1 >>> 16;
-        h1 *= 0x85ebca6b;
-        h1 ^= h1 >>> 13;
-        h1 *= 0xc2b2ae35;
-        h1 ^= h1 >>> 16;
-
-        return h1;
+        return (int) XxHash64.hash(this, offset, length);
     }
 
     /**
