@@ -15,7 +15,7 @@ package io.airlift.slice;
 
 import com.google.common.hash.Hashing;
 import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
+import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
@@ -36,31 +36,31 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 public class BenchmarkMurmur3
 {
-    @GenerateMicroBenchmark
+    @Benchmark
     public long hash64(BenchmarkData data)
     {
         return Murmur3.hash64(data.getSlice());
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice hash(BenchmarkData data)
     {
         return Murmur3.hash(data.getSlice());
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public long guava(BenchmarkData data)
     {
         return Hashing.murmur3_128().hashBytes(data.getBytes()).asLong();
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public long specializedHashLong(BenchmarkData data)
     {
         return Murmur3.hash64(data.getLong());
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public long hashLong(BenchmarkData data)
     {
         return Murmur3.hash64(data.getSlice(), 0, 8);

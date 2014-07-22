@@ -14,7 +14,7 @@
 package io.airlift.slice;
 
 import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
+import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
@@ -35,13 +35,13 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 public class BenchmarkXxHash64
 {
-    @GenerateMicroBenchmark
+    @Benchmark
     public long xxhash64(BenchmarkData data)
     {
         return XxHash64.hash(data.getSlice());
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public long specializedHashLong(BenchmarkData data)
     {
         return XxHash64.hash(data.getLong());

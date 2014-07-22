@@ -15,7 +15,7 @@ package io.airlift.slice;
 
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.GenerateMicroBenchmark;
+import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Scope;
@@ -66,127 +66,127 @@ public class MemoryCopyBenchmark
         }
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b00sliceZero(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 0);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b01customLoopZero(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 0);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b02unsafeZero(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 0);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b03slice32B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 32);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b04customLoop32B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 32);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b05unsafe32B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 32);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b06slice128B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 128);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b07customLoop128B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 128);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b08unsafe128B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 128);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b09slice512B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 512);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b10customLoop512B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 512);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b11unsafe512B(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 512);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b12slice1K(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b13customLoop1K(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b14unsafe1K(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b15slice1M(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 1024 * 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b16customLoop1M(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 1024 * 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b17unsafe1M(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 1024 * 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b18slice128M(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.SLICE, 128 * 1024 * 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b19customLoop128M(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 128 * 1024 * 1024);
     }
 
-    @GenerateMicroBenchmark
+    @Benchmark
     public Slice b20unsafe128M(Buffers buffers)
     {
         return doCopy(buffers, CopyStrategy.UNSAFE, 128 * 1024 * 1024);

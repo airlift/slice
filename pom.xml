@@ -21,6 +21,7 @@
     <properties>
         <air.check.skip-extended>true</air.check.skip-extended>
         <air.check.skip-license>false</air.check.skip-license>
+        <dep.jmh.version>0.9.4</dep.jmh.version>
     </properties>
 
     <dependencies>
@@ -46,7 +47,14 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>0.3</version>
+            <version>${dep.jmh.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>${dep.jmh.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
