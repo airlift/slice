@@ -220,7 +220,7 @@ public final class Slice
      */
     Slice(@Nullable Object base, long address, int size, @Nullable Object reference)
     {
-        if (address <= 0) {
+        if (address < 0) {
             throw new IllegalArgumentException(format("Invalid address: %s", address));
         }
         if (size <= 0) {
