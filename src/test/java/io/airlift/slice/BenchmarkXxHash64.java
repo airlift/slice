@@ -42,9 +42,9 @@ public class BenchmarkXxHash64
     }
 
     @Benchmark
-    public long specializedHashLong(BenchmarkData data)
+    public long specializedHashLong(SingleLong data)
     {
-        return XxHash64.hash(data.getLong());
+        return XxHash64.hash(data.getValue());
     }
 
     public static void main(String[] args)

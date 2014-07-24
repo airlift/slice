@@ -55,9 +55,9 @@ public class BenchmarkMurmur3
     }
 
     @Benchmark
-    public long specializedHashLong(BenchmarkData data)
+    public long specializedHashLong(SingleLong data)
     {
-        return Murmur3.hash64(data.getLong());
+        return Murmur3.hash64(data.getValue());
     }
 
     @Benchmark
