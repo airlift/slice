@@ -37,32 +37,37 @@ import java.util.concurrent.TimeUnit;
 public class BenchmarkMurmur3
 {
     @Benchmark
-    public long hash64(BenchmarkData data)
+    public long hash64(BenchmarkData data, ByteCounter counter)
     {
+        counter.add(data.getSlice().length());
         return Murmur3.hash64(data.getSlice());
     }
 
     @Benchmark
-    public Slice hash(BenchmarkData data)
+    public Slice hash(BenchmarkData data, ByteCounter counter)
     {
+        counter.add(data.getSlice().length());
         return Murmur3.hash(data.getSlice());
     }
 
     @Benchmark
-    public long guava(BenchmarkData data)
+    public long guava(BenchmarkData data, ByteCounter counter)
     {
+        counter.add(data.getSlice().length());
         return Hashing.murmur3_128().hashBytes(data.getBytes()).asLong();
     }
 
     @Benchmark
-    public long specializedHashLong(SingleLong data)
+    public long specializedHashLong(SingleLong data, ByteCounter counter)
     {
+        counter.add(SizeOf.SIZE_OF_LONG);
         return Murmur3.hash64(data.getValue());
     }
 
     @Benchmark
-    public long hashLong(BenchmarkData data)
+    public long hashLong(BenchmarkData data, ByteCounter counter)
     {
+        counter.add(SizeOf.SIZE_OF_LONG);
         return Murmur3.hash64(data.getSlice(), 0, 8);
     }
 

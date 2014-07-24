@@ -36,8 +36,9 @@ import java.util.concurrent.TimeUnit;
 public class BenchmarkHashCode
 {
     @Benchmark
-    public long hash(BenchmarkData data)
+    public long hash(BenchmarkData data, ByteCounter counter)
     {
+        counter.add(data.getSlice().length());
         return data.getSlice().hashCode(0, data.getSlice().length());
     }
 

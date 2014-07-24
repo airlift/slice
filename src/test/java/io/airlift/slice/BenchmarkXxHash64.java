@@ -36,14 +36,16 @@ import java.util.concurrent.TimeUnit;
 public class BenchmarkXxHash64
 {
     @Benchmark
-    public long xxhash64(BenchmarkData data)
+    public long xxhash64(BenchmarkData data, ByteCounter counter)
     {
+        counter.add(data.getSlice().length());
         return XxHash64.hash(data.getSlice());
     }
 
     @Benchmark
-    public long specializedHashLong(SingleLong data)
+    public long specializedHashLong(SingleLong data, ByteCounter counter)
     {
+        counter.add(SizeOf.SIZE_OF_LONG);
         return XxHash64.hash(data.getValue());
     }
 
