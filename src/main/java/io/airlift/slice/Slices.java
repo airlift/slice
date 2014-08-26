@@ -106,18 +106,18 @@ public final class Slices
     }
 
     /**
-     * Wrap the entire capacity of a {@link java.nio.ByteBuffer}.
+     * Wrap the visible portion of a {@link java.nio.ByteBuffer}.
      */
     public static Slice wrappedBuffer(ByteBuffer buffer)
     {
         if (buffer instanceof DirectBuffer) {
             DirectBuffer direct = (DirectBuffer) buffer;
-            return new Slice(null, direct.address(), buffer.capacity(), direct);
+            return new Slice(null, direct.address() + buffer.position(), buffer.limit() - buffer.position(), direct);
         }
 
         if (buffer.hasArray()) {
-            int address = ARRAY_BYTE_BASE_OFFSET + buffer.arrayOffset();
-            return new Slice(buffer.array(), address, buffer.capacity(), null);
+            int address = ARRAY_BYTE_BASE_OFFSET + buffer.arrayOffset() + buffer.position();
+            return new Slice(buffer.array(), address, buffer.limit() - buffer.position(), null);
         }
 
         throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());

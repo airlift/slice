@@ -43,6 +43,7 @@ public class TestSlices
         }
 
         // test full buffer
+        buffer.rewind();
         Slice slice = Slices.wrappedBuffer(buffer);
         assertEquals(slice.length(), 50);
         for (int i = 0; i < 50; i++) {
@@ -50,19 +51,19 @@ public class TestSlices
         }
 
         // test limited buffer
-        buffer.position(20).limit(30);
+        buffer.position(10).limit(30);
         slice = Slices.wrappedBuffer(buffer);
-        assertEquals(slice.length(), 50);
-        for (int i = 0; i < 50; i++) {
-            assertEquals(slice.getByte(i), i);
+        assertEquals(slice.length(), 20);
+        for (int i = 0; i < 20; i++) {
+            assertEquals(slice.getByte(i), i + 10);
         }
 
         // test limited buffer after slicing
         buffer = buffer.slice();
         slice = Slices.wrappedBuffer(buffer);
-        assertEquals(slice.length(), 10);
-        for (int i = 0; i < 10; i++) {
-            assertEquals(slice.getByte(i), i + 20);
+        assertEquals(slice.length(), 20);
+        for (int i = 0; i < 20; i++) {
+            assertEquals(slice.getByte(i), i + 10);
         }
     }
 }
