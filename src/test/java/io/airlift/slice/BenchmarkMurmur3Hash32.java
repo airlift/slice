@@ -34,41 +34,48 @@ import java.util.concurrent.TimeUnit;
 @Fork(5)
 @Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-public class BenchmarkMurmur3
+public class BenchmarkMurmur3Hash32
 {
     @Benchmark
-    public long hash64(BenchmarkData data, ByteCounter counter)
+    public int hash(BenchmarkData data, ByteCounter counter)
     {
         counter.add(data.getSlice().length());
-        return Murmur3.hash64(data.getSlice());
+        return Murmur3Hash32.hash(data.getSlice());
     }
 
     @Benchmark
-    public Slice hash(BenchmarkData data, ByteCounter counter)
+    public int guava(BenchmarkData data, ByteCounter counter)
     {
         counter.add(data.getSlice().length());
-        return Murmur3.hash(data.getSlice());
+        return Hashing.murmur3_32().hashBytes(data.getBytes()).asInt();
     }
 
     @Benchmark
-    public long guava(BenchmarkData data, ByteCounter counter)
+    public int specializedHashInt(SingleLong data, ByteCounter counter)
     {
-        counter.add(data.getSlice().length());
-        return Hashing.murmur3_128().hashBytes(data.getBytes()).asLong();
+        counter.add(SizeOf.SIZE_OF_INT);
+        return Murmur3Hash32.hash((int) data.getValue());
     }
 
     @Benchmark
-    public long specializedHashLong(SingleLong data, ByteCounter counter)
+    public int hashInt(BenchmarkData data, ByteCounter counter)
+    {
+        counter.add(SizeOf.SIZE_OF_INT);
+        return Murmur3Hash32.hash(data.getSlice(), 0, 4);
+    }
+
+    @Benchmark
+    public int specializedHashLong(SingleLong data, ByteCounter counter)
     {
         counter.add(SizeOf.SIZE_OF_LONG);
-        return Murmur3.hash64(data.getValue());
+        return Murmur3Hash32.hash(data.getValue());
     }
 
     @Benchmark
-    public long hashLong(BenchmarkData data, ByteCounter counter)
+    public int hashLong(BenchmarkData data, ByteCounter counter)
     {
         counter.add(SizeOf.SIZE_OF_LONG);
-        return Murmur3.hash64(data.getSlice(), 0, 8);
+        return Murmur3Hash32.hash(data.getSlice(), 0, 8);
     }
 
     public static void main(String[] args)
@@ -76,7 +83,7 @@ public class BenchmarkMurmur3
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + BenchmarkMurmur3.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkMurmur3Hash32.class.getSimpleName() + ".*")
                 .build();
 
         new Runner(options).run();
