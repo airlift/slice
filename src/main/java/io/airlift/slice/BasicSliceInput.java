@@ -106,7 +106,6 @@ public final class BasicSliceInput
 
     @Override
     public int readUnsignedShort()
-            throws IOException
     {
         return readShort() & 0xFFFF;
     }

@@ -83,6 +83,15 @@ public abstract class SliceInput
     public abstract short readShort();
 
     /**
+     * Gets an unsigned 16-bit short integer at the current {@code position}
+     * and increases the {@code position} by {@code 2} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code 2}
+     */
+    @Override
+    public abstract int readUnsignedShort();
+
+    /**
      * Gets a 32-bit integer at the current {@code position}
      * and increases the {@code position} by {@code 4} in this buffer.
      *
