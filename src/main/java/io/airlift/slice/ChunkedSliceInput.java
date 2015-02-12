@@ -28,7 +28,7 @@ import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("JavaDoc") // IDEA-81310
 public final class ChunkedSliceInput
-        extends SliceInput
+        extends FixedLengthSliceInput
 {
     private final InternalLoader<?> loader;
     private final Slice buffer;
@@ -45,7 +45,8 @@ public final class ChunkedSliceInput
         this.globalLength = loader.getSize();
     }
 
-    public long getSize()
+    @Override
+    public long length()
     {
         return globalLength;
     }
@@ -65,11 +66,6 @@ public final class ChunkedSliceInput
         this.globalPosition = position;
         this.bufferLength = 0;
         this.bufferPosition = 0;
-    }
-
-    public long remaining()
-    {
-        return getSize() - position();
     }
 
     @Override
@@ -103,7 +99,7 @@ public final class ChunkedSliceInput
             readSize = Integer.MAX_VALUE;
         }
         bufferLength = (int) readSize;
-        loader.load(globalPosition, 0, bufferLength);
+        loader.load(globalPosition, bufferLength);
     }
 
     @Override
@@ -336,7 +332,7 @@ public final class ChunkedSliceInput
 
         long getSize();
 
-        void load(long position, B bufferReference, int offset, int length);
+        void load(long position, B bufferReference, int length);
 
         @Override
         void close();
@@ -364,9 +360,9 @@ public final class ChunkedSliceInput
             return bufferReference.getSlice();
         }
 
-        public void load(long position, int offset, int length)
+        public void load(long position, int length)
         {
-            loader.load(position, bufferReference, offset, length);
+            loader.load(position, bufferReference, length);
         }
 
         public void close()

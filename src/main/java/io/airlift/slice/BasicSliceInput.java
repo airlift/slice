@@ -27,7 +27,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 
 @SuppressWarnings("JavaDoc") // IDEA-81310
 public final class BasicSliceInput
-        extends SliceInput
+        extends FixedLengthSliceInput
 {
     private final Slice slice;
     private int position;
@@ -35,6 +35,12 @@ public final class BasicSliceInput
     public BasicSliceInput(Slice slice)
     {
         this.slice = checkNotNull(slice, "slice is null");
+    }
+
+    @Override
+    public long length()
+    {
+        return slice.length();
     }
 
     @Override

@@ -57,10 +57,10 @@ public class TestChunkedSliceInput
         }
 
         @Override
-        public void load(long position, BufferReference buffer, int offset, int length)
+        public void load(long position, BufferReference buffer, int length)
         {
             checkPositionIndex((int) (position + length), (int) getSize());
-            this.data.getBytes((int) position, buffer.getSlice(), offset, length);
+            this.data.getBytes((int) position, buffer.getSlice(), 0, length);
         }
 
         @Override
