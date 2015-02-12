@@ -64,7 +64,6 @@ public final class BasicSliceInput
 
     @Override
     public boolean readBoolean()
-            throws IOException
     {
         return readByte() != 0;
     }
@@ -154,14 +153,12 @@ public final class BasicSliceInput
     }
 
     @Override
-    public int read(byte[] destination)
-    {
-        return read(destination, 0, destination.length);
-    }
-
-    @Override
     public int read(byte[] destination, int destinationIndex, int length)
     {
+        if (length == 0) {
+            return 0;
+        }
+
         length = Math.min(length, available());
         if (length == 0) {
             return -1;

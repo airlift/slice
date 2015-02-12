@@ -13,19 +13,12 @@
  */
 package io.airlift.slice;
 
-import java.io.ByteArrayInputStream;
-
-public class TestInputStreamSliceInput
+public class TestBasicSliceInput
         extends AbstractSliceInputTest
 {
     @Override
     protected SliceInput createSliceInput(Slice slice)
     {
-        return new InputStreamSliceInput(new ByteArrayInputStream(slice.getBytes()));
-    }
-
-    @Override
-    protected void testReadReverse(SliceInputTester tester, Slice slice)
-    {
+        return new BasicSliceInput(slice);
     }
 }

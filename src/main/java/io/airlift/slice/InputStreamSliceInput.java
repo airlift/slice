@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -81,6 +82,9 @@ public final class InputStreamSliceInput
         try {
             return dataInputStream.readFloat();
         }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
+        }
         catch (IOException e) {
             throw new RuntimeIOException(e);
         }
@@ -91,6 +95,9 @@ public final class InputStreamSliceInput
     {
         try {
             return dataInputStream.readDouble();
+        }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -114,6 +121,9 @@ public final class InputStreamSliceInput
         try {
             return dataInputStream.readUnsignedShort();
         }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
+        }
         catch (IOException e) {
             throw new RuntimeIOException(e);
         }
@@ -124,6 +134,9 @@ public final class InputStreamSliceInput
     {
         try {
             return dataInputStream.readInt();
+        }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -136,6 +149,9 @@ public final class InputStreamSliceInput
         try {
             return dataInputStream.readLong();
         }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
+        }
         catch (IOException e) {
             throw new RuntimeIOException(e);
         }
@@ -146,6 +162,9 @@ public final class InputStreamSliceInput
     {
         try {
             return dataInputStream.readShort();
+        }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -158,6 +177,9 @@ public final class InputStreamSliceInput
         try {
             return dataInputStream.readByte();
         }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
+        }
         catch (IOException e) {
             throw new RuntimeIOException(e);
         }
@@ -168,6 +190,9 @@ public final class InputStreamSliceInput
     {
         try {
             return dataInputStream.readBoolean();
+        }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -180,16 +205,8 @@ public final class InputStreamSliceInput
         try {
             return dataInputStream.read();
         }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public int read(byte[] b)
-    {
-        try {
-            return dataInputStream.read(b);
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -244,7 +261,14 @@ public final class InputStreamSliceInput
     public void readBytes(byte[] destination, int destinationIndex, int length)
     {
         try {
-            dataInputStream.read(destination, destinationIndex, length);
+            while (length > 0) {
+                int bytesRead = dataInputStream.read(destination, destinationIndex, length);
+                if (bytesRead < 0) {
+                    throw new IndexOutOfBoundsException("End of stream");
+                }
+                length -= bytesRead;
+                destinationIndex += bytesRead;
+            }
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -262,6 +286,9 @@ public final class InputStreamSliceInput
             newSlice.setBytes(0, countingInputStream, length);
             return newSlice;
         }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
+        }
         catch (IOException e) {
             throw new RuntimeIOException(e);
         }
@@ -273,6 +300,9 @@ public final class InputStreamSliceInput
         try {
             destination.setBytes(destinationIndex, countingInputStream, length);
         }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
+        }
         catch (IOException e) {
             throw new RuntimeIOException(e);
         }
@@ -282,6 +312,12 @@ public final class InputStreamSliceInput
     public void readBytes(OutputStream out, int length)
             throws IOException
     {
-        SliceStreamUtils.copyStreamFully(this, out, length);
+        try {
+            SliceStreamUtils.copyStreamFully(this, out, length);
+        }
+        catch (EOFException e) {
+            // EOFException is thrown if this stream does not have the requested data available
+            throw new IndexOutOfBoundsException();
+        }
     }
 }

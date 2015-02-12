@@ -45,8 +45,7 @@ public abstract class SliceInput
     public abstract boolean isReadable();
 
     /**
-     * Returns the number of readable bytes which is equal to
-     * {@code (this.slice.length() - this.position)}.
+     * Returns the number of bytes that can be read without blocking.
      */
     @SuppressWarnings("AbstractMethodOverridesConcreteMethod")
     @Override
@@ -54,6 +53,15 @@ public abstract class SliceInput
 
     @Override
     public abstract int read();
+
+    /**
+     * Returns true if the byte at the current {@code position} is not {@code 0} and increases
+     * the {@code position} by {@code 1} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code 1}
+     */
+    @Override
+    public abstract boolean readBoolean();
 
     /**
      * Gets a byte at the current {@code position} and increases
@@ -112,13 +120,31 @@ public abstract class SliceInput
     }
 
     /**
-     * Gets a 64-bit integer at the current {@code position}
+     * Gets a 64-bit long at the current {@code position}
      * and increases the {@code position} by {@code 8} in this buffer.
      *
      * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code 8}
      */
     @Override
     public abstract long readLong();
+
+    /**
+     * Gets a 32-bit float at the current {@code position}
+     * and increases the {@code position} by {@code 4} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code 4}
+     */
+    @Override
+    public abstract float readFloat();
+
+    /**
+     * Gets a 64-bit double at the current {@code position}
+     * and increases the {@code position} by {@code 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code 8}
+     */
+    @Override
+    public abstract double readDouble();
 
     /**
      * Returns a new slice of this buffer's sub-region starting at the current
@@ -136,6 +162,15 @@ public abstract class SliceInput
     {
         readBytes(destination);
     }
+
+    @Override
+    public final int read(byte[] destination)
+    {
+        return read(destination, 0, destination.length);
+    }
+
+    @Override
+    public abstract int read(byte[] destination, int destinationIndex, int length);
 
     /**
      * Transfers this buffer's data to the specified destination starting at
@@ -229,7 +264,15 @@ public abstract class SliceInput
             throws IOException;
 
     @Override
+    public abstract long skip(long length);
+
+    @Override
     public abstract int skipBytes(int length);
+
+    @Override
+    public void close()
+    {
+    }
 
     //
     // Unsupported operations
@@ -259,12 +302,6 @@ public abstract class SliceInput
     {
         throw new UnsupportedOperationException();
     }
-
-    @Override
-    public abstract float readFloat();
-
-    @Override
-    public abstract double readDouble();
 
     @Override
     public final String readLine()
