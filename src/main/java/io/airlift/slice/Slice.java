@@ -686,6 +686,17 @@ public final class Slice
         return new Slice(base, address + index, length, reference);
     }
 
+    public int indexOfByte(int b)
+    {
+        b = b & 0xFF;
+        for (int i = 0; i < size; i++) {
+            if (unsafe.getByte(base, address + i) == b) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /**
      * Compares the content of the specified buffer to the content of this
      * buffer.  This comparison is performed byte by byte using an unsigned
