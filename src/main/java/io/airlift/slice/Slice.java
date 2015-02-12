@@ -911,6 +911,35 @@ public final class Slice
     }
 
     /**
+     * Decodes the contents of this slice into a string using the US_ASCII
+     * character set.  The low order 7 bits if each byte are converted directly
+     * into a code point for the string.
+     */
+    public String toStringAscii()
+    {
+        return toStringAscii(0, size);
+    }
+
+    public String toStringAscii(int index, int length)
+    {
+        checkIndexLength(index, length);
+        if (length == 0) {
+            return "";
+        }
+
+        if (base instanceof byte[]) {
+            //noinspection deprecation
+            return new String((byte[]) base, 0, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
+        }
+
+        char[] chars = new char[length];
+        for (int pos = index; pos < length; pos++) {
+            chars[pos] = (char) (unsafe.getByte(base, address + pos) & 0x7F);
+        }
+        return new String(chars);
+    }
+
+    /**
      * Decodes the a portion of this slice into a string with the specified
      * character set name.
      */
