@@ -99,6 +99,16 @@ public abstract class SliceOutput
     public abstract void writeLong(long value);
 
     /**
+     * Sets the specified 32-bit float at the current
+     * {@code writerIndex} and increases the {@code writerIndex} by {@code 4}
+     * in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.writableBytes} is less than {@code 4}
+     */
+    @Override
+    public abstract void writeFloat(float v);
+
+    /**
      * Sets the specified 64-bit double at the current
      * {@code writerIndex} and increases the {@code writerIndex} by {@code 8}
      * in this buffer.
@@ -273,17 +283,6 @@ public abstract class SliceOutput
      */
     @Override
     public void writeChar(int value)
-    {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Unsupported operation
-     *
-     * @throws UnsupportedOperationException always
-     */
-    @Override
-    public void writeFloat(float v)
     {
         throw new UnsupportedOperationException();
     }

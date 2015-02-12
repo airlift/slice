@@ -118,6 +118,17 @@ public class OutputStreamSliceOutput
     }
 
     @Override
+    public void writeFloat(float value)
+    {
+        try {
+            dataOutputStream.writeFloat(value);
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
+    }
+
+    @Override
     public void writeDouble(double value)
     {
         try {

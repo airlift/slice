@@ -20,6 +20,7 @@ import java.nio.charset.Charset;
 import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
+import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
@@ -85,6 +86,13 @@ public class BasicSliceOutput
     {
         slice.setLong(size, value);
         size += SIZE_OF_LONG;
+    }
+
+    @Override
+    public void writeFloat(float value)
+    {
+        slice.setFloat(size, value);
+        size += SIZE_OF_FLOAT;
     }
 
     @Override
