@@ -174,10 +174,10 @@ public class OutputStreamSliceOutput
     }
 
     @Override
-    public int writeBytes(InputStream in, int length)
+    public void writeBytes(InputStream in, int length)
             throws IOException
     {
-        return SliceStreamUtils.copyStream(in, this, length);
+        SliceStreamUtils.copyStreamFully(in, this, length);
     }
 
     @Override

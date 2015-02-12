@@ -647,27 +647,25 @@ public final class Slice
     /**
      * Transfers data from the specified input stream into this slice starting at
      * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + source.length} is greater than {@code this.length()}
      */
-    public int setBytes(int index, InputStream in, int length)
+    public void setBytes(int index, InputStream in, int length)
             throws IOException
     {
         checkIndexLength(index, length);
         byte[] bytes = new byte[4096];
-        int remaining = length;
-        while (remaining > 0) {
-            int bytesRead = in.read(bytes, 0, Math.min(bytes.length, remaining));
+
+        while (length > 0) {
+            int bytesRead = in.read(bytes, 0, Math.min(bytes.length, length));
             if (bytesRead < 0) {
-                // if we didn't read anything return -1
-                if (remaining == length) {
-                    return -1;
-                }
-                break;
+                throw new IndexOutOfBoundsException("End of stream");
             }
             copyMemory(bytes, ARRAY_BYTE_BASE_OFFSET, base, address + index, bytesRead);
-            remaining -= bytesRead;
+            length -= bytesRead;
             index += bytesRead;
         }
-        return length - remaining;
     }
 
     /**

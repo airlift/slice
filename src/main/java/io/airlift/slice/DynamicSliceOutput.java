@@ -136,15 +136,12 @@ public class DynamicSliceOutput
     }
 
     @Override
-    public int writeBytes(InputStream in, int length)
+    public void writeBytes(InputStream in, int length)
             throws IOException
     {
         slice = Slices.ensureSize(slice, size + length);
-        int writtenBytes = slice.setBytes(size, in, length);
-        if (writtenBytes > 0) {
-            size += writtenBytes;
-        }
-        return writtenBytes;
+        slice.setBytes(size, in, length);
+        size += length;
     }
 
     @Override

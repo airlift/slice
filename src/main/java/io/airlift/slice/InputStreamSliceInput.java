@@ -282,6 +282,6 @@ public final class InputStreamSliceInput
     public void readBytes(OutputStream out, int length)
             throws IOException
     {
-        SliceStreamUtils.copyStream(this, out, length);
+        SliceStreamUtils.copyStreamFully(this, out, length);
     }
 }

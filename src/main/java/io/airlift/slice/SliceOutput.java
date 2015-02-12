@@ -190,7 +190,7 @@ public abstract class SliceOutput
      * @throws IndexOutOfBoundsException if {@code length} is greater than {@code this.writableBytes}
      * @throws java.io.IOException if the specified stream threw an exception during I/O
      */
-    public abstract int writeBytes(InputStream in, int length)
+    public abstract void writeBytes(InputStream in, int length)
             throws IOException;
 
     /**

@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -23,19 +24,17 @@ final class SliceStreamUtils
     {
     }
 
-    public static int copyStream(InputStream in, OutputStream out, int length)
+    public static void copyStreamFully(InputStream in, OutputStream out, int length)
             throws IOException
     {
-        int bytesRead = 0;
         byte[] bytes = new byte[4096];
-        while (bytesRead < length) {
-            int newBytes = in.read(bytes, 0, Math.min(bytes.length, length - bytesRead));
+        while (length > 0) {
+            int newBytes = in.read(bytes, 0, Math.min(bytes.length, length));
             if (newBytes < 0) {
-                break;
+                throw new EOFException();
             }
             out.write(bytes, 0, newBytes);
-            bytesRead += newBytes;
+            length -= newBytes;
         }
-        return bytesRead;
     }
 }

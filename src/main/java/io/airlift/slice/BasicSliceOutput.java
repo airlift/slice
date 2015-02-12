@@ -129,14 +129,11 @@ public class BasicSliceOutput
     }
 
     @Override
-    public int writeBytes(InputStream in, int length)
+    public void writeBytes(InputStream in, int length)
             throws IOException
     {
-        int writtenBytes = slice.setBytes(size, in, length);
-        if (writtenBytes > 0) {
-            size += writtenBytes;
-        }
-        return writtenBytes;
+        slice.setBytes(size, in, length);
+        size += length;
     }
 
     @Override
