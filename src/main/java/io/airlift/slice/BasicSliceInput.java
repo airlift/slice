@@ -38,16 +38,16 @@ public final class BasicSliceInput
     }
 
     @Override
-    public int position()
+    public long position()
     {
         return position;
     }
 
     @Override
-    public void setPosition(int position)
+    public void setPosition(long position)
     {
         checkPositionIndex(position, slice.length());
-        this.position = position;
+        this.position = (int) position;
     }
 
     @Override

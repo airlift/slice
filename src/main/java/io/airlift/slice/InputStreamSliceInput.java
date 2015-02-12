@@ -37,13 +37,13 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public int position()
+    public long position()
     {
         return (int) countingInputStream.getCount();
     }
 
     @Override
-    public void setPosition(int position)
+    public void setPosition(long position)
     {
         throw new UnsupportedOperationException();
     }

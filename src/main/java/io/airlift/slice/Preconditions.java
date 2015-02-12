@@ -60,7 +60,21 @@ final class Preconditions
         return index;
     }
 
-    private static String badPositionIndex(int index, int size, String desc)
+    public static long checkPositionIndex(long index, long size)
+    {
+        return checkPositionIndex(index, size, "index");
+    }
+
+    public static long checkPositionIndex(long index, long size, @Nullable String desc)
+    {
+        // Carefully optimized for execution by hotspot (explanatory comment above)
+        if (index < 0 || index > size) {
+            throw new IndexOutOfBoundsException(badPositionIndex(index, size, desc));
+        }
+        return index;
+    }
+
+    private static String badPositionIndex(long index, long size, String desc)
     {
         if (index < 0) {
             return format("%s (%s) must not be negative", desc, index);
@@ -93,7 +107,7 @@ final class Preconditions
         return format("end index (%s) must not be less than start index (%s)", end, start);
     }
 
-    private static String format(String template, @Nullable Object... args)
+    private static String format(String template, Object... args)
     {
         template = String.valueOf(template); // null -> "null"
 

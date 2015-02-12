@@ -26,7 +26,7 @@ public abstract class SliceInput
     /**
      * Returns the {@code position} of this buffer.
      */
-    public abstract int position();
+    public abstract long position();
 
     /**
      * Sets the {@code position} of this buffer.
@@ -35,7 +35,7 @@ public abstract class SliceInput
      * less than {@code 0} or
      * greater than {@code this.writerIndex}
      */
-    public abstract void setPosition(int position);
+    public abstract void setPosition(long position);
 
     /**
      * Returns {@code true}
