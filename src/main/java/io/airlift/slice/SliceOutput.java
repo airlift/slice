@@ -186,7 +186,6 @@ public abstract class SliceOutput
      * {@code writerIndex} by the number of the transferred bytes.
      *
      * @param length the number of bytes to transfer
-     * @return the actual number of bytes read in from the specified stream
      * @throws IndexOutOfBoundsException if {@code length} is greater than {@code this.writableBytes}
      * @throws java.io.IOException if the specified stream threw an exception during I/O
      */
