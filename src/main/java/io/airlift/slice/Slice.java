@@ -732,6 +732,105 @@ public final class Slice
     }
 
     /**
+     * Returns the index of the first occurrence of the pattern with this slice.
+     * If the pattern is not found -1 is returned. If patten is empty, zero is
+     * returned.
+     */
+    public int indexOf(Slice slice)
+    {
+        return indexOf(slice, 0);
+    }
+
+    /**
+     * Returns the index of the first occurrence of the pattern with this slice.
+     * If the pattern is not found -1 is returned If patten is empty, the offset
+     * is returned.
+     */
+    public int indexOf(Slice pattern, int offset)
+    {
+        if (size == 0 || offset >= size) {
+            return -1;
+        }
+
+        if (pattern.length() == 0) {
+            return offset;
+        }
+
+        // Do we have enough characters
+        if (pattern.length() < SIZE_OF_INT || size < SIZE_OF_LONG) {
+            return indexOfBruteForce(pattern, offset);
+        }
+
+        // Using first four bytes for faster search. We are not using eight bytes for long
+        // because we want more strings to get use of fast search.
+        int head = pattern.getIntUnchecked(0);
+
+        // Take the first byte of head for faster skipping
+        int firstByteMask = head & 0xff;
+        firstByteMask |= firstByteMask << 8;
+        firstByteMask |= firstByteMask << 16;
+
+        int lastValidIndex = size - pattern.length();
+        int index = offset;
+        while (index <= lastValidIndex) {
+            // Read four bytes in sequence
+            int value = getIntUnchecked(index);
+
+            // Compare all bytes of value with first byte of search data
+            // see https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
+            int valueXor = value ^ firstByteMask;
+            int hasZeroBytes = (valueXor - 0x01010101) & ~valueXor & 0x80808080;
+
+            // If valueXor doesn't not have any zero byte then there is no match and we can advance
+            if (hasZeroBytes == 0) {
+                index += SIZE_OF_INT;
+                continue;
+            }
+
+            // Try fast match of head and the rest
+            if (value == head && equalsUnchecked(index, pattern, 0, pattern.length())) {
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    int indexOfBruteForce(Slice pattern, int offset)
+    {
+        if (size == 0 || offset >= size) {
+            return -1;
+        }
+
+        if (pattern.length() == 0) {
+            return offset;
+        }
+
+        byte firstByte = pattern.getByteUnchecked(0);
+        int lastValidIndex = size - pattern.length();
+        int index = offset;
+        while (true) {
+            // seek to first byte match
+            while (index < lastValidIndex && getByteUnchecked(index) != firstByte) {
+                index++;
+            }
+            if (index > lastValidIndex) {
+                break;
+            }
+
+            if (equalsUnchecked(index, pattern, 0, pattern.length())) {
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    /**
      * Compares the content of the specified buffer to the content of this
      * buffer.  This comparison is performed byte by byte using an unsigned
      * comparison.
