@@ -717,8 +717,60 @@ public class TestSlice
         }
         catch (IndexOutOfBoundsException ignored) {
         }
+    }
 
+    @Test
+    public void testIndexOf()
+            throws Exception
+    {
+        assertIndexOf(utf8Slice("no-match-bigger"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("no"), utf8Slice("test"));
 
+        assertIndexOf(utf8Slice("test"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("test-start"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("end-test"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("a-test-middle"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("this-test-is-a-test"), utf8Slice("test"));
+
+        assertIndexOf(utf8Slice("test"), EMPTY_SLICE, 0, 0);
+        assertIndexOf(EMPTY_SLICE, utf8Slice("test"), 0, -1);
+
+        assertIndexOf(utf8Slice("test"), utf8Slice("no"), 4, -1);
+        assertIndexOf(utf8Slice("test"), utf8Slice("no"), 5, -1);
+        assertIndexOf(utf8Slice("test"), utf8Slice("no"), -1, -1);
+    }
+
+    public static void assertIndexOf(Slice data, Slice pattern, int offset, int expected)
+    {
+        assertEquals(data.indexOf(pattern, offset), expected);
+        assertEquals(data.indexOfBruteForce(pattern, offset), expected);
+    }
+
+    public static void assertIndexOf(Slice data, Slice pattern)
+    {
+        int index;
+
+        List<Integer> bruteForce = new ArrayList<>();
+        index = 0;
+        while (index >= 0 && index < data.length()) {
+            index = data.indexOfBruteForce(pattern, index);
+            if (index >= 0) {
+                bruteForce.add(index);
+                index++;
+            }
+        }
+
+        List<Integer> indexOf = new ArrayList<>();
+        index = 0;
+        while (index >= 0 && index < data.length()) {
+            index = data.indexOf(pattern, index);
+            if (index >= 0) {
+                indexOf.add(index);
+                index++;
+            }
+        }
+
+        assertEquals(bruteForce, indexOf);
     }
 
     private static List<Long> createRandomLongs(int count)
