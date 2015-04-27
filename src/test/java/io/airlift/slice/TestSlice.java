@@ -32,6 +32,8 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SliceMatcher.createSliceMatcherInternal;
+import static io.airlift.slice.SliceMatcher.sliceMatcher;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Double.doubleToLongBits;
@@ -744,6 +746,7 @@ public class TestSlice
     {
         assertEquals(data.indexOf(pattern, offset), expected);
         assertEquals(data.indexOfBruteForce(pattern, offset), expected);
+        assertEquals(sliceMatcher(pattern).find(data, offset), expected);
     }
 
     public static void assertIndexOf(Slice data, Slice pattern)
@@ -770,7 +773,20 @@ public class TestSlice
             }
         }
 
+        List<Integer> find = new ArrayList<>();
+        index = 0;
+        // use internal methods or short circuit fast path will kick in
+        SliceMatcher matcher = createSliceMatcherInternal(pattern);
+        while (index >= 0 && index < data.length()) {
+            index = matcher.findInternal(data, index);
+            if (index >= 0) {
+                find.add(index);
+                index++;
+            }
+        }
+
         assertEquals(bruteForce, indexOf);
+        assertEquals(bruteForce, find);
     }
 
     private static List<Long> createRandomLongs(int count)
