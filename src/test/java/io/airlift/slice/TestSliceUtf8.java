@@ -23,8 +23,10 @@ import java.util.stream.IntStream;
 
 import static io.airlift.slice.SliceUtf8.codePointToUtf8;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
+import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
 import static io.airlift.slice.SliceUtf8.getCodePointAt;
 import static io.airlift.slice.SliceUtf8.getCodePointBefore;
+import static io.airlift.slice.SliceUtf8.isAscii;
 import static io.airlift.slice.SliceUtf8.leftTrim;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePoint;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePointFromStartByte;
@@ -45,6 +47,8 @@ import static java.lang.Character.SURROGATE;
 import static java.lang.Character.getType;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 public class TestSliceUtf8
 {
@@ -54,7 +58,7 @@ public class TestSliceUtf8
     private static final String STRING_ALL_CODE_POINTS;
     private static final int[] ALL_CODE_POINTS_RANDOM;
     private static final String STRING_ALL_CODE_POINTS_RANDOM;
-    
+
     private static final byte START_1_BYTE = (byte) 0b0111_1111;
     private static final byte CONTINUATION_BYTE = (byte) 0b1011_1111;
     private static final byte START_2_BYTE = (byte) 0b1101_1111;
@@ -63,6 +67,7 @@ public class TestSliceUtf8
     private static final byte START_5_BYTE = (byte) 0b1111_1011;
     private static final byte START_6_BYTE = (byte) 0b1111_1101;
     private static final byte INVALID_FF_BYTE = (byte) 0b11111111;
+    private static final byte X_CHAR = (byte) 'X';
 
     static {
         ASCII_CODE_POINTS = IntStream.range(0, 0x7F)
@@ -243,6 +248,101 @@ public class TestSliceUtf8
     public void testReverseInvalidUtf8()
     {
         reverse(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_3_BYTE, CONTINUATION_BYTE));
+    }
+
+    @Test
+    public void testIsAscii()
+    {
+        assertTrue(isAscii(utf8Slice(STRING_HELLO)));
+        assertTrue(isAscii(utf8Slice(STRING_QUADRATICALLY)));
+        assertFalse(isAscii(utf8Slice(STRING_OESTERREICH)));
+        assertFalse(isAscii(utf8Slice(STRING_DULIOE_DULIOE)));
+        assertFalse(isAscii(utf8Slice(STRING_FAITH_HOPE_LOVE)));
+        assertFalse(isAscii(utf8Slice(STRING_NAIVE)));
+        assertFalse(isAscii(utf8Slice(STRING_OO)));
+        assertTrue(isAscii(utf8Slice(STRING_ASCII_CODE_POINTS)));
+        assertFalse(isAscii(utf8Slice(STRING_ALL_CODE_POINTS)));
+    }
+
+    @Test
+    public void testFixInvalidUtf8()
+    {
+        assertFixInvalidUtf8(utf8Slice(STRING_OESTERREICH), utf8Slice(STRING_OESTERREICH));
+        assertFixInvalidUtf8(utf8Slice(STRING_HELLO), utf8Slice(STRING_HELLO));
+        assertFixInvalidUtf8(utf8Slice(STRING_QUADRATICALLY), utf8Slice(STRING_QUADRATICALLY));
+        assertFixInvalidUtf8(utf8Slice(STRING_OESTERREICH), utf8Slice(STRING_OESTERREICH));
+        assertFixInvalidUtf8(utf8Slice(STRING_DULIOE_DULIOE), utf8Slice(STRING_DULIOE_DULIOE));
+        assertFixInvalidUtf8(utf8Slice(STRING_FAITH_HOPE_LOVE), utf8Slice(STRING_FAITH_HOPE_LOVE));
+        assertFixInvalidUtf8(utf8Slice(STRING_NAIVE), utf8Slice(STRING_NAIVE));
+        assertFixInvalidUtf8(utf8Slice(STRING_OO), utf8Slice(STRING_OO));
+        assertFixInvalidUtf8(utf8Slice(STRING_ASCII_CODE_POINTS), utf8Slice(STRING_ASCII_CODE_POINTS));
+        assertFixInvalidUtf8(utf8Slice(STRING_ALL_CODE_POINTS), utf8Slice(STRING_ALL_CODE_POINTS));
+
+        // max valid value for 2, 3, and 4 byte sequences
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_2_BYTE, CONTINUATION_BYTE), utf8Slice("X\u07FF"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_3_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFF"));
+        // 4 byte sequence is limited to U+10FFFF by RFC 3629
+        assertFixInvalidUtf8(
+                wrappedBuffer(X_CHAR, (byte) 0xF4, (byte) 0x8F, CONTINUATION_BYTE, CONTINUATION_BYTE),
+                wrappedBuffer(X_CHAR, (byte) 0xF4, (byte) 0x8F, CONTINUATION_BYTE, CONTINUATION_BYTE));
+
+        // 4 byte sequence is limited to 10FFFF
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+
+        // 5 and 6 byte sequences are always invalid
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+
+        // continuation byte alone is invalid
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FF_BYTE), utf8Slice("X\uFFFD"));
+
+        // sequences with not enough continuation bytes, but enough bytes
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_2_BYTE, X_CHAR), utf8Slice("X\uFFFDX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_3_BYTE, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_3_BYTE, CONTINUATION_BYTE, X_CHAR), utf8Slice("X\uFFFDX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR), utf8Slice("X\uFFFDX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, X_CHAR, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR), utf8Slice("X\uFFFDX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, X_CHAR, X_CHAR, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXXXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR), utf8Slice("X\uFFFDX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FF_BYTE), utf8Slice("X\uFFFD"));
+
+        // truncated sequences
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_2_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_3_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_3_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FF_BYTE), utf8Slice("X\uFFFD"));
+        // min and max surrogate characters
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, (byte) 0b11101101, (byte) 0xA0, (byte) 0x80), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, (byte) 0b11101101, (byte) 0xBF, (byte) 0xBF), utf8Slice("X\uFFFD"));
+    }
+
+    private static void assertFixInvalidUtf8(Slice testSlice, Slice expectedSlice)
+    {
+        assertEquals(fixInvalidUtf8(testSlice), expectedSlice);
     }
 
     @Test

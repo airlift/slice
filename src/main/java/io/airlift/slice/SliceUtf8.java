@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import java.util.OptionalInt;
+
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkPositionIndex;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
@@ -54,6 +56,39 @@ public final class SliceUtf8
                 WHITESPACE_CODE_POINTS[codePoint] = false;
             }
         }
+    }
+
+    /**
+     * Does the slice contain only 7-bit ASCII characters.
+     */
+    public static boolean isAscii(Slice utf8)
+    {
+        int length = utf8.length();
+        int offset = 0;
+
+        // Length rounded to 8 bytes
+        int length8 = length & 0x7FFF_FFF8;
+        for (; offset < length8; offset += 8) {
+            if ((utf8.getLongUnchecked(offset) & TOP_MASK64) != 0) {
+                return false;
+            }
+        }
+        // Enough bytes left for 32 bits?
+        if (offset + 4 < length) {
+            if ((utf8.getIntUnchecked(offset) & TOP_MASK32) != 0) {
+                return false;
+            }
+
+            offset += 4;
+        }
+        // Do the rest one by one
+        for (; offset < length; offset++) {
+            if ((utf8.getByteUnchecked(offset) & 0x80) != 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -318,6 +353,205 @@ public final class SliceUtf8
         int start = firstNonWhitespacePosition(utf8);
         int end = lastNonWhitespacePosition(utf8, start);
         return utf8.slice(start, end - start);
+    }
+
+    public static Slice fixInvalidUtf8(Slice slice)
+    {
+        return fixInvalidUtf8(slice, OptionalInt.of(REPLACEMENT_CODE_POINT));
+    }
+
+    public static Slice fixInvalidUtf8(Slice slice, OptionalInt replacementCodePoint)
+    {
+        if (isAscii(slice)) {
+            return slice;
+        }
+
+        int replacementCodePointValue = -1;
+        int replacementCodePointLength = 0;
+        if (replacementCodePoint.isPresent()) {
+            replacementCodePointValue = replacementCodePoint.getAsInt();
+            replacementCodePointLength = lengthOfCodePoint(replacementCodePointValue);
+        }
+
+        int length = slice.length();
+        Slice utf8 = Slices.allocate(length);
+
+        int dataPosition = 0;
+        int utf8Position = 0;
+        while (dataPosition < length) {
+            int codePoint = getCodePointAtSafe(slice, dataPosition);
+            int codePointLength;
+            if (codePoint >= 0) {
+                codePointLength = lengthOfCodePoint(codePoint);
+                dataPosition += codePointLength;
+            }
+            else {
+                // negative number carries the number of invalid bytes
+                dataPosition += (-codePoint);
+                if (replacementCodePointValue < 0) {
+                    continue;
+                }
+                codePoint = replacementCodePointValue;
+                codePointLength = replacementCodePointLength;
+            }
+            utf8 = Slices.ensureSize(utf8, utf8Position + codePointLength);
+            utf8Position += setCodePointAt(codePoint, utf8, utf8Position);
+        }
+        return utf8.slice(0, utf8Position);
+    }
+
+    private static int getCodePointAtSafe(Slice utf8, int position)
+    {
+        //
+        // Process first byte
+        byte firstByte = utf8.getByte(position);
+
+        int length = lengthOfCodePointFromStartByteSafe(firstByte);
+        if (length < 0) {
+            return length;
+        }
+
+        if (length == 1) {
+            // normal ASCII
+            // 0xxx_xxxx
+            return firstByte;
+        }
+
+        //
+        // Process second byte
+        if (position + 1 >= utf8.length()) {
+            return -1;
+        }
+
+        byte secondByte = utf8.getByteUnchecked(position + 1);
+        if (!isContinuationByte(secondByte)) {
+            return -1;
+        }
+
+        if (length == 2) {
+            // 110x_xxxx 10xx_xxxx
+            return ((firstByte & 0b0001_1111) << 6) |
+                    (secondByte & 0b0011_1111);
+        }
+
+        //
+        // Process third byte
+        if (position + 2 >= utf8.length()) {
+            return -2;
+        }
+
+        byte thirdByte = utf8.getByteUnchecked(position + 2);
+        if (!isContinuationByte(thirdByte)) {
+            return -2;
+        }
+
+        if (length == 3) {
+            // 1110_xxxx 10xx_xxxx 10xx_xxxx
+            int codePoint = ((firstByte & 0b0000_1111) << 12) |
+                    ((secondByte & 0b0011_1111) << 6) |
+                    (thirdByte & 0b0011_1111);
+
+            // surrogates are invalid
+            if (MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE) {
+                return -3;
+            }
+            return codePoint;
+        }
+
+        //
+        // Process forth byte
+        if (position + 3 >= utf8.length()) {
+            return -3;
+        }
+
+        byte forthByte = utf8.getByteUnchecked(position + 3);
+        if (!isContinuationByte(forthByte)) {
+            return -3;
+        }
+
+        if (length == 4) {
+            // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
+            int codePoint = ((firstByte & 0b0000_0111) << 18) |
+                    ((secondByte & 0b0011_1111) << 12) |
+                    ((thirdByte & 0b0011_1111) << 6) |
+                    (forthByte & 0b0011_1111);
+            // 4 byte code points have a limited valid range
+            if (codePoint < 0x11_0000) {
+                return codePoint;
+            }
+            return -4;
+        }
+
+        //
+        // Process fifth byte
+        if (position + 4 >= utf8.length()) {
+            return -4;
+        }
+
+        byte fifthByte = utf8.getByteUnchecked(position + 4);
+        if (!isContinuationByte(fifthByte)) {
+            return -4;
+        }
+
+        if (length == 5) {
+            // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
+            return -5;
+        }
+
+        //
+        // Process sixth byte
+        if (position + 5 >= utf8.length()) {
+            return -5;
+        }
+
+        byte sixthByte = utf8.getByteUnchecked(position + 5);
+        if (!isContinuationByte(sixthByte)) {
+            return -5;
+        }
+
+        if (length == 6) {
+            // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
+            return -6;
+        }
+
+        // for longer sequence, which can't happen
+        return -1;
+    }
+
+    static int lengthOfCodePointFromStartByteSafe(byte startByte)
+    {
+        int unsignedStartByte = startByte & 0xFF;
+        if (unsignedStartByte < 0b1000_0000) {
+            // normal ASCII
+            // 0xxx_xxxx
+            return 1;
+        }
+        if (unsignedStartByte < 0b1100_0000) {
+            // illegal bytes
+            // 10xx_xxxx
+            return -1;
+        }
+        if (unsignedStartByte < 0b1110_0000) {
+            // 110x_xxxx 10xx_xxxx
+            return 2;
+        }
+        if (unsignedStartByte < 0b1111_0000) {
+            // 1110_xxxx 10xx_xxxx 10xx_xxxx
+            return 3;
+        }
+        if (unsignedStartByte < 0b1111_1000) {
+            // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
+            return 4;
+        }
+        if (unsignedStartByte < 0b1111_1100) {
+            // 1111_10xx 10xx_xxxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
+            return 5;
+        }
+        if (unsignedStartByte < 0b1111_1110) {
+            // 1111_110x 10xx_xxxx 10xx_xxxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
+            return 6;
+        }
+        return -1;
     }
 
     /**
