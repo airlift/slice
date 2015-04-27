@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -200,9 +199,9 @@ public class TestSlice
         String s = "apple \u2603 snowman";
         Slice slice = Slices.copiedBuffer(s, UTF_8);
 
-        assertEquals(Slices.utf8Slice(s), slice);
+        assertEquals(utf8Slice(s), slice);
         assertEquals(slice.toStringUtf8(), s);
-        assertEquals(Slices.utf8Slice(s).toStringUtf8(), s);
+        assertEquals(utf8Slice(s).toStringUtf8(), s);
     }
 
     @SuppressWarnings("CharUsedInArithmeticContext")
@@ -682,23 +681,23 @@ public class TestSlice
     {
         // slightly stronger guarantees for empty slice
         assertSame(Slices.copyOf(EMPTY_SLICE), EMPTY_SLICE);
-        assertSame(Slices.copyOf(Slices.utf8Slice("hello world"), 1, 0), EMPTY_SLICE);
+        assertSame(Slices.copyOf(utf8Slice("hello world"), 1, 0), EMPTY_SLICE);
 
-        Slice slice = Slices.utf8Slice("hello world");
+        Slice slice = utf8Slice("hello world");
         assertEquals(Slices.copyOf(slice), slice);
         assertEquals(Slices.copyOf(slice, 1, 3), slice.slice(1, 3));
 
         // verify it's an actual copy
-        Slice original = Slices.utf8Slice("hello world");
+        Slice original = utf8Slice("hello world");
         Slice copy = Slices.copyOf(original);
 
         original.fill((byte) 0);
-        assertEquals(copy, Slices.utf8Slice("hello world"));
+        assertEquals(copy, utf8Slice("hello world"));
 
         // read before beginning
         try {
             Slices.copyOf(slice, -1, slice.length());
-            Assert.fail();
+            fail();
         }
         catch (IndexOutOfBoundsException ignored) {
         }
@@ -706,7 +705,7 @@ public class TestSlice
         // read after end
         try {
             Slices.copyOf(slice, slice.length() + 1, 1);
-            Assert.fail();
+            fail();
         }
         catch (IndexOutOfBoundsException ignored) {
         }
@@ -714,7 +713,7 @@ public class TestSlice
         // start before but extend past end
         try {
             Slices.copyOf(slice, 1, slice.length());
-            Assert.fail();
+            fail();
         }
         catch (IndexOutOfBoundsException ignored) {
         }

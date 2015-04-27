@@ -35,6 +35,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.StringDecoder.decodeString;
+import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
@@ -74,7 +75,7 @@ public final class Slice
      * this slice; otherwise, address is the offset from the base object.
      * This base plus relative offset addressing is taken directly from
      * the Unsafe interface.
-     * <p/>
+     * <p>
      * Note: if base object is a byte array, this address ARRAY_BYTE_BASE_OFFSET,
      * since the byte array data starts AFTER the byte array object header.
      */
@@ -313,6 +314,11 @@ public final class Slice
     public byte getByte(int index)
     {
         checkIndexLength(index, SIZE_OF_BYTE);
+        return getByteUnchecked(index);
+    }
+
+    byte getByteUnchecked(int index)
+    {
         return unsafe.getByte(base, address + index);
     }
 
@@ -338,6 +344,11 @@ public final class Slice
     public short getShort(int index)
     {
         checkIndexLength(index, SIZE_OF_SHORT);
+        return getShortUnchecked(index);
+    }
+
+    short getShortUnchecked(int index)
+    {
         return unsafe.getShort(base, address + index);
     }
 
@@ -351,6 +362,11 @@ public final class Slice
     public int getInt(int index)
     {
         checkIndexLength(index, SIZE_OF_INT);
+        return getIntUnchecked(index);
+    }
+
+    public int getIntUnchecked(int index)
+    {
         return unsafe.getInt(base, address + index);
     }
 
@@ -364,6 +380,11 @@ public final class Slice
     public long getLong(int index)
     {
         checkIndexLength(index, SIZE_OF_LONG);
+        return getLongUnchecked(index);
+    }
+
+    long getLongUnchecked(int index)
+    {
         return unsafe.getLong(base, address + index);
     }
 
@@ -496,7 +517,7 @@ public final class Slice
 
         byte[] buffer = new byte[4096];
         while (length > 0) {
-            int size = Math.min(buffer.length, length);
+            int size = min(buffer.length, length);
             getBytes(index, buffer, 0, size);
             out.write(buffer, 0, size);
             length -= size;
@@ -514,6 +535,11 @@ public final class Slice
     public void setByte(int index, int value)
     {
         checkIndexLength(index, SIZE_OF_BYTE);
+        setByteUnchecked(index, value);
+    }
+
+    void setByteUnchecked(int index, int value)
+    {
         unsafe.putByte(base, address + index, (byte) (value & 0xFF));
     }
 
@@ -528,6 +554,11 @@ public final class Slice
     public void setShort(int index, int value)
     {
         checkIndexLength(index, SIZE_OF_SHORT);
+        setShortUnchecked(index, value);
+    }
+
+    void setShortUnchecked(int index, int value)
+    {
         unsafe.putShort(base, address + index, (short) (value & 0xFFFF));
     }
 
@@ -541,6 +572,11 @@ public final class Slice
     public void setInt(int index, int value)
     {
         checkIndexLength(index, SIZE_OF_INT);
+        setIntUnchecked(index, value);
+    }
+
+    void setIntUnchecked(int index, int value)
+    {
         unsafe.putInt(base, address + index, value);
     }
 
@@ -658,7 +694,7 @@ public final class Slice
         byte[] bytes = new byte[4096];
 
         while (length > 0) {
-            int bytesRead = in.read(bytes, 0, Math.min(bytes.length, length));
+            int bytesRead = in.read(bytes, 0, min(bytes.length, length));
             if (bytesRead < 0) {
                 throw new IndexOutOfBoundsException("End of stream");
             }
@@ -688,7 +724,7 @@ public final class Slice
     {
         b = b & 0xFF;
         for (int i = 0; i < size; i++) {
-            if (unsafe.getByte(base, address + i) == b) {
+            if (getByteUnchecked(i) == b) {
                 return i;
             }
         }
@@ -724,11 +760,11 @@ public final class Slice
         checkIndexLength(offset, length);
         that.checkIndexLength(otherOffset, otherLength);
 
-        int compareLength = Math.min(length, otherLength);
+        int compareLength = min(length, otherLength);
         while (compareLength >= SIZE_OF_LONG) {
-            long thisLong = unsafe.getLong(base, address + offset);
+            long thisLong = getLongUnchecked(offset);
             thisLong = Long.reverseBytes(thisLong);
-            long thatLong = unsafe.getLong(that.base, that.address + otherOffset);
+            long thatLong = that.getLongUnchecked(otherOffset);
             thatLong = Long.reverseBytes(thatLong);
 
             int v = compareUnsignedLongs(thisLong, thatLong);
@@ -742,8 +778,8 @@ public final class Slice
         }
 
         while (compareLength > 0) {
-            byte thisByte = unsafe.getByte(base, address + offset);
-            byte thatByte = unsafe.getByte(that.base, that.address + otherOffset);
+            byte thisByte = getByteUnchecked(offset);
+            byte thatByte = that.getByteUnchecked(otherOffset);
 
             int v = compareUnsignedBytes(thisByte, thatByte);
             if (v != 0) {
@@ -779,8 +815,8 @@ public final class Slice
         int offset = 0;
         int length = size;
         while (length >= SIZE_OF_LONG) {
-            long thisLong = unsafe.getLong(base, address + offset);
-            long thatLong = unsafe.getLong(that.base, that.address + offset);
+            long thisLong = getLongUnchecked(offset);
+            long thatLong = that.getLongUnchecked(offset);
 
             if (thisLong != thatLong) {
                 return false;
@@ -791,8 +827,8 @@ public final class Slice
         }
 
         while (length > 0) {
-            byte thisByte = unsafe.getByte(base, address + offset);
-            byte thatByte = unsafe.getByte(that.base, that.address + offset);
+            byte thisByte = getByteUnchecked(offset);
+            byte thatByte = that.getByteUnchecked(offset);
             if (thisByte != thatByte) {
                 return false;
             }
@@ -838,16 +874,21 @@ public final class Slice
             return false;
         }
 
+        checkIndexLength(offset, length);
+        that.checkIndexLength(otherOffset, otherLength);
+
+        return equalsUnchecked(offset, that, otherOffset, length);
+    }
+
+    boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
+    {
         if ((this == that) && (offset == otherOffset)) {
             return true;
         }
 
-        checkIndexLength(offset, length);
-        that.checkIndexLength(otherOffset, otherLength);
-
         while (length >= SIZE_OF_LONG) {
-            long thisLong = unsafe.getLong(base, address + offset);
-            long thatLong = unsafe.getLong(that.base, that.address + otherOffset);
+            long thisLong = getLongUnchecked(offset);
+            long thatLong = that.getLongUnchecked(otherOffset);
 
             if (thisLong != thatLong) {
                 return false;
@@ -859,8 +900,8 @@ public final class Slice
         }
 
         while (length > 0) {
-            byte thisByte = unsafe.getByte(base, address + offset);
-            byte thatByte = unsafe.getByte(that.base, that.address + otherOffset);
+            byte thisByte = getByteUnchecked(offset);
+            byte thatByte = that.getByteUnchecked(otherOffset);
             if (thisByte != thatByte) {
                 return false;
             }
@@ -932,7 +973,7 @@ public final class Slice
 
         char[] chars = new char[length];
         for (int pos = index; pos < length; pos++) {
-            chars[pos] = (char) (unsafe.getByte(base, address + pos) & 0x7F);
+            chars[pos] = (char) (getByteUnchecked(pos) & 0x7F);
         }
         return new String(chars);
     }
@@ -1029,13 +1070,13 @@ public final class Slice
     private static long fillLong(byte value)
     {
         return (value & 0xFFL) << 56
-            | (value & 0xFFL) << 48
-            | (value & 0xFFL) << 40
-            | (value & 0xFFL) << 32
-            | (value & 0xFFL) << 24
-            | (value & 0xFFL) << 16
-            | (value & 0xFFL) << 8
-            | (value & 0xFFL);
+                | (value & 0xFFL) << 48
+                | (value & 0xFFL) << 40
+                | (value & 0xFFL) << 32
+                | (value & 0xFFL) << 24
+                | (value & 0xFFL) << 16
+                | (value & 0xFFL) << 8
+                | (value & 0xFFL);
     }
 
     private static int compareUnsignedBytes(byte thisByte, byte thatByte)

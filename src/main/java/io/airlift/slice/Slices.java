@@ -59,7 +59,7 @@ public final class Slices
         else {
             newCapacity = existingSlice.length();
         }
-        int minNewCapacity = existingSlice.length() + minWritableBytes;
+        int minNewCapacity = minWritableBytes;
         while (newCapacity < minNewCapacity) {
             if (newCapacity < SLICE_ALLOC_THRESHOLD) {
                 newCapacity <<= 1;
@@ -69,7 +69,7 @@ public final class Slices
             }
         }
 
-        Slice newSlice = Slices.allocate(newCapacity);
+        Slice newSlice = allocate(newCapacity);
         newSlice.setBytes(0, existingSlice, 0, existingSlice.length());
         return newSlice;
     }
@@ -123,7 +123,7 @@ public final class Slices
         throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
     }
 
-    public static Slice wrappedBuffer(byte[] array)
+    public static Slice wrappedBuffer(byte... array)
     {
         if (array.length == 0) {
             return EMPTY_SLICE;
