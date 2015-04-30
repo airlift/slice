@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -33,6 +32,8 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SliceMatcher.createSliceMatcherInternal;
+import static io.airlift.slice.SliceMatcher.sliceMatcher;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Double.doubleToLongBits;
@@ -200,9 +201,9 @@ public class TestSlice
         String s = "apple \u2603 snowman";
         Slice slice = Slices.copiedBuffer(s, UTF_8);
 
-        assertEquals(Slices.utf8Slice(s), slice);
+        assertEquals(utf8Slice(s), slice);
         assertEquals(slice.toStringUtf8(), s);
-        assertEquals(Slices.utf8Slice(s).toStringUtf8(), s);
+        assertEquals(utf8Slice(s).toStringUtf8(), s);
     }
 
     @SuppressWarnings("CharUsedInArithmeticContext")
@@ -682,23 +683,23 @@ public class TestSlice
     {
         // slightly stronger guarantees for empty slice
         assertSame(Slices.copyOf(EMPTY_SLICE), EMPTY_SLICE);
-        assertSame(Slices.copyOf(Slices.utf8Slice("hello world"), 1, 0), EMPTY_SLICE);
+        assertSame(Slices.copyOf(utf8Slice("hello world"), 1, 0), EMPTY_SLICE);
 
-        Slice slice = Slices.utf8Slice("hello world");
+        Slice slice = utf8Slice("hello world");
         assertEquals(Slices.copyOf(slice), slice);
         assertEquals(Slices.copyOf(slice, 1, 3), slice.slice(1, 3));
 
         // verify it's an actual copy
-        Slice original = Slices.utf8Slice("hello world");
+        Slice original = utf8Slice("hello world");
         Slice copy = Slices.copyOf(original);
 
         original.fill((byte) 0);
-        assertEquals(copy, Slices.utf8Slice("hello world"));
+        assertEquals(copy, utf8Slice("hello world"));
 
         // read before beginning
         try {
             Slices.copyOf(slice, -1, slice.length());
-            Assert.fail();
+            fail();
         }
         catch (IndexOutOfBoundsException ignored) {
         }
@@ -706,7 +707,7 @@ public class TestSlice
         // read after end
         try {
             Slices.copyOf(slice, slice.length() + 1, 1);
-            Assert.fail();
+            fail();
         }
         catch (IndexOutOfBoundsException ignored) {
         }
@@ -714,12 +715,78 @@ public class TestSlice
         // start before but extend past end
         try {
             Slices.copyOf(slice, 1, slice.length());
-            Assert.fail();
+            fail();
         }
         catch (IndexOutOfBoundsException ignored) {
         }
+    }
 
+    @Test
+    public void testIndexOf()
+            throws Exception
+    {
+        assertIndexOf(utf8Slice("no-match-bigger"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("no"), utf8Slice("test"));
 
+        assertIndexOf(utf8Slice("test"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("test-start"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("end-test"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("a-test-middle"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("this-test-is-a-test"), utf8Slice("test"));
+
+        assertIndexOf(utf8Slice("test"), EMPTY_SLICE, 0, 0);
+        assertIndexOf(EMPTY_SLICE, utf8Slice("test"), 0, -1);
+
+        assertIndexOf(utf8Slice("test"), utf8Slice("no"), 4, -1);
+        assertIndexOf(utf8Slice("test"), utf8Slice("no"), 5, -1);
+        assertIndexOf(utf8Slice("test"), utf8Slice("no"), -1, -1);
+    }
+
+    public static void assertIndexOf(Slice data, Slice pattern, int offset, int expected)
+    {
+        assertEquals(data.indexOf(pattern, offset), expected);
+        assertEquals(data.indexOfBruteForce(pattern, offset), expected);
+        assertEquals(sliceMatcher(pattern).find(data, offset), expected);
+    }
+
+    public static void assertIndexOf(Slice data, Slice pattern)
+    {
+        int index;
+
+        List<Integer> bruteForce = new ArrayList<>();
+        index = 0;
+        while (index >= 0 && index < data.length()) {
+            index = data.indexOfBruteForce(pattern, index);
+            if (index >= 0) {
+                bruteForce.add(index);
+                index++;
+            }
+        }
+
+        List<Integer> indexOf = new ArrayList<>();
+        index = 0;
+        while (index >= 0 && index < data.length()) {
+            index = data.indexOf(pattern, index);
+            if (index >= 0) {
+                indexOf.add(index);
+                index++;
+            }
+        }
+
+        List<Integer> find = new ArrayList<>();
+        index = 0;
+        // use internal methods or short circuit fast path will kick in
+        SliceMatcher matcher = createSliceMatcherInternal(pattern);
+        while (index >= 0 && index < data.length()) {
+            index = matcher.findInternal(data, index);
+            if (index >= 0) {
+                find.add(index);
+                index++;
+            }
+        }
+
+        assertEquals(bruteForce, indexOf);
+        assertEquals(bruteForce, find);
     }
 
     private static List<Long> createRandomLongs(int count)
