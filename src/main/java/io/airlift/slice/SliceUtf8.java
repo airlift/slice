@@ -93,7 +93,7 @@ public final class SliceUtf8
 
     /**
      * Counts the code points within UTF-8 encoded slice.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -104,7 +104,7 @@ public final class SliceUtf8
 
     /**
      * Counts the code points within UTF-8 encoded slice up to {@code length}.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -144,7 +144,7 @@ public final class SliceUtf8
     /**
      * Gets the substring starting at {@code codePointStart} and extending for
      * {@code codePointLength} code points.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -173,7 +173,7 @@ public final class SliceUtf8
 
     /**
      * Reverses the slice code point by code point.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -221,7 +221,7 @@ public final class SliceUtf8
      * not perform perform locale-sensitive, context-sensitive, or one-to-many
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -256,7 +256,7 @@ public final class SliceUtf8
      * not perform perform locale-sensitive, context-sensitive, or one-to-many
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -288,7 +288,7 @@ public final class SliceUtf8
 
     /**
      * Removes all white space characters from the left string of the string.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -317,7 +317,7 @@ public final class SliceUtf8
 
     /**
      * Removes all white space characters from the right side of the string.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -344,7 +344,7 @@ public final class SliceUtf8
 
     /**
      * Removes all white space characters from the left and right side of the string.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -557,7 +557,7 @@ public final class SliceUtf8
     /**
      * Finds the index of the first byte of the code point at a position, or
      * {@code -1} if the position is not withing the slice.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -572,7 +572,7 @@ public final class SliceUtf8
      * in the slice.  If the slice does not contain
      * {@code codePointCount} code points after {@code position}, {@code -1}
      * is returned.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -627,7 +627,7 @@ public final class SliceUtf8
 
     /**
      * Gets the UTF-8 sequence length of the code point at {@code position}.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -666,7 +666,7 @@ public final class SliceUtf8
 
     /**
      * Gets the UTF-8 sequence length using the sequence start byte.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -701,7 +701,7 @@ public final class SliceUtf8
 
     /**
      * Gets the UTF-8 encoded code point at the {@code position}.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -751,7 +751,7 @@ public final class SliceUtf8
 
     /**
      * Gets the UTF-8 encoded code point before the {@code position}.
-     * </p>
+     * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
      */
@@ -782,7 +782,7 @@ public final class SliceUtf8
 
     /**
      * Convert the code point to UTF-8.
-     * </p>
+     * <p>
      *
      * @throws InvalidCodePointException if code point is not within a valid range
      */
