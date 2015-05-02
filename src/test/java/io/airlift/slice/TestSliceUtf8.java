@@ -13,14 +13,17 @@
  */
 package io.airlift.slice;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.stream.IntStream;
 
+import static com.google.common.primitives.Bytes.concat;
 import static io.airlift.slice.SliceUtf8.codePointToUtf8;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
@@ -30,6 +33,7 @@ import static io.airlift.slice.SliceUtf8.isAscii;
 import static io.airlift.slice.SliceUtf8.leftTrim;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePoint;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePointFromStartByte;
+import static io.airlift.slice.SliceUtf8.lengthOfCodePointSafe;
 import static io.airlift.slice.SliceUtf8.offsetOfCodePoint;
 import static io.airlift.slice.SliceUtf8.reverse;
 import static io.airlift.slice.SliceUtf8.rightTrim;
@@ -70,6 +74,8 @@ public class TestSliceUtf8
     private static final byte INVALID_FF_BYTE = (byte) 0b11111111;
     private static final byte X_CHAR = (byte) 'X';
 
+    private static final List<byte[]> INVALID_SEQUENCES;
+
     static {
         ASCII_CODE_POINTS = IntStream.range(0, 0x7F)
                 .toArray();
@@ -83,6 +89,34 @@ public class TestSliceUtf8
         ALL_CODE_POINTS_RANDOM = Arrays.copyOf(ALL_CODE_POINTS, ALL_CODE_POINTS.length);
         Collections.shuffle(Arrays.asList(ALL_CODE_POINTS_RANDOM));
         STRING_ALL_CODE_POINTS_RANDOM = new String(ALL_CODE_POINTS_RANDOM, 0, ALL_CODE_POINTS_RANDOM.length);
+
+        ImmutableList.Builder<byte[]> invalidSequences = ImmutableList.builder();
+        invalidSequences.add(new byte[] {CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_2_BYTE});
+        invalidSequences.add(new byte[] {START_3_BYTE});
+        invalidSequences.add(new byte[] {START_3_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_4_BYTE});
+        invalidSequences.add(new byte[] {START_4_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        // 4 byte sequence is limited to 10FFFF
+        invalidSequences.add(new byte[] {START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_5_BYTE});
+        invalidSequences.add(new byte[] {START_5_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_6_BYTE});
+        invalidSequences.add(new byte[] {START_6_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE});
+        invalidSequences.add(new byte[] {INVALID_FF_BYTE});
+
+        // min and max surrogate characters
+        invalidSequences.add(new byte[] {(byte) 0b11101101, (byte) 0xA0, (byte) 0x80});
+        invalidSequences.add(new byte[] {(byte) 0b11101101, (byte) 0xBF, (byte) 0xBF});
+        INVALID_SEQUENCES = invalidSequences.build();
     }
 
     private static final String STRING_EMPTY = "";
@@ -526,12 +560,19 @@ public class TestSliceUtf8
             Slice utf8 = wrappedBuffer(string.getBytes(UTF_8));
             assertEquals(lengthOfCodePoint(codePoint), utf8.length());
             assertEquals(lengthOfCodePoint(utf8, 0), utf8.length());
+            assertEquals(lengthOfCodePointSafe(utf8, 0), utf8.length());
             assertEquals(lengthOfCodePointFromStartByte(utf8.getByte(0)), utf8.length());
 
             assertEquals(getCodePointAt(utf8, 0), codePoint);
             assertEquals(getCodePointBefore(utf8, utf8.length()), codePoint);
 
             assertEquals(codePointToUtf8(codePoint), utf8);
+        }
+
+        for (byte[] sequence : INVALID_SEQUENCES) {
+            assertEquals(lengthOfCodePointSafe(wrappedBuffer(sequence), 0), sequence.length);
+            assertEquals(lengthOfCodePointSafe(wrappedBuffer(concat(new byte[] {'x'}, sequence)), 1), sequence.length);
+            assertEquals(lengthOfCodePointSafe(wrappedBuffer(concat(sequence, new byte[] {'x'})), 0), sequence.length);
         }
     }
 

@@ -637,6 +637,46 @@ public final class SliceUtf8
     }
 
     /**
+     * Gets the UTF-8 sequence length of the code point at {@code position}.
+     * <p>
+     * Truncated UTF-8 sequences, 5 and 6 byte sequences, and invalid code points
+     * are handled by this method without throwing an exception.
+     */
+    public static int lengthOfCodePointSafe(Slice utf8, int position)
+    {
+        int length = lengthOfCodePointFromStartByteSafe(utf8.getByte(position));
+        if (length < 0) {
+            return -length;
+        }
+
+        if (length == 1 || position + 1 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 1))) {
+            return 1;
+        }
+
+        if (length == 2 || position + 2 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 2))) {
+            return 2;
+        }
+
+        if (length == 3 || position + 3 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 3))) {
+            return 3;
+        }
+
+        if (length == 4 || position + 4 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 4))) {
+            return 4;
+        }
+
+        if (length == 5 || position + 5 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 5))) {
+            return 5;
+        }
+
+        if (length == 6) {
+            return 6;
+        }
+
+        return 1;
+    }
+
+    /**
      * Gets the UTF-8 sequence length of the code point.
      *
      * @throws InvalidCodePointException if code point is not within a valid range
