@@ -174,8 +174,7 @@ public final class SliceUtf8
     /**
      * Reverses the slice code point by code point.
      * <p>
-     * Note: This method does not explicitly check for valid UTF-8, and may
-     * return incorrect results or throw an exception for invalid UTF-8.
+     * Note: Invalid UTF-8 sequences are copied directly to the output.
      */
     public static Slice reverse(Slice utf8)
     {
@@ -185,31 +184,16 @@ public final class SliceUtf8
         int forwardPosition = 0;
         int reversePosition = length;
         while (forwardPosition < length) {
-            int codePointLength = lengthOfCodePointFromStartByte(utf8.getByteUnchecked(forwardPosition));
+            int codePointLength = lengthOfCodePointSafe(utf8, forwardPosition);
 
             // backup the reverse pointer
             reversePosition -= codePointLength;
             if (reversePosition < 0) {
+                // this should not happen
                 throw new InvalidUtf8Exception("UTF-8 is not well formed");
             }
             // copy the character
-            switch (codePointLength) {
-                case 1:
-                    reverse.setByteUnchecked(reversePosition, utf8.getByteUnchecked(forwardPosition));
-                    break;
-                case 2:
-                    reverse.setShortUnchecked(reversePosition, utf8.getShortUnchecked(forwardPosition));
-                    break;
-                case 3:
-                    reverse.setByteUnchecked(reversePosition, utf8.getByteUnchecked(forwardPosition));
-                    reverse.setShortUnchecked(reversePosition + 1, utf8.getShortUnchecked(forwardPosition + 1));
-                    break;
-                case 4:
-                    reverse.setIntUnchecked(reversePosition, utf8.getIntUnchecked(forwardPosition));
-                    break;
-                default:
-                    throw new IllegalStateException("Invalid code point length " + codePointLength);
-            }
+            copyUtf8SequenceUnsafe(utf8, forwardPosition, reverse, reversePosition, codePointLength);
 
             forwardPosition += codePointLength;
         }
@@ -222,33 +206,11 @@ public final class SliceUtf8
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
      * <p>
-     * Note: This method does not explicitly check for valid UTF-8, and may
-     * return incorrect results or throw an exception for invalid UTF-8.
+     * Note: Invalid UTF-8 sequences are copied directly to the output.
      */
     public static Slice toUpperCase(Slice utf8)
     {
-        int length = utf8.length();
-        Slice upperUtf8 = Slices.allocate(length);
-
-        int position = 0;
-        int upperPosition = 0;
-        while (position < length) {
-            int codePoint = getCodePointAt(utf8, position);
-            int upperCodePoint = UPPER_CODE_POINTS[codePoint];
-
-            // grow slice if necessary
-            int nextUpperPosition = upperPosition + lengthOfCodePoint(upperCodePoint);
-            if (nextUpperPosition > length) {
-                upperUtf8 = Slices.ensureSize(upperUtf8, nextUpperPosition);
-            }
-
-            // write new byte
-            setCodePointAt(upperCodePoint, upperUtf8, upperPosition);
-
-            position += lengthOfCodePoint(codePoint);
-            upperPosition = nextUpperPosition;
-        }
-        return upperUtf8.slice(0, upperPosition);
+        return translateCodePoints(utf8, UPPER_CODE_POINTS);
     }
 
     /**
@@ -257,40 +219,80 @@ public final class SliceUtf8
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
      * <p>
-     * Note: This method does not explicitly check for valid UTF-8, and may
-     * return incorrect results or throw an exception for invalid UTF-8.
+     * Note: Invalid UTF-8 sequences are copied directly to the output.
      */
     public static Slice toLowerCase(Slice utf8)
     {
+        return translateCodePoints(utf8, LOWER_CODE_POINTS);
+    }
+
+    private static Slice translateCodePoints(Slice utf8, int[] codePointTranslationMap)
+    {
         int length = utf8.length();
-        Slice lowerUtf8 = Slices.allocate(length);
+        Slice newUtf8 = Slices.allocate(length);
 
         int position = 0;
-        int lowerPosition = 0;
+        int upperPosition = 0;
         while (position < length) {
-            int codePoint = getCodePointAt(utf8, position);
-            int lowerCodePoint = LOWER_CODE_POINTS[codePoint];
+            int codePoint = getCodePointAtSafe(utf8, position);
+            if (codePoint >= 0) {
+                int upperCodePoint = codePointTranslationMap[codePoint];
 
-            // grow slice if necessary
-            int nextLowerPosition = lowerPosition + lengthOfCodePoint(lowerCodePoint);
-            if (nextLowerPosition > length) {
-                lowerUtf8 = Slices.ensureSize(lowerUtf8, nextLowerPosition);
+                // grow slice if necessary
+                int nextUpperPosition = upperPosition + lengthOfCodePoint(upperCodePoint);
+                if (nextUpperPosition > length) {
+                    newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
+                }
+
+                // write new byte
+                setCodePointAt(upperCodePoint, newUtf8, upperPosition);
+
+                position += lengthOfCodePoint(codePoint);
+                upperPosition = nextUpperPosition;
             }
-
-            // write new byte
-            setCodePointAt(lowerCodePoint, lowerUtf8, lowerPosition);
-
-            position += lengthOfCodePoint(codePoint);
-            lowerPosition = nextLowerPosition;
+            else {
+                int skipLength = -codePoint;
+                copyUtf8SequenceUnsafe(utf8, position, newUtf8, upperPosition, skipLength);
+                position += skipLength;
+                upperPosition += skipLength;
+            }
         }
-        return lowerUtf8.slice(0, lowerPosition);
+        return newUtf8.slice(0, upperPosition);
+    }
+
+    private static void copyUtf8SequenceUnsafe(Slice source, int sourcePosition, Slice destination, int destinationPosition, int length)
+    {
+        switch (length) {
+            case 1:
+                destination.setByteUnchecked(destinationPosition, source.getByteUnchecked(sourcePosition));
+                break;
+            case 2:
+                destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
+                break;
+            case 3:
+                destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
+                destination.setByteUnchecked(destinationPosition + 2, source.getByteUnchecked(sourcePosition + 2));
+                break;
+            case 4:
+                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
+                break;
+            case 5:
+                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
+                destination.setByteUnchecked(destinationPosition + 4, source.getByteUnchecked(sourcePosition + 4));
+                break;
+            case 6:
+                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
+                destination.setShortUnchecked(destinationPosition + 4, source.getShortUnchecked(sourcePosition + 4));
+                break;
+            default:
+                throw new IllegalStateException("Invalid code point length " + length);
+        }
     }
 
     /**
      * Removes all white space characters from the left string of the string.
      * <p>
-     * Note: This method does not explicitly check for valid UTF-8, and may
-     * return incorrect results or throw an exception for invalid UTF-8.
+     * Note: Invalid UTF-8 sequences are not trimmed.
      */
     public static Slice leftTrim(Slice utf8)
     {
@@ -306,7 +308,10 @@ public final class SliceUtf8
 
         int position = 0;
         while (position < length) {
-            int codePoint = getCodePointAt(utf8, position);
+            int codePoint = getCodePointAtSafe(utf8, position);
+            if (codePoint < 0) {
+                break;
+            }
             if (!WHITESPACE_CODE_POINTS[codePoint]) {
                 break;
             }
@@ -318,8 +323,7 @@ public final class SliceUtf8
     /**
      * Removes all white space characters from the right side of the string.
      * <p>
-     * Note: This method does not explicitly check for valid UTF-8, and may
-     * return incorrect results or throw an exception for invalid UTF-8.
+     * Note: Invalid UTF-8 sequences are not trimmed.
      */
     public static Slice rightTrim(Slice utf8)
     {
@@ -333,8 +337,26 @@ public final class SliceUtf8
 
         int position = length;
         while (minPosition < position) {
-            int codePoint = getCodePointBefore(utf8, position);
-            if (!WHITESPACE_CODE_POINTS[codePoint]) {
+            // decode the code point before position if possible
+            int codePoint;
+            byte unsignedByte = utf8.getByte(position - 1);
+            if (!isContinuationByte(unsignedByte)) {
+                codePoint = unsignedByte & 0xFF;
+            }
+            else if (minPosition <= position -2 && !isContinuationByte(utf8.getByte(position - 2))) {
+                codePoint = getCodePointAtSafe(utf8, position - 2);
+            }
+            else if (minPosition <= position -3 && !isContinuationByte(utf8.getByte(position - 3))) {
+                codePoint = getCodePointAtSafe(utf8, position - 3);
+            }
+            else if (minPosition <= position -4 && !isContinuationByte(utf8.getByte(position - 4))) {
+                codePoint = getCodePointAtSafe(utf8, position - 4);
+            }
+            else {
+                break;
+            }
+
+            if (codePoint < 0 || !WHITESPACE_CODE_POINTS[codePoint]) {
                 break;
             }
             position -= lengthOfCodePoint(codePoint);
@@ -345,8 +367,7 @@ public final class SliceUtf8
     /**
      * Removes all white space characters from the left and right side of the string.
      * <p>
-     * Note: This method does not explicitly check for valid UTF-8, and may
-     * return incorrect results or throw an exception for invalid UTF-8.
+     * Note: Invalid UTF-8 sequences are not trimmed.
      */
     public static Slice trim(Slice utf8)
     {

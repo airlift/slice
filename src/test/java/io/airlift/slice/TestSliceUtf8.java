@@ -267,6 +267,8 @@ public class TestSliceUtf8
         assertReverse(STRING_OO);
         assertReverse(STRING_ASCII_CODE_POINTS);
         assertReverse(STRING_ALL_CODE_POINTS);
+
+        INVALID_SEQUENCES.forEach(TestSliceUtf8::assertReverseWithInvalidSequence);
     }
 
     private static void assertReverse(String string)
@@ -280,10 +282,20 @@ public class TestSliceUtf8
         assertEquals(actualReverse, expectedReverse);
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 is not well formed")
-    public void testReverseInvalidUtf8()
+    private static void assertReverseWithInvalidSequence(byte[] invalidSequence)
     {
-        reverse(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_3_BYTE, CONTINUATION_BYTE));
+        assertEquals(
+                reverse(wrappedBuffer(invalidSequence)),
+                wrappedBuffer(invalidSequence));
+        assertEquals(
+                reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence))),
+                wrappedBuffer(concat(invalidSequence, new byte[] {'c', 'b', 'a'})));
+        assertEquals(
+                reverse(wrappedBuffer(concat(invalidSequence, new byte[] {'x', 'y', 'z'}))),
+                wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence)));
+        assertEquals(
+                reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence, new byte[] {'x', 'y', 'z'}))),
+                wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence, new byte[] {'c', 'b', 'a'})));
     }
 
     @Test
@@ -399,12 +411,40 @@ public class TestSliceUtf8
         assertCaseChange(STRING_ASCII_CODE_POINTS);
         assertCaseChange(STRING_ALL_CODE_POINTS);
         assertCaseChange(STRING_ALL_CODE_POINTS_RANDOM);
+
+        INVALID_SEQUENCES.forEach(TestSliceUtf8::assertCaseChangeWithInvalidSequence);
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 sequence truncated")
-    public void testToUpperCaseTruncatedUtf8()
+    private static void assertCaseChangeWithInvalidSequence(byte[] invalidSequence)
     {
-        toUpperCase(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_3_BYTE, CONTINUATION_BYTE));
+        assertEquals(
+                toLowerCase(wrappedBuffer(invalidSequence)),
+                wrappedBuffer(invalidSequence));
+        assertEquals(
+                toUpperCase(wrappedBuffer(invalidSequence)),
+                wrappedBuffer(invalidSequence));
+
+        assertEquals(
+                toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence))),
+                wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence)));
+        assertEquals(
+                toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence))),
+                wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence)));
+
+        assertEquals(
+                toLowerCase(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'}))),
+                wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'})));
+        assertEquals(
+                toUpperCase(wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'}))),
+                wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'})));
+
+        assertEquals(
+                toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'}))),
+                wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'})));
+        assertEquals(
+                toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'}))),
+                wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'})));
+
     }
 
     private static void assertCaseChange(String string)
@@ -435,36 +475,6 @@ public class TestSliceUtf8
         return new String(upperCodePoints, 0, upperCodePoints.length);
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFB of code point")
-    public void testToUpperCase5ByteUtf8()
-    {
-        toUpperCase(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE));
-    }
-
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xBF of code point")
-    public void testToUpperCaseStartContinuationUtf8()
-    {
-        toUpperCase(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', CONTINUATION_BYTE, (byte) 'x'));
-    }
-
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 sequence truncated")
-    public void testToLowerCaseTruncatedUtf8()
-    {
-        toLowerCase(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_3_BYTE, CONTINUATION_BYTE));
-    }
-
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFB of code point")
-    public void testToLowerCase5ByteUtf8()
-    {
-        toLowerCase(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE));
-    }
-
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xBF of code point")
-    public void testToLowerCaseStartContinuationUtf8()
-    {
-        toLowerCase(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', CONTINUATION_BYTE, (byte) 'x'));
-    }
-
     @Test
     public void testLeftTrim()
     {
@@ -472,16 +482,23 @@ public class TestSliceUtf8
         assertLeftTrim("hello");
         assertLeftTrim("hello world");
         assertLeftTrim("hello world  ");
+
+        INVALID_SEQUENCES.forEach(TestSliceUtf8::assertLeftTrim);
     }
 
     private static void assertLeftTrim(String string)
     {
-        assertEquals(leftTrim(utf8Slice(string)), utf8Slice(string));
+        assertLeftTrim(string.getBytes(UTF_8));
+    }
+
+    private static void assertLeftTrim(byte[] sequence)
+    {
+        assertEquals(leftTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
-                String whitespace = new String(new int[] {codePoint}, 0, 1);
-                assertEquals(leftTrim(utf8Slice(whitespace + string)), utf8Slice(string));
-                assertEquals(leftTrim(utf8Slice(whitespace + "\r\n\t " + whitespace + string)), utf8Slice(string));
+                byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
+                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, sequence))), wrappedBuffer(sequence));
+                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence))), wrappedBuffer(sequence));
             }
         }
     }
@@ -493,16 +510,23 @@ public class TestSliceUtf8
         assertRightTrim("hello");
         assertRightTrim("hello world");
         assertRightTrim("  hello world");
+
+        INVALID_SEQUENCES.forEach(TestSliceUtf8::assertRightTrim);
     }
 
     private static void assertRightTrim(String string)
     {
-        assertEquals(rightTrim(utf8Slice(string)), utf8Slice(string));
+        assertRightTrim(string.getBytes(UTF_8));
+    }
+
+    private static void assertRightTrim(byte[] sequence)
+    {
+        assertEquals(rightTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
-                String whitespace = new String(new int[] {codePoint}, 0, 1);
-                assertEquals(rightTrim(utf8Slice(string + whitespace)), utf8Slice(string));
-                assertEquals(rightTrim(utf8Slice(string + whitespace + "\r\n\t " + whitespace)), utf8Slice(string));
+                byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
+                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace))), wrappedBuffer(sequence));
+                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))), wrappedBuffer(sequence));
             }
         }
     }
@@ -513,16 +537,25 @@ public class TestSliceUtf8
         assertTrim("");
         assertTrim("hello");
         assertTrim("hello world");
+
+        INVALID_SEQUENCES.forEach(TestSliceUtf8::assertTrim);
     }
 
     private static void assertTrim(String string)
     {
-        assertEquals(trim(utf8Slice(string)), utf8Slice(string));
+        assertTrim(string.getBytes(UTF_8));
+    }
+
+    private static void assertTrim(byte[] sequence)
+    {
+        assertEquals(trim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
-                String whitespace = new String(new int[] {codePoint}, 0, 1);
-                assertEquals(trim(utf8Slice(whitespace + string + whitespace)), utf8Slice(string));
-                assertEquals(trim(utf8Slice(whitespace + "\r\n\t " + whitespace + string + whitespace + "\r\n\t " + whitespace)), utf8Slice(string));
+                byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
+                assertEquals(trim(wrappedBuffer(concat(whitespace, sequence, whitespace))), wrappedBuffer(sequence));
+                assertEquals(
+                        trim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))),
+                        wrappedBuffer(sequence));
             }
         }
     }
