@@ -66,6 +66,7 @@ public class TestSliceUtf8
     private static final byte START_4_BYTE = (byte) 0b1111_0111;
     private static final byte START_5_BYTE = (byte) 0b1111_1011;
     private static final byte START_6_BYTE = (byte) 0b1111_1101;
+    private static final byte INVALID_FE_BYTE = (byte) 0b11111110;
     private static final byte INVALID_FF_BYTE = (byte) 0b11111111;
     private static final byte X_CHAR = (byte) 'X';
 
@@ -117,6 +118,7 @@ public class TestSliceUtf8
         assertEquals(countCodePoints(wrappedBuffer(START_4_BYTE)), 1);
         assertEquals(countCodePoints(wrappedBuffer(START_5_BYTE)), 1);
         assertEquals(countCodePoints(wrappedBuffer(START_6_BYTE)), 1);
+        assertEquals(countCodePoints(wrappedBuffer(INVALID_FE_BYTE)), 1);
         assertEquals(countCodePoints(wrappedBuffer(INVALID_FF_BYTE)), 1);
         assertEquals(countCodePoints(wrappedBuffer(CONTINUATION_BYTE)), 0);
     }
@@ -296,6 +298,7 @@ public class TestSliceUtf8
         // continuation byte alone is invalid
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
 
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FE_BYTE), utf8Slice("X\uFFFD"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FF_BYTE), utf8Slice("X\uFFFD"));
 
         // sequences with not enough continuation bytes, but enough bytes
@@ -314,6 +317,7 @@ public class TestSliceUtf8
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXXX"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR, X_CHAR), utf8Slice("X\uFFFDXX"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, X_CHAR), utf8Slice("X\uFFFDX"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FE_BYTE), utf8Slice("X\uFFFD"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FF_BYTE), utf8Slice("X\uFFFD"));
 
         // truncated sequences
@@ -334,6 +338,7 @@ public class TestSliceUtf8
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, START_6_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), utf8Slice("X\uFFFD"));
+        assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FE_BYTE), utf8Slice("X\uFFFD"));
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, INVALID_FF_BYTE), utf8Slice("X\uFFFD"));
         // min and max surrogate characters
         assertFixInvalidUtf8(wrappedBuffer(X_CHAR, (byte) 0b11101101, (byte) 0xA0, (byte) 0x80), utf8Slice("X\uFFFD"));
@@ -549,19 +554,25 @@ public class TestSliceUtf8
     }
 
     @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFB of code point")
-    public void testLengthOfCodePoint4ByteSequence()
+    public void testLengthOfCodePoint5ByteSequence()
     {
         lengthOfCodePointFromStartByte(START_5_BYTE);
     }
 
     @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFD of code point")
-    public void testLengthOfCodePointFEByte()
+    public void testLengthOfCodePoint6ByteByte()
     {
         lengthOfCodePointFromStartByte(START_6_BYTE);
     }
 
+    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFE of code point")
+    public void testLengthOfCodePointFEByte()
+    {
+        lengthOfCodePointFromStartByte(INVALID_FE_BYTE);
+    }
+
     @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFF of code point")
-    public void testLengthOfCodePointFGByte()
+    public void testLengthOfCodePointFFByte()
     {
         lengthOfCodePointFromStartByte(INVALID_FF_BYTE);
     }
