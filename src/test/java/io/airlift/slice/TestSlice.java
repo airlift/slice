@@ -676,6 +676,18 @@ public class TestSlice
     }
 
     @Test
+    public void testRetainedSize()
+            throws Exception
+    {
+        Slice slice = Slices.allocate(10);
+        assertEquals(slice.getRetainedSize(), 10);
+        assertEquals(slice.length(), 10);
+        Slice subSlice = slice.slice(0, 1);
+        assertEquals(subSlice.getRetainedSize(), 10);
+        assertEquals(subSlice.length(), 1);
+    }
+
+    @Test
     public void testCopyOf()
             throws Exception
     {

@@ -70,7 +70,7 @@ public class UnsafeSliceFactory
         if (size == 0) {
             return Slices.EMPTY_SLICE;
         }
-        return new Slice(null, address, size, null);
+        return new Slice(null, address, size, 0, null);
     }
 
     /**
@@ -95,6 +95,6 @@ public class UnsafeSliceFactory
         if (size == 0) {
             return Slices.EMPTY_SLICE;
         }
-        return new Slice(null, address, size, reference);
+        return new Slice(null, address, size, size, reference);
     }
 }
