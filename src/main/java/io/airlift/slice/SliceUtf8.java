@@ -235,7 +235,7 @@ public final class SliceUtf8
         int upperPosition = 0;
         while (position < length) {
             int codePoint = getCodePointAtSafe(utf8, position);
-            if (codePoint >= 0) {
+            if (codePoint >= 0 && codePoint < codePointTranslationMap.length) {
                 int upperCodePoint = codePointTranslationMap[codePoint];
 
                 // grow slice if necessary
