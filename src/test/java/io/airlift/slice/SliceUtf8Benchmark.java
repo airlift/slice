@@ -150,9 +150,9 @@ public class SliceUtf8Benchmark
         private static final int[] ALL_CODE_POINTS;
 
         static {
-            ASCII_CODE_POINTS = IntStream.range(0, 0x7F)
+            ASCII_CODE_POINTS = IntStream.rangeClosed(0, 0x7F)
                     .toArray();
-            ALL_CODE_POINTS = IntStream.range(0, MAX_CODE_POINT)
+            ALL_CODE_POINTS = IntStream.rangeClosed(0, MAX_CODE_POINT)
                     .filter(codePoint -> getType(codePoint) != SURROGATE)
                     .toArray();
         }
@@ -200,10 +200,10 @@ public class SliceUtf8Benchmark
         private static final int[] ALL_WHITESPACE;
 
         static {
-            ASCII_WHITESPACE = IntStream.range(0, 0x7F)
+            ASCII_WHITESPACE = IntStream.rangeClosed(0, 0x7F)
                     .filter(Character::isWhitespace)
                     .toArray();
-            ALL_WHITESPACE = IntStream.range(0, MAX_CODE_POINT)
+            ALL_WHITESPACE = IntStream.rangeClosed(0, MAX_CODE_POINT)
                     .filter(Character::isWhitespace)
                     .toArray();
         }
