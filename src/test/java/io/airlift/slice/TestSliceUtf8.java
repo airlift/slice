@@ -86,8 +86,6 @@ public class TestSliceUtf8
                 .toArray();
         STRING_ALL_CODE_POINTS = new String(ALL_CODE_POINTS, 0, ALL_CODE_POINTS.length);
 
-        System.out.println(STRING_ALL_CODE_POINTS.charAt(ALL_CODE_POINTS.length - 1));
-
         ALL_CODE_POINTS_RANDOM = Arrays.copyOf(ALL_CODE_POINTS, ALL_CODE_POINTS.length);
         Collections.shuffle(Arrays.asList(ALL_CODE_POINTS_RANDOM));
         STRING_ALL_CODE_POINTS_RANDOM = new String(ALL_CODE_POINTS_RANDOM, 0, ALL_CODE_POINTS_RANDOM.length);
