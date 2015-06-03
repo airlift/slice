@@ -77,14 +77,16 @@ public class TestSliceUtf8
     private static final List<byte[]> INVALID_SEQUENCES;
 
     static {
-        ASCII_CODE_POINTS = IntStream.range(0, 0x7F)
+        ASCII_CODE_POINTS = IntStream.rangeClosed(0, 0x7F)
                 .toArray();
         STRING_ASCII_CODE_POINTS = new String(ASCII_CODE_POINTS, 0, ASCII_CODE_POINTS.length);
 
-        ALL_CODE_POINTS = IntStream.range(0, MAX_CODE_POINT)
+        ALL_CODE_POINTS = IntStream.rangeClosed(0, MAX_CODE_POINT)
                 .filter(codePoint -> getType(codePoint) != SURROGATE)
                 .toArray();
         STRING_ALL_CODE_POINTS = new String(ALL_CODE_POINTS, 0, ALL_CODE_POINTS.length);
+
+        System.out.println(STRING_ALL_CODE_POINTS.charAt(ALL_CODE_POINTS.length - 1));
 
         ALL_CODE_POINTS_RANDOM = Arrays.copyOf(ALL_CODE_POINTS, ALL_CODE_POINTS.length);
         Collections.shuffle(Arrays.asList(ALL_CODE_POINTS_RANDOM));

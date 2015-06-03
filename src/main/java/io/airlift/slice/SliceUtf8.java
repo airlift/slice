@@ -40,10 +40,10 @@ public final class SliceUtf8
     private static final boolean[] WHITESPACE_CODE_POINTS;
 
     static {
-        LOWER_CODE_POINTS = new int[MAX_CODE_POINT];
-        UPPER_CODE_POINTS = new int[MAX_CODE_POINT];
-        WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT];
-        for (int codePoint = 0; codePoint < MAX_CODE_POINT; codePoint++) {
+        LOWER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
+        UPPER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
+        WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
+        for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
             int type = Character.getType(codePoint);
             if (type != Character.SURROGATE) {
                 LOWER_CODE_POINTS[codePoint] = Character.toLowerCase(codePoint);
@@ -235,7 +235,7 @@ public final class SliceUtf8
         int upperPosition = 0;
         while (position < length) {
             int codePoint = getCodePointAtSafe(utf8, position);
-            if (codePoint >= 0 && codePoint < codePointTranslationMap.length) {
+            if (codePoint >= 0) {
                 int upperCodePoint = codePointTranslationMap[codePoint];
 
                 // grow slice if necessary
