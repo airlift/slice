@@ -252,9 +252,16 @@ public final class SliceUtf8
             }
             else {
                 int skipLength = -codePoint;
+
+                // grow slice if necessary
+                int nextUpperPosition = upperPosition + skipLength;
+                if (nextUpperPosition > length) {
+                    newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
+                }
+
                 copyUtf8SequenceUnsafe(utf8, position, newUtf8, upperPosition, skipLength);
                 position += skipLength;
-                upperPosition += skipLength;
+                upperPosition = nextUpperPosition;
             }
         }
         return newUtf8.slice(0, upperPosition);

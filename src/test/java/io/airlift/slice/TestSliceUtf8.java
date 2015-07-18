@@ -127,6 +127,8 @@ public class TestSliceUtf8
     private static final String STRING_FAITH_HOPE_LOVE = "\u4FE1\u5FF5,\u7231,\u5E0C\u671B";
     private static final String STRING_NAIVE = "na\u00EFve";
     private static final String STRING_OO = "\uD801\uDC2Dend";
+    // length increase when cast to lower case, and ends with invalid character
+    private static final byte[] INVALID_SEQUENCE_TO_LOWER_EXPANDS = new byte[] {(byte) 0xC8, (byte) 0xBA, (byte) 0xFF};
 
     private static final byte[] INVALID_UTF8_1 = new byte[] {-127};
     private static final byte[] INVALID_UTF8_2 = new byte[] {50, -127, 52, 50};
@@ -411,6 +413,8 @@ public class TestSliceUtf8
         assertCaseChange(STRING_ASCII_CODE_POINTS);
         assertCaseChange(STRING_ALL_CODE_POINTS);
         assertCaseChange(STRING_ALL_CODE_POINTS_RANDOM);
+
+        toLowerCase(Slices.wrappedBuffer(INVALID_SEQUENCE_TO_LOWER_EXPANDS));
 
         INVALID_SEQUENCES.forEach(TestSliceUtf8::assertCaseChangeWithInvalidSequence);
     }
