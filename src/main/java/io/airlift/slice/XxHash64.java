@@ -56,39 +56,11 @@ public class XxHash64
         checkPositionIndexes(0, offset + length, data.length());
 
         Object base = data.getBase();
-        long index = data.getAddress() + offset;
-        long end = index + length;
+        final long address = data.getAddress() + offset;
 
         long hash;
-
         if (length >= 32) {
-            long v1 = seed + PRIME64_1 + PRIME64_2;
-            long v2 = seed + PRIME64_2;
-            long v3 = seed + 0;
-            long v4 = seed - PRIME64_1;
-
-            long limit = end - 32;
-            do {
-                v1 = mix(v1, unsafe.getLong(base, index));
-                index += 8;
-
-                v2 = mix(v2, unsafe.getLong(base, index));
-                index += 8;
-
-                v3 = mix(v3, unsafe.getLong(base, index));
-                index += 8;
-
-                v4 = mix(v4, unsafe.getLong(base, index));
-                index += 8;
-            }
-            while (index <= limit);
-
-            hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
-
-            hash = update(hash, v1);
-            hash = update(hash, v2);
-            hash = update(hash, v3);
-            hash = update(hash, v4);
+            hash = updateBody(seed, base, address, length - 32);
         }
         else {
             hash = seed + PRIME64_5;
@@ -96,22 +68,52 @@ public class XxHash64
 
         hash += length;
 
-        while (index <= end - 8) {
-            hash = updateTail(hash, unsafe.getLong(base, index));
+        // round to the closest 32 byte boundary
+        // this is the point up to which {@see #updateBody} processed
+        int index = length & 0xFFFFFF70;
+
+        while (index <= length - 8) {
+            hash = updateTail(hash, unsafe.getLong(base, address + index));
             index += 8;
         }
 
-        if (index <= end - 4) {
-            hash = updateTail(hash, unsafe.getInt(base, index));
+        if (index <= length - 4) {
+            hash = updateTail(hash, unsafe.getInt(base, address + index));
             index += 4;
         }
 
-        while (index < end) {
-            hash = updateTail(hash, unsafe.getByte(base, index));
+        while (index < length) {
+            hash = updateTail(hash, unsafe.getByte(base, address + index));
             index++;
         }
 
         hash = finalShuffle(hash);
+
+        return hash;
+    }
+
+    private static long updateBody(long seed, Object base, long address, int length)
+    {
+        long v1 = seed + PRIME64_1 + PRIME64_2;
+        long v2 = seed + PRIME64_2;
+        long v3 = seed + 0;
+        long v4 = seed - PRIME64_1;
+
+        for (int index = 0; index <= length; index += 32) {
+            v1 = mix(v1, unsafe.getLong(base, address));
+            v2 = mix(v2, unsafe.getLong(base, address + 8));
+            v3 = mix(v3, unsafe.getLong(base, address + 16));
+            v4 = mix(v4, unsafe.getLong(base, address + 24));
+
+            address += 32;
+        }
+
+        long hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
+
+        hash = update(hash, v1);
+        hash = update(hash, v2);
+        hash = update(hash, v3);
+        hash = update(hash, v4);
 
         return hash;
     }
