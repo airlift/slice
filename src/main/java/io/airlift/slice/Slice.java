@@ -538,6 +538,11 @@ public final class Slice
     {
         checkIndexLength(index, length);
 
+        if (base instanceof byte[]) {
+            out.write((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
+            return;
+        }
+
         byte[] buffer = new byte[4096];
         while (length > 0) {
             int size = min(buffer.length, length);
