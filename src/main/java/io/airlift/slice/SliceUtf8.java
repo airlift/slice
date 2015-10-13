@@ -13,7 +13,9 @@
  */
 package io.airlift.slice;
 
+import java.util.Iterator;
 import java.util.OptionalInt;
+import java.util.function.Function;
 
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkPositionIndex;
@@ -37,25 +39,42 @@ public final class SliceUtf8
 
     private static final int[] LOWER_CODE_POINTS;
     private static final int[] UPPER_CODE_POINTS;
+    private static final boolean[] PUNCTUATION_CODE_POINTS;
     private static final boolean[] WHITESPACE_CODE_POINTS;
 
     static {
         LOWER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         UPPER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
+        PUNCTUATION_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
         for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
             int type = Character.getType(codePoint);
             if (type != Character.SURROGATE) {
                 LOWER_CODE_POINTS[codePoint] = Character.toLowerCase(codePoint);
                 UPPER_CODE_POINTS[codePoint] = Character.toUpperCase(codePoint);
                 WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
+                PUNCTUATION_CODE_POINTS[codePoint] = isPunctuation(type);
             }
             else {
                 LOWER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 UPPER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 WHITESPACE_CODE_POINTS[codePoint] = false;
+                PUNCTUATION_CODE_POINTS[codePoint] = false;
             }
         }
+    }
+
+    /**
+     * Utility method to identify if the character of a type is a punctuation character
+     * @param type - type of the character
+     * @return true if the character of type is a punctuation character (excluding quote and continuation
+     *  punctuation)
+     */
+    private static boolean isPunctuation(int type) {
+        return type == Character.START_PUNCTUATION ||
+            type == Character.END_PUNCTUATION ||
+            type == Character.OTHER_PUNCTUATION ||
+            type == Character.DASH_PUNCTUATION;
     }
 
     /**
@@ -311,20 +330,37 @@ public final class SliceUtf8
 
     private static int firstNonWhitespacePosition(Slice utf8)
     {
+        return firstFunctionPosition(utf8, 0, codePoint -> !WHITESPACE_CODE_POINTS[codePoint]);
+    }
+
+    private static int firstNonWhitespaceOrPunctuationPosition(Slice utf8, int beginIndex)
+    {
+        return firstFunctionPosition(utf8, beginIndex, codePoint -> !isWhitespaceOrPunctuation(codePoint));
+    }
+
+    /**
+     * Returns the first position in utf8 for the codePoint of which the function returns false
+     * starting from the startPosition
+     */
+    private static int firstFunctionPosition(Slice utf8, int beginIndex, Function<Integer, Boolean> function) {
         int length = utf8.length();
 
-        int position = 0;
+        int position = beginIndex;
         while (position < length) {
             int codePoint = getCodePointAtSafe(utf8, position);
             if (codePoint < 0) {
                 break;
             }
-            if (!WHITESPACE_CODE_POINTS[codePoint]) {
+            if (function.apply(codePoint)) {
                 break;
             }
             position += lengthOfCodePoint(codePoint);
         }
         return position;
+    }
+
+    private static boolean isWhitespaceOrPunctuation(int codePoint) {
+        return WHITESPACE_CODE_POINTS[codePoint] || PUNCTUATION_CODE_POINTS[codePoint];
     }
 
     /**
@@ -930,5 +966,58 @@ public final class SliceUtf8
         //    that matched.
         i64 = ((i64 & TOP_MASK64) >>> 1) & (~i64);
         return Long.bitCount(i64);
+    }
+
+    /**
+     * Utility class to iterate all words in a utf8 {@link Slice}
+     * a "word" is defined as any sequence of characters that are not whitespace or punctuation
+     * character (excluding continuation punctuation f.e. '_' and quote punctuation f.e. '"')
+     */
+    public static class Utf8WordsIterator implements Iterator<Slice>
+    {
+        private final Slice slice;
+        private int cursor;
+        private final int length;
+        private boolean hasNext;
+
+        public Utf8WordsIterator(Slice slice)
+        {
+            this.slice = trim(slice);
+            this.length = this.slice.length();
+            updateCursor(0);
+        }
+
+        private void updateCursor(int startingPosition)
+        {
+            this.cursor = firstNonWhitespaceOrPunctuationPosition(slice, startingPosition);
+            this.hasNext = cursor < length;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return hasNext;
+        }
+
+        @Override
+        public Slice next()
+        {
+            int position = cursor;
+            while (position < length) {
+                int codePoint = getCodePointAtSafe(slice, position);
+                if (codePoint < 0) {
+                    hasNext = false;
+                    return slice.slice(cursor, length - cursor);
+                }
+                if (isWhitespaceOrPunctuation(codePoint)) {
+                  break;
+                }
+                position += lengthOfCodePoint(codePoint);
+            }
+
+            Slice result = slice.slice(cursor, position - cursor);
+            updateCursor(position);
+            return result;
+        }
     }
 }

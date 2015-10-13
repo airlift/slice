@@ -18,6 +18,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -708,4 +709,29 @@ public class TestSliceUtf8
         setCodePointAt(CONTINUATION_BYTE, Slices.allocate(8), 0);
     }
 
+    @Test
+    public void testUtf8WordIterator()
+    {
+        String[] inputs = {"!!", "my name is_a adaM!!", "my name is_a adaM!!\n,and done", "my", ""};
+        String[] outputs = {"", "my name is_a adaM", "my name is_a adaM and done", "my", ""};
+        for (int i = 0 ; i < inputs.length; ++i) {
+            assertEquals(outputs[i], generateUtf8WordsString(inputs[i]));
+        }
+    }
+
+    private static String generateUtf8WordsString(String input)
+    {
+        Slice slice = wrappedBuffer(input.getBytes());
+        SliceUtf8.Utf8WordsIterator wordsIterator = new SliceUtf8.Utf8WordsIterator(slice);
+        StringBuilder builder = new StringBuilder();
+        boolean first = true;
+        while (wordsIterator.hasNext()) {
+            if (!first) {
+                builder.append(' ');
+            }
+            builder.append(wordsIterator.next().toStringUtf8());
+            first = false;
+        }
+        return builder.toString();
+    }
 }
