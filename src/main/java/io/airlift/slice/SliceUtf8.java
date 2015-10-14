@@ -234,7 +234,7 @@ public final class SliceUtf8
         int position = 0;
         int upperPosition = 0;
         while (position < length) {
-            int codePoint = getCodePointAtSafe(utf8, position);
+            int codePoint = tryGetCodePointAt(utf8, position);
             if (codePoint >= 0) {
                 int upperCodePoint = codePointTranslationMap[codePoint];
 
@@ -315,7 +315,7 @@ public final class SliceUtf8
 
         int position = 0;
         while (position < length) {
-            int codePoint = getCodePointAtSafe(utf8, position);
+            int codePoint = tryGetCodePointAt(utf8, position);
             if (codePoint < 0) {
                 break;
             }
@@ -351,13 +351,13 @@ public final class SliceUtf8
                 codePoint = unsignedByte & 0xFF;
             }
             else if (minPosition <= position -2 && !isContinuationByte(utf8.getByte(position - 2))) {
-                codePoint = getCodePointAtSafe(utf8, position - 2);
+                codePoint = tryGetCodePointAt(utf8, position - 2);
             }
             else if (minPosition <= position -3 && !isContinuationByte(utf8.getByte(position - 3))) {
-                codePoint = getCodePointAtSafe(utf8, position - 3);
+                codePoint = tryGetCodePointAt(utf8, position - 3);
             }
             else if (minPosition <= position -4 && !isContinuationByte(utf8.getByte(position - 4))) {
-                codePoint = getCodePointAtSafe(utf8, position - 4);
+                codePoint = tryGetCodePointAt(utf8, position - 4);
             }
             else {
                 break;
@@ -407,7 +407,7 @@ public final class SliceUtf8
         int dataPosition = 0;
         int utf8Position = 0;
         while (dataPosition < length) {
-            int codePoint = getCodePointAtSafe(slice, dataPosition);
+            int codePoint = tryGetCodePointAt(slice, dataPosition);
             int codePointLength;
             if (codePoint >= 0) {
                 codePointLength = lengthOfCodePoint(codePoint);
@@ -428,7 +428,15 @@ public final class SliceUtf8
         return utf8.slice(0, utf8Position);
     }
 
-    private static int getCodePointAtSafe(Slice utf8, int position)
+    /**
+     * Tries to get the UTF-8 encoded code point at the {@code position}.  A positive
+     * return value means the UTF-8 sequence at the position is valid, and the result
+     * is the code point.  A negative return value means the UTF-8 sequence at the
+     * position is invalid, and the length of the invalid sequence is the absolute
+     * value of the result.
+     * @return the code point or negative the number of bytes in the invalid UTF-8 sequence.
+     */
+    public static int tryGetCodePointAt(Slice utf8, int position)
     {
         //
         // Process first byte
