@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -679,11 +680,12 @@ public class TestSlice
     public void testRetainedSize()
             throws Exception
     {
+        int sliceInstanceSize = ClassLayout.parseClass(Slice.class).instanceSize();
         Slice slice = Slices.allocate(10);
-        assertEquals(slice.getRetainedSize(), 10);
+        assertEquals(slice.getRetainedSize(), 10 + sliceInstanceSize);
         assertEquals(slice.length(), 10);
         Slice subSlice = slice.slice(0, 1);
-        assertEquals(subSlice.getRetainedSize(), 10);
+        assertEquals(subSlice.getRetainedSize(), 10 + sliceInstanceSize);
         assertEquals(subSlice.length(), 1);
     }
 

@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
 import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;
@@ -55,6 +56,8 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 public final class Slice
         implements Comparable<Slice>
 {
+    private static final int INSTANCE_SIZE = ClassLayout.parseClass(Slice.class).instanceSize();
+
     /**
      * @deprecated use {@link Slices#wrappedBuffer(java.nio.ByteBuffer)}
      */
@@ -108,7 +111,7 @@ public final class Slice
         this.base = null;
         this.address = 0;
         this.size = 0;
-        this.retainedSize = 0;
+        this.retainedSize = INSTANCE_SIZE;
         this.reference = null;
     }
 
@@ -121,7 +124,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = base.length;
-        this.retainedSize = base.length;
+        this.retainedSize = INSTANCE_SIZE + base.length;
         this.reference = null;
     }
 
@@ -136,7 +139,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_BYTE_BASE_OFFSET + offset;
         this.size = length;
-        this.retainedSize = base.length;
+        this.retainedSize = INSTANCE_SIZE + base.length;
         this.reference = null;
     }
 
@@ -151,7 +154,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_BOOLEAN_BASE_OFFSET + offset;
         this.size = length * ARRAY_BOOLEAN_INDEX_SCALE;
-        this.retainedSize = base.length * ARRAY_BOOLEAN_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_BOOLEAN_INDEX_SCALE;
         this.reference = null;
     }
 
@@ -166,7 +169,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_SHORT_BASE_OFFSET + offset;
         this.size = length * ARRAY_SHORT_INDEX_SCALE;
-        this.retainedSize = base.length * ARRAY_SHORT_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_SHORT_INDEX_SCALE;
         this.reference = null;
     }
 
@@ -181,7 +184,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_INT_BASE_OFFSET + offset;
         this.size = length * ARRAY_INT_INDEX_SCALE;
-        this.retainedSize = base.length * ARRAY_INT_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_INT_INDEX_SCALE;
         this.reference = null;
     }
 
@@ -196,7 +199,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_LONG_BASE_OFFSET + offset;
         this.size = length * ARRAY_LONG_INDEX_SCALE;
-        this.retainedSize = base.length * ARRAY_LONG_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_LONG_INDEX_SCALE;
         this.reference = null;
     }
 
@@ -211,7 +214,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_FLOAT_BASE_OFFSET + offset;
         this.size = length * ARRAY_FLOAT_INDEX_SCALE;
-        this.retainedSize = base.length * ARRAY_FLOAT_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_FLOAT_INDEX_SCALE;
         this.reference = null;
     }
 
@@ -226,7 +229,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_DOUBLE_BASE_OFFSET + offset;
         this.size = length * ARRAY_DOUBLE_INDEX_SCALE;
-        this.retainedSize = base.length * ARRAY_DOUBLE_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_DOUBLE_INDEX_SCALE;
         this.reference = null;
     }
 
@@ -247,6 +250,7 @@ public final class Slice
         this.base = base;
         this.address = address;
         this.size = size;
+        // INSTANCE_SIZE is not included, as the caller is responsible for including it.
         this.retainedSize = retainedSize;
     }
 
