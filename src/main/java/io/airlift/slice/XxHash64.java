@@ -70,7 +70,7 @@ public class XxHash64
 
         // round to the closest 32 byte boundary
         // this is the point up to which {@see #updateBody} processed
-        int index = length & 0xFFFFFF70;
+        int index = length & 0xFFFFFFE0;
 
         while (index <= length - 8) {
             hash = updateTail(hash, unsafe.getLong(base, address + index));

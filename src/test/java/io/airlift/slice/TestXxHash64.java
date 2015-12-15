@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import net.jpountz.xxhash.XXHash64;
+import net.jpountz.xxhash.XXHashFactory;
 import org.testng.annotations.Test;
 
 import static io.airlift.slice.XxHash64.hash;
@@ -56,6 +58,19 @@ public class TestXxHash64
 
         assertEquals(hash(0, buffer), 0x0EAB543384F878ADL);
         assertEquals(hash(PRIME, buffer), 0xCAA65939306F1E21L);
+    }
+
+    @Test
+    public void testMultipleLengths()
+            throws Exception
+    {
+        XXHash64 jpountz = XXHashFactory.fastestInstance().hash64();
+        for (int i = 0; i < 10_000; i++) {
+            byte[] data = new byte[i];
+            long expected = jpountz.hash(data, 0, data.length, 0);
+            long actual = XxHash64.hash(0, Slices.wrappedBuffer(data));
+            assertEquals(actual, expected, "Failed at length: " + i);
+        }
     }
 
     @Test
