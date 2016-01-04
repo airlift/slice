@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -78,5 +79,21 @@ public class TestSliceOutput
 
         Slice expected = Slices.wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 });
         assertEquals(actual, expected);
+    }
+
+    @Test
+    public void testRetainedSize()
+            throws Exception
+    {
+        int sliceOutputInstanceSize = ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize();
+        DynamicSliceOutput output = new DynamicSliceOutput(10);
+
+        int originalRetainedSize = output.getRetainedSize();
+        assertEquals(originalRetainedSize, sliceOutputInstanceSize + output.getUnderlyingSlice().getRetainedSize());
+        assertEquals(output.size(), 0);
+        output.appendLong(0);
+        output.appendShort(0);
+        assertEquals(output.getRetainedSize(), originalRetainedSize);
+        assertEquals(output.size(), 10);
     }
 }

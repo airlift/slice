@@ -35,6 +35,11 @@ public abstract class SliceOutput
     public abstract int size();
 
     /**
+     * Approximate number of bytes retained by this.
+     */
+    public abstract int getRetainedSize();
+
+    /**
      * Returns the number of writable bytes which is equal to
      * {@code (this.capacity - this.writerIndex)}.
      */

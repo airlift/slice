@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,6 +26,8 @@ import static io.airlift.slice.Preconditions.checkNotNull;
 public class OutputStreamSliceOutput
         extends SliceOutput
 {
+    private static final int INSTANCE_SIZE = ClassLayout.parseClass(OutputStreamSliceOutput.class).instanceSize();
+
     private final CountingOutputStream countingOutputStream; // Used only to track byte usage
     private final LittleEndianDataOutputStream dataOutputStream;
 
@@ -59,6 +63,15 @@ public class OutputStreamSliceOutput
     public int size()
     {
         return checkedCast(countingOutputStream.getCount());
+    }
+
+    /**
+     * Note: This does not include the size of the nested OutputStream.
+     */
+    @Override
+    public int getRetainedSize()
+    {
+        return INSTANCE_SIZE;
     }
 
     @Override

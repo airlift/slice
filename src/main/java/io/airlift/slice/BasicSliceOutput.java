@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -28,6 +30,8 @@ import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 public class BasicSliceOutput
         extends SliceOutput
 {
+    private static final int INSTANCE_SIZE = ClassLayout.parseClass(BasicSliceOutput.class).instanceSize();
+
     private final Slice slice;
     private int size;
 
@@ -46,6 +50,12 @@ public class BasicSliceOutput
     public int size()
     {
         return size;
+    }
+
+    @Override
+    public int getRetainedSize()
+    {
+        return slice.getRetainedSize() + INSTANCE_SIZE;
     }
 
     @Override
