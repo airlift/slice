@@ -433,7 +433,7 @@ public final class SliceUtf8
      * return value means the UTF-8 sequence at the position is valid, and the result
      * is the code point.  A negative return value means the UTF-8 sequence at the
      * position is invalid, and the length of the invalid sequence is the absolute
-     * value of the result.
+     * value of the result.  UTF-8 Overlong encoding is considered as valid in this method.
      * @return the code point or negative the number of bytes in the invalid UTF-8 sequence.
      */
     public static int tryGetCodePointAt(Slice utf8, int position)
@@ -511,11 +511,11 @@ public final class SliceUtf8
                     ((secondByte & 0b0011_1111) << 12) |
                     ((thirdByte & 0b0011_1111) << 6) |
                     (forthByte & 0b0011_1111);
-            // 4 byte code points have a limited valid range
-            if (codePoint < 0x11_0000) {
-                return codePoint;
+            // 4 byte code points have a limited valid range; surrogates are invalid
+            if (codePoint >= 0x11_0000 || (MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE)) {
+                return -4;
             }
-            return -4;
+            return codePoint;
         }
 
         //
