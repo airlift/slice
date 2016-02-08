@@ -116,6 +116,10 @@ public class TestSliceUtf8
         // min and max surrogate characters
         invalidSequences.add(new byte[] {(byte) 0b11101101, (byte) 0xA0, (byte) 0x80});
         invalidSequences.add(new byte[] {(byte) 0b11101101, (byte) 0xBF, (byte) 0xBF});
+        // overlong encoding of min and max surrogate characters
+        invalidSequences.add(new byte[] {(byte) 0b11110000, (byte) 0x8D, (byte) 0xA0, (byte) 0x80});
+        invalidSequences.add(new byte[] {(byte) 0b11110000, (byte) 0x8D, (byte) 0xBF, (byte) 0xBF});
+
         INVALID_SEQUENCES = invalidSequences.build();
     }
 
