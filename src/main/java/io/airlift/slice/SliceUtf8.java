@@ -466,8 +466,10 @@ public final class SliceUtf8
 
         if (length == 2) {
             // 110x_xxxx 10xx_xxxx
-            return ((firstByte & 0b0001_1111) << 6) |
+            int codePoint = ((firstByte & 0b0001_1111) << 6) |
                     (secondByte & 0b0011_1111);
+            // fail if overlong encoding detected
+            return codePoint < 0x80 ? -2 : codePoint;
         }
 
         //
@@ -491,7 +493,8 @@ public final class SliceUtf8
             if (MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE) {
                 return -3;
             }
-            return codePoint;
+            // fail if overlong encoding detected
+            return codePoint < 0x800 ? -3 : codePoint;
         }
 
         //
@@ -511,8 +514,8 @@ public final class SliceUtf8
                     ((secondByte & 0b0011_1111) << 12) |
                     ((thirdByte & 0b0011_1111) << 6) |
                     (forthByte & 0b0011_1111);
-            // 4 byte code points have a limited valid range
-            if (codePoint < 0x11_0000) {
+            // Check for overlong encoding and code points above upper bound of Unicode
+            if (codePoint < 0x11_0000 && codePoint >= 0x1_0000) {
                 return codePoint;
             }
             return -4;
