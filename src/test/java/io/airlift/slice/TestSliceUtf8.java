@@ -116,6 +116,17 @@ public class TestSliceUtf8
         // min and max surrogate characters
         invalidSequences.add(new byte[] {(byte) 0b11101101, (byte) 0xA0, (byte) 0x80});
         invalidSequences.add(new byte[] {(byte) 0b11101101, (byte) 0xBF, (byte) 0xBF});
+
+        // check overlong encoding
+        invalidSequences.add(new byte[] {(byte) 0b11000000, (byte) 0xAF}); // 2-byte encoding of 0x2F
+        invalidSequences.add(new byte[] {(byte) 0b11000001, (byte) 0xBF}); // 2-byte encoding of 0x7F
+        invalidSequences.add(new byte[] {(byte) 0b11100000, (byte) 0x81, (byte) 0xBF}); // 3-byte encoding of 0x7F
+        invalidSequences.add(new byte[] {(byte) 0b11100000, (byte) 0x90, (byte) 0x80}); // 3-byte encoding of 0x400
+        invalidSequences.add(new byte[] {(byte) 0b11100000, (byte) 0x9F, (byte) 0xBF}); // 3-byte encoding of 0x7FF
+        invalidSequences.add(new byte[] {(byte) 0b11110000, (byte) 0x8D, (byte) 0xA0, (byte) 0x80}); // 4-byte encoding of 0xD800
+        invalidSequences.add(new byte[] {(byte) 0b11110000, (byte) 0x8D, (byte) 0xBF, (byte) 0xBF}); // 4-byte encoding of 0xDFFF
+        invalidSequences.add(new byte[] {(byte) 0b11110000, (byte) 0x8F, (byte) 0xBF, (byte) 0xBF}); // 4-byte encoding of 0xFFFF
+
         INVALID_SEQUENCES = invalidSequences.build();
     }
 
