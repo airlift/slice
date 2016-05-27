@@ -16,6 +16,8 @@ package io.airlift.slice;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.Long.rotateLeft;
+import static java.lang.Math.min;
+import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class XxHash64
 {
@@ -26,6 +28,130 @@ public final class XxHash64
     private static final long PRIME64_5 = 0x27D4EB2F165667C5L;
 
     private static final long DEFAULT_SEED = 0;
+
+    private final long seed;
+
+    private static final long BUFFER_ADDRESS = ARRAY_BYTE_BASE_OFFSET;
+    private final byte[] buffer = new byte[32];
+    private int bufferSize;
+
+    private long bodyLength;
+
+    private long v1;
+    private long v2;
+    private long v3;
+    private long v4;
+
+    public XxHash64()
+    {
+        this(DEFAULT_SEED);
+    }
+
+    public XxHash64(long seed)
+    {
+        this.seed = seed;
+        this.v1 = seed + PRIME64_1 + PRIME64_2;
+        this.v2 = seed + PRIME64_2;
+        this.v3 = seed;
+        this.v4 = seed - PRIME64_1;
+    }
+
+    public XxHash64 update(byte[] data)
+    {
+        return update(data, 0, data.length);
+    }
+
+    public XxHash64 update(byte[] data, int offset, int length)
+    {
+        checkPositionIndexes(offset, offset + length, data.length);
+        updateHash(data, ARRAY_BYTE_BASE_OFFSET + offset, length);
+        return this;
+    }
+
+    public XxHash64 update(Slice data)
+    {
+        return update(data, 0, data.length());
+    }
+
+    public XxHash64 update(Slice data, int offset, int length)
+    {
+        checkPositionIndexes(0, offset + length, data.length());
+        updateHash(data.getBase(), data.getAddress() + offset, length);
+        return this;
+    }
+
+    public long hash()
+    {
+        long hash;
+        if (bodyLength > 0) {
+            hash = computeBody();
+        }
+        else {
+            hash = seed + PRIME64_5;
+        }
+
+        hash += bodyLength + bufferSize;
+
+        return updateTail(hash, buffer, BUFFER_ADDRESS, 0, bufferSize);
+    }
+
+    private long computeBody()
+    {
+        long hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
+
+        hash = update(hash, v1);
+        hash = update(hash, v2);
+        hash = update(hash, v3);
+        hash = update(hash, v4);
+
+        return hash;
+    }
+
+    private void updateHash(Object base, long address, int length)
+    {
+        if (bufferSize > 0) {
+            int available = min(32 - bufferSize, length);
+
+            unsafe.copyMemory(base, address, buffer, BUFFER_ADDRESS + bufferSize, available);
+
+            bufferSize += available;
+            address += available;
+            length -= available;
+
+            if (bufferSize == 32) {
+                updateBody(buffer, BUFFER_ADDRESS, 0);
+                bufferSize = 0;
+            }
+        }
+
+        if (length >= 32) {
+            int index = updateBody(base, address, length - 32);
+            address += index;
+            length -= index;
+        }
+
+        if (length > 0) {
+            unsafe.copyMemory(base, address, buffer, BUFFER_ADDRESS, length);
+            bufferSize = length;
+        }
+    }
+
+    private int updateBody(Object base, long address, int length)
+    {
+        int index = 0;
+        while (index <= length) {
+            v1 = mix(v1, unsafe.getLong(base, address));
+            v2 = mix(v2, unsafe.getLong(base, address + 8));
+            v3 = mix(v3, unsafe.getLong(base, address + 16));
+            v4 = mix(v4, unsafe.getLong(base, address + 24));
+
+            address += 32;
+            index += 32;
+        }
+
+        bodyLength += index;
+        return index;
+    }
 
     public static long hash(long value)
     {
