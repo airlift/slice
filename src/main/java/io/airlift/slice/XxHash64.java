@@ -17,15 +17,15 @@ import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.Long.rotateLeft;
 
-public class XxHash64
+public final class XxHash64
 {
-    private final static long PRIME64_1 = 0x9E3779B185EBCA87L;
-    private final static long PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
-    private final static long PRIME64_3 = 0x165667B19E3779F9L;
-    private final static long PRIME64_4 = 0x85EBCA77C2b2AE63L;
-    private final static long PRIME64_5 = 0x27D4EB2F165667C5L;
+    private static final long PRIME64_1 = 0x9E3779B185EBCA87L;
+    private static final long PRIME64_2 = 0xC2B2AE3D27D4EB4FL;
+    private static final long PRIME64_3 = 0x165667B19E3779F9L;
+    private static final long PRIME64_4 = 0x85EBCA77C2b2AE63L;
+    private static final long PRIME64_5 = 0x27D4EB2F165667C5L;
 
-    private final static long DEFAULT_SEED = 0;
+    private static final long DEFAULT_SEED = 0;
 
     public static long hash(long value)
     {
@@ -69,7 +69,7 @@ public class XxHash64
         hash += length;
 
         // round to the closest 32 byte boundary
-        // this is the point up to which {@see #updateBody} processed
+        // this is the point up to which updateBody() processed
         int index = length & 0xFFFFFFE0;
 
         while (index <= length - 8) {
@@ -96,7 +96,7 @@ public class XxHash64
     {
         long v1 = seed + PRIME64_1 + PRIME64_2;
         long v2 = seed + PRIME64_2;
-        long v3 = seed + 0;
+        long v3 = seed;
         long v4 = seed - PRIME64_1;
 
         for (int index = 0; index <= length; index += 32) {

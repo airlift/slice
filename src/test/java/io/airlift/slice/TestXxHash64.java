@@ -68,7 +68,7 @@ public class TestXxHash64
         for (int i = 0; i < 10_000; i++) {
             byte[] data = new byte[i];
             long expected = jpountz.hash(data, 0, data.length, 0);
-            long actual = XxHash64.hash(0, Slices.wrappedBuffer(data));
+            long actual = hash(0, Slices.wrappedBuffer(data));
             assertEquals(actual, expected, "Failed at length: " + i);
         }
     }
