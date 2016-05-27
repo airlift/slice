@@ -72,6 +72,11 @@ public final class XxHash64
         // this is the point up to which updateBody() processed
         int index = length & 0xFFFFFFE0;
 
+        return updateTail(hash, base, address, index, length);
+    }
+
+    private static long updateTail(long hash, Object base, long address, int index, int length)
+    {
         while (index <= length - 8) {
             hash = updateTail(hash, unsafe.getLong(base, address + index));
             index += 8;
