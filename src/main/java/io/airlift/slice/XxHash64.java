@@ -119,13 +119,13 @@ public final class XxHash64
             length -= available;
 
             if (bufferSize == 32) {
-                updateBody(buffer, BUFFER_ADDRESS, 0);
+                updateBody(buffer, BUFFER_ADDRESS, bufferSize);
                 bufferSize = 0;
             }
         }
 
         if (length >= 32) {
-            int index = updateBody(base, address, length - 32);
+            int index = updateBody(base, address, length);
             address += index;
             length -= index;
         }
@@ -138,17 +138,18 @@ public final class XxHash64
 
     private int updateBody(Object base, long address, int length)
     {
-        int index = 0;
-        while (index <= length) {
+        int remaining = length;
+        while (remaining >= 32) {
             v1 = mix(v1, unsafe.getLong(base, address));
             v2 = mix(v2, unsafe.getLong(base, address + 8));
             v3 = mix(v3, unsafe.getLong(base, address + 16));
             v4 = mix(v4, unsafe.getLong(base, address + 24));
 
             address += 32;
-            index += 32;
+            remaining -= 32;
         }
 
+        int index = length - remaining;
         bodyLength += index;
         return index;
     }
@@ -186,7 +187,7 @@ public final class XxHash64
 
         long hash;
         if (length >= 32) {
-            hash = updateBody(seed, base, address, length - 32);
+            hash = updateBody(seed, base, address, length);
         }
         else {
             hash = seed + PRIME64_5;
@@ -230,13 +231,15 @@ public final class XxHash64
         long v3 = seed;
         long v4 = seed - PRIME64_1;
 
-        for (int index = 0; index <= length; index += 32) {
+        int remaining = length;
+        while (remaining >= 32) {
             v1 = mix(v1, unsafe.getLong(base, address));
             v2 = mix(v2, unsafe.getLong(base, address + 8));
             v3 = mix(v3, unsafe.getLong(base, address + 16));
             v4 = mix(v4, unsafe.getLong(base, address + 24));
 
             address += 32;
+            remaining -= 32;
         }
 
         long hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
