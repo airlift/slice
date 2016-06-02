@@ -392,7 +392,7 @@ public final class Slice
         return getIntUnchecked(index);
     }
 
-    public int getIntUnchecked(int index)
+    int getIntUnchecked(int index)
     {
         return unsafe.getInt(base, address + index);
     }
