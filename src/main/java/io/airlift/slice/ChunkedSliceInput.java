@@ -63,6 +63,11 @@ public final class ChunkedSliceInput
         if (position < 0 || position > globalLength) {
             throw new IndexOutOfBoundsException("Invalid position " + position + " for slice with length " + globalLength);
         }
+        if (position >= globalPosition && position - globalPosition < bufferLength) {
+            // (position - globalPosition) is guaranteed to fit in int type here because of the above condition
+            bufferPosition = (int) (position - globalPosition);
+            return;
+        }
         this.globalPosition = position;
         this.bufferLength = 0;
         this.bufferPosition = 0;
