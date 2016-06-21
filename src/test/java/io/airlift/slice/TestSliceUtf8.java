@@ -60,6 +60,7 @@ public class TestSliceUtf8
     private static final String STRING_ASCII_CODE_POINTS;
     private static final int[] ALL_CODE_POINTS;
     private static final String STRING_ALL_CODE_POINTS;
+    private static final int[] WHITESPACE_CODE_POINTS;
     private static final int[] ALL_CODE_POINTS_RANDOM;
     private static final String STRING_ALL_CODE_POINTS_RANDOM;
 
@@ -85,6 +86,9 @@ public class TestSliceUtf8
                 .filter(codePoint -> getType(codePoint) != SURROGATE)
                 .toArray();
         STRING_ALL_CODE_POINTS = new String(ALL_CODE_POINTS, 0, ALL_CODE_POINTS.length);
+        WHITESPACE_CODE_POINTS = IntStream.rangeClosed(0, MAX_CODE_POINT)
+                .filter(Character::isWhitespace)
+                .toArray();
 
         ALL_CODE_POINTS_RANDOM = Arrays.copyOf(ALL_CODE_POINTS, ALL_CODE_POINTS.length);
         Collections.shuffle(Arrays.asList(ALL_CODE_POINTS_RANDOM));
@@ -513,11 +517,14 @@ public class TestSliceUtf8
     private static void assertLeftTrim(byte[] sequence)
     {
         assertEquals(leftTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
+        assertEquals(leftTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
+        assertEquals(leftTrim(wrappedBuffer(concat(new byte[] {'@'}, sequence)), new int[]{'@'}), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
                 assertEquals(leftTrim(wrappedBuffer(concat(whitespace, sequence))), wrappedBuffer(sequence));
-                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence))), wrappedBuffer(sequence));
+                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, sequence)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
+                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
             }
         }
     }
@@ -542,11 +549,15 @@ public class TestSliceUtf8
     private static void assertRightTrim(byte[] sequence)
     {
         assertEquals(rightTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
+        assertEquals(rightTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
+        assertEquals(rightTrim(wrappedBuffer(concat(sequence, new byte[]{'@'})), new int[]{'@'}), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
                 assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace))), wrappedBuffer(sequence));
+                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
                 assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))), wrappedBuffer(sequence));
+                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
             }
         }
     }
@@ -570,12 +581,20 @@ public class TestSliceUtf8
     private static void assertTrim(byte[] sequence)
     {
         assertEquals(trim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
+        assertEquals(trim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
+        assertEquals(trim(wrappedBuffer(concat(new byte[] {'@'}, sequence, new byte[]{'@'})), new int[]{'@'}), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
                 assertEquals(trim(wrappedBuffer(concat(whitespace, sequence, whitespace))), wrappedBuffer(sequence));
+                assertEquals(trim(wrappedBuffer(concat(whitespace, sequence, whitespace)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
                 assertEquals(
                         trim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))),
+                        wrappedBuffer(sequence));
+                assertEquals(
+                        trim(
+                                wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)),
+                                WHITESPACE_CODE_POINTS),
                         wrappedBuffer(sequence));
             }
         }

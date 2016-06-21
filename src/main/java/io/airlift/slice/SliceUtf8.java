@@ -309,6 +309,19 @@ public final class SliceUtf8
         return utf8.slice(position, length - position);
     }
 
+    /**
+     * Removes all {@code whiteSpaceCodePoints} from the left side of the string.
+     * <p>
+     * Note: Invalid UTF-8 sequences are not trimmed.
+     */
+    public static Slice leftTrim(Slice utf8, int[] whiteSpaceCodePoints)
+    {
+        int length = utf8.length();
+
+        int position = firstNonMatchPosition(utf8, whiteSpaceCodePoints);
+        return utf8.slice(position, length - position);
+    }
+
     private static int firstNonWhitespacePosition(Slice utf8)
     {
         int length = utf8.length();
@@ -327,6 +340,35 @@ public final class SliceUtf8
         return position;
     }
 
+    // This function is an exact duplicate of firstNonWhitespacePosition(Slice) except for one line.
+    private static int firstNonMatchPosition(Slice utf8, int[] codePointsToMatch)
+    {
+        int length = utf8.length();
+
+        int position = 0;
+        while (position < length) {
+            int codePoint = tryGetCodePointAt(utf8, position);
+            if (codePoint < 0) {
+                break;
+            }
+            if (!matches(codePoint, codePointsToMatch)) {
+                break;
+            }
+            position += lengthOfCodePoint(codePoint);
+        }
+        return position;
+    }
+
+    private static boolean matches(int codePoint, int[] codePoints)
+    {
+        for (int codePointToTrim : codePoints) {
+            if (codePoint == codePointToTrim) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Removes all white space characters from the right side of the string.
      * <p>
@@ -338,9 +380,19 @@ public final class SliceUtf8
         return utf8.slice(0, position);
     }
 
+    /**
+     * Removes all white {@code whiteSpaceCodePoints} from the right side of the string.
+     * <p>
+     * Note: Invalid UTF-8 sequences are not trimmed.
+     */
+    public static Slice rightTrim(Slice utf8, int[] whiteSpaceCodePoints)
+    {
+        int position = lastNonMatchPosition(utf8, 0, whiteSpaceCodePoints);
+        return utf8.slice(0, position);
+    }
+
     private static int lastNonWhitespacePosition(Slice utf8, int minPosition)
     {
-
         int position = utf8.length();
         while (minPosition < position) {
             // decode the code point before position if possible
@@ -377,6 +429,45 @@ public final class SliceUtf8
         return position;
     }
 
+    // This function is an exact duplicate of lastNonWhitespacePosition(Slice, int) except for one line.
+    private static int lastNonMatchPosition(Slice utf8, int minPosition, int[] codePointsToMatch)
+    {
+        int position = utf8.length();
+        while (position > minPosition) {
+            // decode the code point before position if possible
+            int codePoint;
+            int codePointLength;
+            byte unsignedByte = utf8.getByte(position - 1);
+            if (!isContinuationByte(unsignedByte)) {
+                codePoint = unsignedByte & 0xFF;
+                codePointLength = 1;
+            }
+            else if (minPosition <= position - 2 && !isContinuationByte(utf8.getByte(position - 2))) {
+                codePoint = tryGetCodePointAt(utf8, position - 2);
+                codePointLength = 2;
+            }
+            else if (minPosition <= position - 3 && !isContinuationByte(utf8.getByte(position - 3))) {
+                codePoint = tryGetCodePointAt(utf8, position - 3);
+                codePointLength = 3;
+            }
+            else if (minPosition <= position - 4 && !isContinuationByte(utf8.getByte(position - 4))) {
+                codePoint = tryGetCodePointAt(utf8, position - 4);
+                codePointLength = 4;
+            }
+            else {
+                break;
+            }
+            if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
+                break;
+            }
+            if (!matches(codePoint, codePointsToMatch)) {
+                break;
+            }
+            position -= codePointLength;
+        }
+        return position;
+    }
+
     /**
      * Removes all white space characters from the left and right side of the string.
      * <p>
@@ -386,6 +477,18 @@ public final class SliceUtf8
     {
         int start = firstNonWhitespacePosition(utf8);
         int end = lastNonWhitespacePosition(utf8, start);
+        return utf8.slice(start, end - start);
+    }
+
+    /**
+     * Removes all white {@code whiteSpaceCodePoints} from the left and right side of the string.
+     * <p>
+     * Note: Invalid UTF-8 sequences are not trimmed.
+     */
+    public static Slice trim(Slice utf8, int[] whiteSpaceCodePoints)
+    {
+        int start = firstNonMatchPosition(utf8, whiteSpaceCodePoints);
+        int end = lastNonMatchPosition(utf8, start, whiteSpaceCodePoints);
         return utf8.slice(start, end - start);
     }
 
