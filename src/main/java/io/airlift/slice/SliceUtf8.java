@@ -297,7 +297,7 @@ public final class SliceUtf8
     }
 
     /**
-     * Removes all white space characters from the left string of the string.
+     * Removes all white space characters from the left side of the string.
      * <p>
      * Note: Invalid UTF-8 sequences are not trimmed.
      */
@@ -340,33 +340,39 @@ public final class SliceUtf8
 
     private static int lastNonWhitespacePosition(Slice utf8, int minPosition)
     {
-        int length = utf8.length();
 
-        int position = length;
+        int position = utf8.length();
         while (minPosition < position) {
             // decode the code point before position if possible
             int codePoint;
+            int codePointLength;
             byte unsignedByte = utf8.getByte(position - 1);
             if (!isContinuationByte(unsignedByte)) {
                 codePoint = unsignedByte & 0xFF;
+                codePointLength = 1;
             }
             else if (minPosition <= position -2 && !isContinuationByte(utf8.getByte(position - 2))) {
                 codePoint = tryGetCodePointAt(utf8, position - 2);
+                codePointLength = 2;
             }
             else if (minPosition <= position -3 && !isContinuationByte(utf8.getByte(position - 3))) {
                 codePoint = tryGetCodePointAt(utf8, position - 3);
+                codePointLength = 3;
             }
             else if (minPosition <= position -4 && !isContinuationByte(utf8.getByte(position - 4))) {
                 codePoint = tryGetCodePointAt(utf8, position - 4);
+                codePointLength = 4;
             }
             else {
                 break;
             }
-
-            if (codePoint < 0 || !WHITESPACE_CODE_POINTS[codePoint]) {
+            if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
                 break;
             }
-            position -= lengthOfCodePoint(codePoint);
+            if (!WHITESPACE_CODE_POINTS[codePoint]) {
+                break;
+            }
+            position -= codePointLength;
         }
         return position;
     }

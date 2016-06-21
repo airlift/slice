@@ -144,6 +144,9 @@ public class TestSliceUtf8
     private static final byte[] INVALID_UTF8_1 = new byte[] {-127};
     private static final byte[] INVALID_UTF8_2 = new byte[] {50, -127, 52, 50};
 
+    private static final byte[] EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE =
+            new byte[] {CONTINUATION_BYTE, (byte) 0xE2, (byte) 0x80, (byte) 0x83, CONTINUATION_BYTE};
+
     @Test
     public void testCodePointCount()
     {
@@ -497,6 +500,7 @@ public class TestSliceUtf8
         assertLeftTrim("hello");
         assertLeftTrim("hello world");
         assertLeftTrim("hello world  ");
+        assertLeftTrim(EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE);
 
         INVALID_SEQUENCES.forEach(TestSliceUtf8::assertLeftTrim);
     }
@@ -525,6 +529,7 @@ public class TestSliceUtf8
         assertRightTrim("hello");
         assertRightTrim("hello world");
         assertRightTrim("  hello world");
+        assertRightTrim(EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE);
 
         INVALID_SEQUENCES.forEach(TestSliceUtf8::assertRightTrim);
     }
@@ -552,6 +557,7 @@ public class TestSliceUtf8
         assertTrim("");
         assertTrim("hello");
         assertTrim("hello world");
+        assertTrim(EM_SPACE_SURROUNDED_BY_CONTINUATION_BYTE);
 
         INVALID_SEQUENCES.forEach(TestSliceUtf8::assertTrim);
     }
