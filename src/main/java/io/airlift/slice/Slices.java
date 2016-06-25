@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import sun.nio.ch.DirectBuffer;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -25,6 +23,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
 
+import static io.airlift.slice.JvmUtils.getAddress;
 import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -110,9 +109,9 @@ public final class Slices
      */
     public static Slice wrappedBuffer(ByteBuffer buffer)
     {
-        if (buffer instanceof DirectBuffer) {
-            DirectBuffer direct = (DirectBuffer) buffer;
-            return new Slice(null, direct.address() + buffer.position(), buffer.limit() - buffer.position(), buffer.capacity(), direct);
+        if (buffer.isDirect()) {
+            long address = getAddress(buffer);
+            return new Slice(null, address + buffer.position(), buffer.limit() - buffer.position(), buffer.capacity(), buffer);
         }
 
         if (buffer.hasArray()) {

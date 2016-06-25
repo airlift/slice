@@ -15,11 +15,11 @@ package io.airlift.slice;
 
 import com.google.common.primitives.Ints;
 import org.testng.annotations.Test;
-import sun.nio.ch.DirectBuffer;
 
 import java.nio.ByteBuffer;
 import java.security.Permission;
 
+import static io.airlift.slice.JvmUtils.getAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -54,8 +54,8 @@ public class TestUnsafeSliceFactory
             throws Exception
     {
         ByteBuffer buffer = ByteBuffer.allocateDirect(100);
-        assertTrue(buffer instanceof DirectBuffer);
-        long address = ((DirectBuffer) buffer).address();
+        assertTrue(buffer.isDirect());
+        long address = getAddress(buffer);
 
         UnsafeSliceFactory factory = UnsafeSliceFactory.getInstance();
 
