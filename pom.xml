@@ -13,7 +13,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>38</version>
+        <version>56</version>
     </parent>
 
     <inceptionYear>2012</inceptionYear>
@@ -22,7 +22,6 @@
         <air.check.skip-extended>true</air.check.skip-extended>
         <air.check.skip-license>false</air.check.skip-license>
         <air.javadoc.lint>-missing</air.javadoc.lint>
-        <dep.jmh.version>0.9.4</dep.jmh.version>
     </properties>
 
     <dependencies>
