@@ -60,6 +60,12 @@ public class OutputStreamSliceOutput
     }
 
     @Override
+    public void reset(int position)
+    {
+        throw new UnsupportedOperationException("OutputStream can not be reset");
+    }
+
+    @Override
     public int size()
     {
         return checkedCast(countingOutputStream.getCount());

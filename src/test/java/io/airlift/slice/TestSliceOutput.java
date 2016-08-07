@@ -96,4 +96,46 @@ public class TestSliceOutput
         assertEquals(output.getRetainedSize(), originalRetainedSize);
         assertEquals(output.size(), 10);
     }
+
+    @Test
+    public void testReset()
+            throws Exception
+    {
+        assertReset(new DynamicSliceOutput(1));
+        assertReset(Slices.allocate(50).getOutput());
+    }
+
+    private static void assertReset(SliceOutput output)
+    {
+        output
+                .appendByte(0)
+                .appendByte(1)
+                .appendByte(2)
+                .appendByte(3)
+                .appendByte(4);
+        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {0, 1, 2, 3, 4}));
+
+        output.reset();
+        assertEquals(output.slice(), Slices.EMPTY_SLICE);
+
+        output
+                .appendByte(2)
+                .appendByte(4)
+                .appendByte(6)
+                .appendByte(8)
+                .appendByte(10);
+        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2, 4, 6, 8, 10}));
+
+        output.reset(5);
+        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2, 4, 6, 8, 10}));
+
+        output.reset(3);
+        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2, 4, 6}));
+
+        output.reset(1);
+        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2}));
+
+        output.reset(0);
+        assertEquals(output.slice(), Slices.EMPTY_SLICE);
+    }
 }

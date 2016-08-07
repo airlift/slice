@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
+import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
@@ -43,6 +44,14 @@ public class DynamicSliceOutput
     public void reset()
     {
         size = 0;
+    }
+
+    @Override
+    public void reset(int position)
+    {
+        checkArgument(position >= 0, "position is negative");
+        checkArgument(position <= size, "position is larger than size");
+        size = position;
     }
 
     @Override

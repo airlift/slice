@@ -30,6 +30,11 @@ public abstract class SliceOutput
     public abstract void reset();
 
     /**
+     * Resets this stream to the specified position.
+     */
+    public abstract void reset(int position);
+
+    /**
      * Returns the {@code writerIndex} of this buffer.
      */
     public abstract int size();
