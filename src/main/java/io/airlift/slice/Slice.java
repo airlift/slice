@@ -891,33 +891,33 @@ public final class Slice
         checkIndexLength(offset, length);
         that.checkIndexLength(otherOffset, otherLength);
 
+        long thisAddress = address + offset;
+        long thatAddress = that.address + otherOffset;
+
         int compareLength = min(length, otherLength);
         while (compareLength >= SIZE_OF_LONG) {
-            long thisLong = getLongUnchecked(offset);
-            thisLong = Long.reverseBytes(thisLong);
-            long thatLong = that.getLongUnchecked(otherOffset);
-            thatLong = Long.reverseBytes(thatLong);
+            long thisLong = unsafe.getLong(base, thisAddress);
+            long thatLong = unsafe.getLong(that.base, thatAddress);
 
-            int v = compareUnsignedLongs(thisLong, thatLong);
-            if (v != 0) {
-                return v;
+            if (thisLong != thatLong) {
+                return longBytesToLong(thisLong) < longBytesToLong(thatLong) ? -1 : 1;
             }
 
-            offset += SIZE_OF_LONG;
-            otherOffset += SIZE_OF_LONG;
+            thisAddress += SIZE_OF_LONG;
+            thatAddress += SIZE_OF_LONG;
             compareLength -= SIZE_OF_LONG;
         }
 
         while (compareLength > 0) {
-            byte thisByte = getByteUnchecked(offset);
-            byte thatByte = that.getByteUnchecked(otherOffset);
+            byte thisByte = unsafe.getByte(base, thisAddress);
+            byte thatByte = unsafe.getByte(that.base, thatAddress);
 
             int v = compareUnsignedBytes(thisByte, thatByte);
             if (v != 0) {
                 return v;
             }
-            offset++;
-            otherOffset++;
+            thisAddress++;
+            thatAddress++;
             compareLength--;
         }
 
@@ -1220,13 +1220,13 @@ public final class Slice
         return thisByte & 0xFF;
     }
 
-    private static int compareUnsignedLongs(long thisLong, long thatLong)
+    /**
+     * Turns a long representing a sequence of 8 bytes read in little-endian order
+     * into a number that when compared produces the same effect as comparing the
+     * original sequence of bytes lexicographically
+     */
+    private static long longBytesToLong(long bytes)
     {
-        return Long.compare(flipUnsignedLong(thisLong), flipUnsignedLong(thatLong));
-    }
-
-    private static long flipUnsignedLong(long thisLong)
-    {
-        return thisLong ^ Long.MIN_VALUE;
+        return Long.reverseBytes(bytes) ^ Long.MIN_VALUE;
     }
 }
