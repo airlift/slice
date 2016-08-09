@@ -892,28 +892,30 @@ public final class Slice
         that.checkIndexLength(otherOffset, otherLength);
 
         int compareLength = min(length, otherLength);
+        long thisaddress = address + offset;
+        long thataddress = that.address + otherOffset;
         while (compareLength >= SIZE_OF_LONG) {
-            long thisLong = getLongUnchecked(offset);
-            long thatLong = that.getLongUnchecked(otherOffset);
+            long thisLong = unsafe.getLong(base, thisaddress);
+            long thatLong = unsafe.getLong(that.base, thataddress);
             if (thisLong != thatLong) {
                 return compareUnsignedLongs(Long.reverseBytes(thisLong), Long.reverseBytes(thatLong));
             }
 
-            offset += SIZE_OF_LONG;
-            otherOffset += SIZE_OF_LONG;
+            thisaddress += SIZE_OF_LONG;
+            thataddress += SIZE_OF_LONG;
             compareLength -= SIZE_OF_LONG;
         }
 
         while (compareLength > 0) {
-            byte thisByte = getByteUnchecked(offset);
-            byte thatByte = that.getByteUnchecked(otherOffset);
+            byte thisByte = unsafe.getByte(base, thisaddress);
+            byte thatByte = unsafe.getByte(that.base, thataddress);
 
             int v = compareUnsignedBytes(thisByte, thatByte);
             if (v != 0) {
                 return v;
             }
-            offset++;
-            otherOffset++;
+            thisaddress++;
+            thataddress++;
             compareLength--;
         }
 
