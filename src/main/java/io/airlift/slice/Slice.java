@@ -894,13 +894,9 @@ public final class Slice
         int compareLength = min(length, otherLength);
         while (compareLength >= SIZE_OF_LONG) {
             long thisLong = getLongUnchecked(offset);
-            thisLong = Long.reverseBytes(thisLong);
             long thatLong = that.getLongUnchecked(otherOffset);
-            thatLong = Long.reverseBytes(thatLong);
-
-            int v = compareUnsignedLongs(thisLong, thatLong);
-            if (v != 0) {
-                return v;
+            if (thisLong != thatLong) {
+                return compareUnsignedLongs(Long.reverseBytes(thisLong), Long.reverseBytes(thatLong));
             }
 
             offset += SIZE_OF_LONG;
