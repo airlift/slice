@@ -1218,7 +1218,8 @@ public final class Slice
 
     private static int compareUnsignedLongs(long thisLong, long thatLong)
     {
-        return Long.compare(flipUnsignedLong(thisLong), flipUnsignedLong(thatLong));
+        // We know that thisLong and thatLong are not equal
+        return flipUnsignedLong(thisLong) < flipUnsignedLong(thatLong) ? -1 : 1;
     }
 
     private static long flipUnsignedLong(long thisLong)
