@@ -892,32 +892,30 @@ public final class Slice
         that.checkIndexLength(otherOffset, otherLength);
 
         int compareLength = min(length, otherLength);
+        long thisaddress = address + offset;
+        long thataddress = that.address + otherOffset;
         while (compareLength >= SIZE_OF_LONG) {
-            long thisLong = getLongUnchecked(offset);
-            thisLong = Long.reverseBytes(thisLong);
-            long thatLong = that.getLongUnchecked(otherOffset);
-            thatLong = Long.reverseBytes(thatLong);
-
-            int v = compareUnsignedLongs(thisLong, thatLong);
-            if (v != 0) {
-                return v;
+            long thisLong = unsafe.getLong(base, thisaddress);
+            long thatLong = unsafe.getLong(that.base, thataddress);
+            if (thisLong != thatLong) {
+                return compareUnsignedLongs(Long.reverseBytes(thisLong), Long.reverseBytes(thatLong));
             }
 
-            offset += SIZE_OF_LONG;
-            otherOffset += SIZE_OF_LONG;
+            thisaddress += SIZE_OF_LONG;
+            thataddress += SIZE_OF_LONG;
             compareLength -= SIZE_OF_LONG;
         }
 
         while (compareLength > 0) {
-            byte thisByte = getByteUnchecked(offset);
-            byte thatByte = that.getByteUnchecked(otherOffset);
+            byte thisByte = unsafe.getByte(base, thisaddress);
+            byte thatByte = unsafe.getByte(that.base, thataddress);
 
             int v = compareUnsignedBytes(thisByte, thatByte);
             if (v != 0) {
                 return v;
             }
-            offset++;
-            otherOffset++;
+            thisaddress++;
+            thataddress++;
             compareLength--;
         }
 
@@ -1222,7 +1220,8 @@ public final class Slice
 
     private static int compareUnsignedLongs(long thisLong, long thatLong)
     {
-        return Long.compare(flipUnsignedLong(thisLong), flipUnsignedLong(thatLong));
+        // We know that thisLong and thatLong are not equal
+        return flipUnsignedLong(thisLong) < flipUnsignedLong(thatLong) ? -1 : 1;
     }
 
     private static long flipUnsignedLong(long thisLong)
