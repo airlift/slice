@@ -723,6 +723,20 @@ public final class Slice
             throws IOException
     {
         checkIndexLength(index, length);
+        if (base instanceof byte[]) {
+            byte[] bytes = (byte[]) base;
+            int offset = (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index);
+            while (length > 0) {
+                int bytesRead = in.read(bytes, offset, length);
+                if (bytesRead < 0) {
+                    throw new IndexOutOfBoundsException("End of stream");
+                }
+                length -= bytesRead;
+                offset += bytesRead;
+            }
+            return;
+        }
+
         byte[] bytes = new byte[4096];
 
         while (length > 0) {
