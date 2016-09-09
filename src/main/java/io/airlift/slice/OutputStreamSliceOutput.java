@@ -19,38 +19,67 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.Preconditions.checkNotNull;
+import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
+import static io.airlift.slice.SizeOf.SIZE_OF_INT;
+import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
+import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 
-public class OutputStreamSliceOutput
+public final class OutputStreamSliceOutput
         extends SliceOutput
 {
+    public static final int DEFAULT_BUFFER_SIZE = 128 * 1024;
+
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(OutputStreamSliceOutput.class).instanceSize();
+    private static final int MINIMUM_CHUNK_SIZE = 4096;
 
-    private final CountingOutputStream countingOutputStream; // Used only to track byte usage
-    private final LittleEndianDataOutputStream dataOutputStream;
+    private final OutputStream outputStream;
 
-    @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
-    public OutputStreamSliceOutput(OutputStream outputStream)
+    private final Slice slice;
+    private final byte[] buffer;
+
+    /**
+     * Offset of buffer within stream.
+     */
+    private long bufferOffset;
+    /**
+     * Current position for writing in buffer.
+     */
+    private int bufferPosition;
+
+    public OutputStreamSliceOutput(OutputStream inputStream)
     {
-        checkNotNull(outputStream, "outputStream is null");
-        countingOutputStream = new CountingOutputStream(outputStream);
-        dataOutputStream = new LittleEndianDataOutputStream(countingOutputStream);
+        this(inputStream, DEFAULT_BUFFER_SIZE);
+    }
+
+    public OutputStreamSliceOutput(OutputStream outputStream, int bufferSize)
+    {
+        checkArgument(bufferSize >= MINIMUM_CHUNK_SIZE, "minimum buffer size of " + MINIMUM_CHUNK_SIZE + " required");
+        if (outputStream == null) {
+            throw new NullPointerException("outputStream is null");
+        }
+
+        this.outputStream = outputStream;
+        this.buffer = new byte[bufferSize];
+        this.slice = Slices.wrappedBuffer(buffer);
     }
 
     @Override
     public void flush()
             throws IOException
     {
-        countingOutputStream.flush();
+        flushBufferToOutputStream();
+        outputStream.flush();
     }
 
     @Override
     public void close()
             throws IOException
     {
-        countingOutputStream.close();
+        flushBufferToOutputStream();
+        outputStream.close();
     }
 
     @Override
@@ -68,16 +97,13 @@ public class OutputStreamSliceOutput
     @Override
     public int size()
     {
-        return checkedCast(countingOutputStream.getCount());
+        return checkedCast(bufferOffset + bufferPosition);
     }
 
-    /**
-     * Note: This does not include the size of the nested OutputStream.
-     */
     @Override
     public int getRetainedSize()
     {
-        return INSTANCE_SIZE;
+        return slice.getRetainedSize() + INSTANCE_SIZE;
     }
 
     @Override
@@ -95,67 +121,45 @@ public class OutputStreamSliceOutput
     @Override
     public void writeByte(int value)
     {
-        try {
-            dataOutputStream.writeByte(value);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        ensureWritableBytes(SIZE_OF_BYTE);
+        slice.setByteUnchecked(bufferPosition, value);
+        bufferPosition += SIZE_OF_BYTE;
     }
 
     @Override
     public void writeShort(int value)
     {
-        try {
-            dataOutputStream.writeShort(value);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        ensureWritableBytes(SIZE_OF_SHORT);
+        slice.setShortUnchecked(bufferPosition, value);
+        bufferPosition += SIZE_OF_SHORT;
     }
 
     @Override
     public void writeInt(int value)
     {
-        try {
-            dataOutputStream.writeInt(value);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        ensureWritableBytes(SIZE_OF_INT);
+        slice.setIntUnchecked(bufferPosition, value);
+        bufferPosition += SIZE_OF_INT;
     }
 
     @Override
     public void writeLong(long value)
     {
-        try {
-            dataOutputStream.writeLong(value);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        ensureWritableBytes(SIZE_OF_LONG);
+        slice.setLongUnchecked(bufferPosition, value);
+        bufferPosition += SIZE_OF_LONG;
     }
 
     @Override
     public void writeFloat(float value)
     {
-        try {
-            dataOutputStream.writeFloat(value);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        writeInt(Float.floatToIntBits(value));
     }
 
     @Override
     public void writeDouble(double value)
     {
-        try {
-            dataOutputStream.writeDouble(value);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        writeLong(Double.doubleToLongBits(value));
     }
 
     @Override
@@ -167,11 +171,16 @@ public class OutputStreamSliceOutput
     @Override
     public void writeBytes(Slice source, int sourceIndex, int length)
     {
-        try {
-            source.getBytes(sourceIndex, dataOutputStream, length);
+        // Write huge chunks direct to OutputStream
+        if (length >= MINIMUM_CHUNK_SIZE) {
+            flushBufferToOutputStream();
+            writeToOutputStream(source, sourceIndex, length);
+            bufferOffset += length;
         }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
+        else {
+            ensureWritableBytes(length);
+            slice.setBytes(bufferPosition, source, sourceIndex, length);
+            bufferPosition += length;
         }
     }
 
@@ -184,11 +193,16 @@ public class OutputStreamSliceOutput
     @Override
     public void writeBytes(byte[] source, int sourceIndex, int length)
     {
-        try {
-            dataOutputStream.write(source, sourceIndex, length);
+        // Write huge chunks direct to OutputStream
+        if (length >= MINIMUM_CHUNK_SIZE) {
+            flushBufferToOutputStream();
+            writeToOutputStream(source, sourceIndex, length);
+            bufferOffset += length;
         }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
+        else {
+            ensureWritableBytes(length);
+            slice.setBytes(bufferPosition, source, sourceIndex, length);
+            bufferPosition += length;
         }
     }
 
@@ -196,7 +210,25 @@ public class OutputStreamSliceOutput
     public void writeBytes(InputStream in, int length)
             throws IOException
     {
-        SliceStreamUtils.copyStreamFully(in, this, length);
+        while (length > 0) {
+            int batch = ensureBatchSize(length);
+            slice.setBytes(bufferPosition, in, batch);
+            bufferPosition += batch;
+            length -= batch;
+        }
+    }
+
+    @Override
+    public void writeZero(int length)
+    {
+        checkArgument(length >= 0, "length must be 0 or greater than 0.");
+
+        while (length > 0) {
+            int batch = ensureBatchSize(length);
+            Arrays.fill(buffer, bufferPosition, bufferPosition + batch, (byte) 0);
+            bufferPosition += batch;
+            length -= batch;
+        }
     }
 
     @Override
@@ -276,11 +308,51 @@ public class OutputStreamSliceOutput
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("BasicSliceOutput{");
-        builder.append("countingOutputStream=").append(countingOutputStream);
-        builder.append(", dataOutputStream=").append(dataOutputStream);
+        StringBuilder builder = new StringBuilder("OutputStreamSliceOutputAdapter{");
+        builder.append("outputStream=").append(outputStream);
+        builder.append("bufferSize=").append(slice.length());
         builder.append('}');
         return builder.toString();
+    }
+
+    private void ensureWritableBytes(int minWritableBytes)
+    {
+        if (bufferPosition + minWritableBytes > slice.length()) {
+            flushBufferToOutputStream();
+        }
+    }
+
+    private int ensureBatchSize(int length)
+    {
+        ensureWritableBytes(Math.min(MINIMUM_CHUNK_SIZE, length));
+        return Math.min(length, slice.length() - bufferPosition);
+    }
+
+    private void flushBufferToOutputStream()
+    {
+        writeToOutputStream(buffer, 0, bufferPosition);
+        bufferOffset += bufferPosition;
+        bufferPosition = 0;
+    }
+
+    private void writeToOutputStream(byte[] source, int sourceIndex, int length)
+    {
+        try {
+            outputStream.write(source, sourceIndex, length);
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
+    }
+
+    private void writeToOutputStream(Slice source, int sourceIndex, int length)
+    {
+        try {
+            source.getBytes(sourceIndex, outputStream, length);
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
     }
 
     private static int checkedCast(long value)

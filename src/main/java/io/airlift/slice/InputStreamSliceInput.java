@@ -13,34 +13,58 @@
  */
 package io.airlift.slice;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PushbackInputStream;
 
-import static io.airlift.slice.Preconditions.checkNotNull;
+import static io.airlift.slice.Preconditions.checkArgument;
+import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
+import static io.airlift.slice.SizeOf.SIZE_OF_INT;
+import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
+import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 
 public final class InputStreamSliceInput
         extends SliceInput
 {
-    private final PushbackInputStream pushbackInputStream;
-    private final CountingInputStream countingInputStream;
-    private final LittleEndianDataInputStream dataInputStream;
+    public static final int DEFAULT_BUFFER_SIZE = 128 * 1024;
+    private static final int MINIMUM_CHUNK_SIZE = 4096;
 
-    @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
+    private final InputStream inputStream;
+
+    private final byte[] buffer;
+    private final Slice slice;
+    /**
+     * Offset of buffer within stream.
+     */
+    private long bufferOffset;
+    /**
+     * Current position for reading from buffer.
+     */
+    private int bufferPosition;
+
+    private int bufferFill;
+
     public InputStreamSliceInput(InputStream inputStream)
     {
-        checkNotNull(inputStream, "inputStream is null");
-        pushbackInputStream = new PushbackInputStream(inputStream);
-        countingInputStream = new CountingInputStream(pushbackInputStream);
-        dataInputStream = new LittleEndianDataInputStream(countingInputStream);
+        this(inputStream, DEFAULT_BUFFER_SIZE);
+    }
+
+    public InputStreamSliceInput(InputStream inputStream, int bufferSize)
+    {
+        checkArgument(bufferSize >= MINIMUM_CHUNK_SIZE, "minimum buffer size of " + MINIMUM_CHUNK_SIZE + " required");
+        if (inputStream == null) {
+            throw new NullPointerException("inputStream is null");
+        }
+
+        this.inputStream = inputStream;
+        this.buffer = new byte[bufferSize];
+        this.slice = Slices.wrappedBuffer(buffer);
     }
 
     @Override
     public long position()
     {
-        return (int) countingInputStream.getCount();
+        return checkedCast(bufferOffset + bufferPosition);
     }
 
     @Override
@@ -52,183 +76,126 @@ public final class InputStreamSliceInput
     @Override
     public boolean isReadable()
     {
-        try {
-            int value = pushbackInputStream.read();
-            if (value == -1) {
-                return false;
-            }
-            pushbackInputStream.unread(value);
-            return true;
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        return available() > 0;
     }
 
     @Override
     public int skipBytes(int n)
     {
-        try {
-            return dataInputStream.skipBytes(n);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public float readFloat()
-    {
-        try {
-            return dataInputStream.readFloat();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public double readDouble()
-    {
-        try {
-            return dataInputStream.readDouble();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public int readUnsignedByte()
-    {
-        try {
-            return dataInputStream.readUnsignedByte();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public int readUnsignedShort()
-    {
-        try {
-            return dataInputStream.readUnsignedShort();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public int readInt()
-    {
-        try {
-            return dataInputStream.readInt();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public long readLong()
-    {
-        try {
-            return dataInputStream.readLong();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public short readShort()
-    {
-        try {
-            return dataInputStream.readShort();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public byte readByte()
-    {
-        try {
-            return dataInputStream.readByte();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        return (int) skip(n);
     }
 
     @Override
     public boolean readBoolean()
     {
-        try {
-            return dataInputStream.readBoolean();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+        return readByte() != 0;
+    }
+
+    @Override
+    public byte readByte()
+    {
+        ensureAvailable(SIZE_OF_BYTE);
+        byte v = slice.getByteUnchecked(bufferPosition);
+        bufferPosition += SIZE_OF_BYTE;
+        return v;
+    }
+
+    @Override
+    public int readUnsignedByte()
+    {
+        return readByte() & 0xFF;
+    }
+
+    @Override
+    public short readShort()
+    {
+        ensureAvailable(SIZE_OF_SHORT);
+        short v = slice.getShortUnchecked(bufferPosition);
+        bufferPosition += SIZE_OF_SHORT;
+        return v;
+    }
+
+    @Override
+    public int readUnsignedShort()
+    {
+        return readShort() & 0xFFFF;
+    }
+
+    @Override
+    public int readInt()
+    {
+        ensureAvailable(SIZE_OF_INT);
+        int v = slice.getIntUnchecked(bufferPosition);
+        bufferPosition += SIZE_OF_INT;
+        return v;
+    }
+
+    @Override
+    public long readLong()
+    {
+        ensureAvailable(SIZE_OF_LONG);
+        long v = slice.getLongUnchecked(bufferPosition);
+        bufferPosition += SIZE_OF_LONG;
+        return v;
+    }
+
+    @Override
+    public float readFloat()
+    {
+        return Float.intBitsToFloat(readInt());
+    }
+
+    @Override
+    public double readDouble()
+    {
+        return Double.longBitsToDouble(readLong());
     }
 
     @Override
     public int read()
     {
-        try {
-            return dataInputStream.read();
+        if (available() == 0) {
+            return -1;
         }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+
+        assert availableBytes() > 0;
+        int v = slice.getByteUnchecked(bufferPosition) & 0xFF;
+        bufferPosition += SIZE_OF_BYTE;
+        return v;
     }
 
     @Override
-    public int read(byte[] b, int off, int len)
+    public int read(byte[] destination, int destinationIndex, int length)
     {
-        try {
-            return dataInputStream.read(b, off, len);
+        if (available() == 0) {
+            return -1;
         }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+
+        assert availableBytes() > 0;
+        int batch = Math.min(availableBytes(), length);
+        slice.getBytes(bufferPosition, destination, destinationIndex, batch);
+        bufferPosition += batch;
+        return batch;
     }
 
     @Override
-    public long skip(long n)
+    public long skip(long length)
     {
+        int availableBytes = availableBytes();
+        // is skip within the current buffer?
+        if (availableBytes >= length) {
+            bufferPosition += length;
+            return length;
+        }
+
+        // drop current buffer
+        bufferPosition = bufferFill;
+
         try {
-            return dataInputStream.skip(n);
+            // skip the rest in inputStream
+            long inputStreamSkip = inputStream.skip(length - availableBytes);
+            bufferOffset += inputStreamSkip;
+            return availableBytes + inputStreamSkip;
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -238,19 +205,18 @@ public final class InputStreamSliceInput
     @Override
     public int available()
     {
-        try {
-            return countingInputStream.available();
+        if (bufferPosition < bufferFill) {
+            return availableBytes();
         }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+
+        return fillBuffer();
     }
 
     @Override
     public void close()
     {
         try {
-            dataInputStream.close();
+            inputStream.close();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -260,18 +226,15 @@ public final class InputStreamSliceInput
     @Override
     public void readBytes(byte[] destination, int destinationIndex, int length)
     {
-        try {
-            while (length > 0) {
-                int bytesRead = dataInputStream.read(destination, destinationIndex, length);
-                if (bytesRead < 0) {
-                    throw new IndexOutOfBoundsException("End of stream");
-                }
-                length -= bytesRead;
-                destinationIndex += bytesRead;
-            }
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length);
+            slice.getBytes(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length, MINIMUM_CHUNK_SIZE));
         }
     }
 
@@ -281,30 +244,24 @@ public final class InputStreamSliceInput
         if (length == 0) {
             return Slices.EMPTY_SLICE;
         }
-        try {
-            Slice newSlice = Slices.allocate(length);
-            newSlice.setBytes(0, countingInputStream, length);
-            return newSlice;
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
+
+        Slice newSlice = Slices.allocate(length);
+        readBytes(newSlice, 0, length);
+        return newSlice;
     }
 
     @Override
     public void readBytes(Slice destination, int destinationIndex, int length)
     {
-        try {
-            destination.setBytes(destinationIndex, countingInputStream, length);
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length);
+            slice.getBytes(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length, MINIMUM_CHUNK_SIZE));
         }
     }
 
@@ -312,12 +269,65 @@ public final class InputStreamSliceInput
     public void readBytes(OutputStream out, int length)
             throws IOException
     {
-        try {
-            SliceStreamUtils.copyStreamFully(this, out, length);
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length);
+            out.write(buffer, bufferPosition, batch);
+
+            bufferPosition += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length, MINIMUM_CHUNK_SIZE));
         }
-        catch (EOFException e) {
-            // EOFException is thrown if this stream does not have the requested data available
-            throw new IndexOutOfBoundsException();
+    }
+
+    private int availableBytes()
+    {
+        return bufferFill - bufferPosition;
+    }
+
+    private void ensureAvailable(int size)
+    {
+        if (bufferPosition + size < bufferFill) {
+            return;
         }
+
+        if (fillBuffer() < size) {
+            throw new IndexOutOfBoundsException("End of stream");
+        }
+    }
+
+    private int fillBuffer()
+    {
+        // Keep the rest
+        int rest = bufferFill - bufferPosition;
+        // Use System.arraycopy for small copies
+        System.arraycopy(buffer, bufferPosition, buffer, 0, rest);
+
+        bufferFill = rest;
+        bufferOffset += bufferPosition;
+        bufferPosition = 0;
+        // Fill buffer with a minimum of bytes
+        while (bufferFill < MINIMUM_CHUNK_SIZE) {
+            try {
+                int bytesRead = inputStream.read(buffer, bufferFill, buffer.length - bufferFill);
+                if (bytesRead < 0) {
+                    break;
+                }
+
+                bufferFill += bytesRead;
+            }
+            catch (IOException e) {
+                throw new RuntimeIOException(e);
+            }
+        }
+
+        return bufferFill;
+    }
+
+    private static int checkedCast(long value)
+    {
+        int result = (int) value;
+        checkArgument(result == value, "Size is greater than maximum int value");
+        return result;
     }
 }
