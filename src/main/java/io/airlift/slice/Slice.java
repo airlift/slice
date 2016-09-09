@@ -622,6 +622,11 @@ public final class Slice
     public void setLong(int index, long value)
     {
         checkIndexLength(index, SIZE_OF_LONG);
+        setLongUnchecked(index, value);
+    }
+
+    void setLongUnchecked(int index, long value)
+    {
         unsafe.putLong(base, address + index, value);
     }
 
