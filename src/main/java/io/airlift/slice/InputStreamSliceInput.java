@@ -214,10 +214,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public int read(byte[] b, int off, int len)
+    public int read(byte[] destination, int destinationIndex, int length)
     {
         try {
-            return dataInputStream.read(b, off, len);
+            return dataInputStream.read(destination, destinationIndex, length);
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -225,10 +225,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public long skip(long n)
+    public long skip(long length)
     {
         try {
-            return dataInputStream.skip(n);
+            return dataInputStream.skip(length);
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
