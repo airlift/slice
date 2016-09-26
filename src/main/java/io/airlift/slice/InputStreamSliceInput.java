@@ -50,6 +50,17 @@ public final class InputStreamSliceInput
     }
 
     @Override
+    public int available()
+    {
+        try {
+            return countingInputStream.available();
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
+    }
+
+    @Override
     public boolean isReadable()
     {
         try {
@@ -77,10 +88,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public float readFloat()
+    public boolean readBoolean()
     {
         try {
-            return dataInputStream.readFloat();
+            return dataInputStream.readBoolean();
         }
         catch (EOFException e) {
             throw new IndexOutOfBoundsException();
@@ -91,10 +102,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public double readDouble()
+    public byte readByte()
     {
         try {
-            return dataInputStream.readDouble();
+            return dataInputStream.readByte();
         }
         catch (EOFException e) {
             throw new IndexOutOfBoundsException();
@@ -109,6 +120,20 @@ public final class InputStreamSliceInput
     {
         try {
             return dataInputStream.readUnsignedByte();
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
+        }
+    }
+
+    @Override
+    public short readShort()
+    {
+        try {
+            return dataInputStream.readShort();
+        }
+        catch (EOFException e) {
+            throw new IndexOutOfBoundsException();
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -158,10 +183,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public short readShort()
+    public float readFloat()
     {
         try {
-            return dataInputStream.readShort();
+            return dataInputStream.readFloat();
         }
         catch (EOFException e) {
             throw new IndexOutOfBoundsException();
@@ -172,24 +197,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public byte readByte()
+    public double readDouble()
     {
         try {
-            return dataInputStream.readByte();
-        }
-        catch (EOFException e) {
-            throw new IndexOutOfBoundsException();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public boolean readBoolean()
-    {
-        try {
-            return dataInputStream.readBoolean();
+            return dataInputStream.readDouble();
         }
         catch (EOFException e) {
             throw new IndexOutOfBoundsException();
@@ -214,17 +225,6 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public int read(byte[] destination, int destinationIndex, int length)
-    {
-        try {
-            return dataInputStream.read(destination, destinationIndex, length);
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
     public long skip(long length)
     {
         try {
@@ -236,21 +236,10 @@ public final class InputStreamSliceInput
     }
 
     @Override
-    public int available()
+    public int read(byte[] destination, int destinationIndex, int length)
     {
         try {
-            return countingInputStream.available();
-        }
-        catch (IOException e) {
-            throw new RuntimeIOException(e);
-        }
-    }
-
-    @Override
-    public void close()
-    {
-        try {
-            dataInputStream.close();
+            return dataInputStream.read(destination, destinationIndex, length);
         }
         catch (IOException e) {
             throw new RuntimeIOException(e);
@@ -318,6 +307,17 @@ public final class InputStreamSliceInput
         catch (EOFException e) {
             // EOFException is thrown if this stream does not have the requested data available
             throw new IndexOutOfBoundsException();
+        }
+    }
+
+    @Override
+    public void close()
+    {
+        try {
+            dataInputStream.close();
+        }
+        catch (IOException e) {
+            throw new RuntimeIOException(e);
         }
     }
 }

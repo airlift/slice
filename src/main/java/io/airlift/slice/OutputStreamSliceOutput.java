@@ -200,23 +200,9 @@ public class OutputStreamSliceOutput
     }
 
     @Override
-    public SliceOutput appendLong(long value)
+    public SliceOutput appendByte(int value)
     {
-        writeLong(value);
-        return this;
-    }
-
-    @Override
-    public SliceOutput appendDouble(double value)
-    {
-        writeDouble(value);
-        return this;
-    }
-
-    @Override
-    public SliceOutput appendInt(int value)
-    {
-        writeInt(value);
+        writeByte(value);
         return this;
     }
 
@@ -228,9 +214,23 @@ public class OutputStreamSliceOutput
     }
 
     @Override
-    public SliceOutput appendByte(int value)
+    public SliceOutput appendInt(int value)
     {
-        writeByte(value);
+        writeInt(value);
+        return this;
+    }
+
+    @Override
+    public SliceOutput appendLong(long value)
+    {
+        writeLong(value);
+        return this;
+    }
+
+    @Override
+    public SliceOutput appendDouble(double value)
+    {
+        writeDouble(value);
         return this;
     }
 
