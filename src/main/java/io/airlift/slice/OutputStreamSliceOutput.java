@@ -30,10 +30,10 @@ import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 public final class OutputStreamSliceOutput
         extends SliceOutput
 {
-    public static final int DEFAULT_BUFFER_SIZE = 128 * 1024;
+    public static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
 
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(OutputStreamSliceOutput.class).instanceSize();
-    private static final int MINIMUM_CHUNK_SIZE = 4096;
+    private static final int MINIMUM_CHUNK_SIZE = 1024;
 
     private final OutputStream outputStream;
 
