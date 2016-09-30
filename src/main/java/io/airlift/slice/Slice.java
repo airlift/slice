@@ -1036,27 +1036,30 @@ public final class Slice
             return true;
         }
 
+        long thisAddress = address + offset;
+        long thatAddress = that.address + otherOffset;
+
         while (length >= SIZE_OF_LONG) {
-            long thisLong = getLongUnchecked(offset);
-            long thatLong = that.getLongUnchecked(otherOffset);
+            long thisLong = unsafe.getLong(base, thisAddress);
+            long thatLong = unsafe.getLong(that.base, thatAddress);
 
             if (thisLong != thatLong) {
                 return false;
             }
 
-            offset += SIZE_OF_LONG;
-            otherOffset += SIZE_OF_LONG;
+            thisAddress += SIZE_OF_LONG;
+            thatAddress += SIZE_OF_LONG;
             length -= SIZE_OF_LONG;
         }
 
         while (length > 0) {
-            byte thisByte = getByteUnchecked(offset);
-            byte thatByte = that.getByteUnchecked(otherOffset);
+            byte thisByte = unsafe.getByte(base, thisAddress);
+            byte thatByte = unsafe.getByte(that.base, thatAddress);
             if (thisByte != thatByte) {
                 return false;
             }
-            offset++;
-            otherOffset++;
+            thisAddress++;
+            thatAddress++;
             length--;
         }
 
