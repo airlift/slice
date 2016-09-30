@@ -55,6 +55,13 @@ public class BenchmarkSlice
         return data.slice1.equalsUnchecked(0, data.slice2, 0, data.slice1.length());
     }
 
+    @Benchmark
+    public Object equalsObject(BenchmarkData data)
+            throws Throwable
+    {
+        return data.slice1.equals(data.slice2);
+    }
+
     @State(Scope.Thread)
     public static class BenchmarkData
     {
@@ -85,7 +92,7 @@ public class BenchmarkSlice
         // assure the benchmarks are valid before running
         BenchmarkData data = new BenchmarkData();
         data.setup();
-        new BenchmarkSlice().compareTo(data);
+        new BenchmarkSlice().equalsObject(data);
 
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)

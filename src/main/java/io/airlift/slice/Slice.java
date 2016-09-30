@@ -962,31 +962,7 @@ public final class Slice
             return false;
         }
 
-        int offset = 0;
-        int length = size;
-        while (length >= SIZE_OF_LONG) {
-            long thisLong = getLongUnchecked(offset);
-            long thatLong = that.getLongUnchecked(offset);
-
-            if (thisLong != thatLong) {
-                return false;
-            }
-
-            offset += SIZE_OF_LONG;
-            length -= SIZE_OF_LONG;
-        }
-
-        while (length > 0) {
-            byte thisByte = getByteUnchecked(offset);
-            byte thatByte = that.getByteUnchecked(offset);
-            if (thisByte != thatByte) {
-                return false;
-            }
-            offset++;
-            length--;
-        }
-
-        return true;
+        return equalsUnchecked(0, that, 0, length());
     }
 
     /**
@@ -1024,6 +1000,10 @@ public final class Slice
             return false;
         }
 
+        if ((this == that) && (offset == otherOffset)) {
+            return true;
+        }
+
         checkIndexLength(offset, length);
         that.checkIndexLength(otherOffset, otherLength);
 
@@ -1032,10 +1012,6 @@ public final class Slice
 
     boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
     {
-        if ((this == that) && (offset == otherOffset)) {
-            return true;
-        }
-
         long thisAddress = address + offset;
         long thatAddress = that.address + otherOffset;
 
