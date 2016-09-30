@@ -17,6 +17,7 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
@@ -35,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 @SuppressWarnings("MethodMayBeStatic")
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @BenchmarkMode(Mode.AverageTime)
+@Fork(5)
+@Warmup(iterations = 5, time = 1000, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 1000, timeUnit = TimeUnit.MILLISECONDS)
 public class BenchmarkSlice
 {
     @Benchmark
@@ -44,11 +48,18 @@ public class BenchmarkSlice
         return data.slice1.compareTo(0, data.slice1.length(), data.slice2, 0, data.slice2.length());
     }
 
+    @Benchmark
+    public Object equalsUnchecked(BenchmarkData data)
+            throws Throwable
+    {
+        return data.slice1.equalsUnchecked(0, data.slice2, 0, data.slice1.length());
+    }
+
     @State(Scope.Thread)
     public static class BenchmarkData
     {
         @Param({"1", "7", "8", "16", "32", "64", "127", "32779"})
-        private int size;
+        private int size = 1;
 
         private Slice slice1;
         private Slice slice2;
