@@ -440,6 +440,25 @@ public final class Slice
     }
 
     /**
+     * Gets an unsigned 64-bit long integer at the specified absolute {@code index} in
+     * this buffer.  Since Java does not have a primitive type that can fit unsigned long
+     * values, instead we throw -- this is useful for interoperating with unsigned values
+     * that almost always fit into 63 bits just fine, but you'd rather fail fast if it doesn't.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + 8} is greater than {@code this.length()}
+     * @throws IllegalStateException if the unsigned long cannot fit into a signed Java long
+     */
+    public long getUnsignedLongOrThrow(int index)
+    {
+        long result = getLong(index);
+        if (result < 0) {
+            throw new IllegalStateException("Unsigned long too big to fit in primitive type");
+        }
+        return result;
+    }
+
+    /**
      * Gets a 32-bit float at the specified absolute {@code index} in
      * this buffer.
      *
