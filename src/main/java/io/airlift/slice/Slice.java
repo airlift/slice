@@ -380,6 +380,18 @@ public final class Slice
     }
 
     /**
+     * Gets an unsigned 16-bit short integer at the specified absolute {@code index}
+     * in this slice.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + 2} is greater than {@code this.length()}
+     */
+    public int getUnsignedShort(int index)
+    {
+        return getShort(index) & 0xFFFF;
+    }
+
+    /**
      * Gets a 32-bit integer at the specified absolute {@code index} in
      * this buffer.
      *
@@ -395,6 +407,18 @@ public final class Slice
     int getIntUnchecked(int index)
     {
         return unsafe.getInt(base, address + index);
+    }
+
+    /**
+     * Gets an unsigned 32-bit integer at the specified absolute {@code index} in
+     * this buffer.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + 4} is greater than {@code this.length()}
+     */
+    public long getUnsignedInt(int index)
+    {
+        return getInt(index) & 0xFFFFFFFFL;
     }
 
     /**
