@@ -13,6 +13,9 @@
  */
 package io.airlift.slice;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.Long.rotateLeft;
@@ -161,6 +164,27 @@ public final class XxHash64
         hash = finalShuffle(hash);
 
         return hash;
+    }
+
+    public static long hash(InputStream in)
+            throws IOException
+    {
+        return hash(DEFAULT_SEED, in);
+    }
+
+    public static long hash(long seed, InputStream in)
+            throws IOException
+    {
+        XxHash64 hash = new XxHash64(seed);
+        byte[] buffer = new byte[8192];
+        while (true) {
+            int length = in.read(buffer);
+            if (length == -1) {
+                break;
+            }
+            hash.update(buffer, 0, length);
+        }
+        return hash.hash();
     }
 
     public static long hash(Slice data)

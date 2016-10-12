@@ -17,6 +17,9 @@ import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
 import org.testng.annotations.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.XxHash64.hash;
 import static java.lang.Math.min;
@@ -65,6 +68,7 @@ public class TestXxHash64
     }
 
     private static void assertHash(long seed, Slice data, int length, long expected)
+            throws IOException
     {
         assertEquals(hash(seed, data, 0, length), expected);
         assertEquals(hash(seed, data.slice(0, length)), expected);
@@ -73,6 +77,8 @@ public class TestXxHash64
         assertEquals(new XxHash64(seed).update(data, 0, length).hash(), expected);
         assertEquals(new XxHash64(seed).update(data.getBytes(0, length)).hash(), expected);
         assertEquals(new XxHash64(seed).update(data.getBytes(), 0, length).hash(), expected);
+
+        assertEquals(hash(seed, new ByteArrayInputStream(data.getBytes(0, length))), expected);
 
         for (int chunkSize = 1; chunkSize <= length; chunkSize++) {
             XxHash64 hash = new XxHash64(seed);
@@ -90,7 +96,7 @@ public class TestXxHash64
             throws Exception
     {
         XXHash64 jpountz = XXHashFactory.fastestInstance().hash64();
-        for (int i = 0; i < 10_000; i++) {
+        for (int i = 0; i < 20_000; i++) {
             byte[] data = new byte[i];
             long expected = jpountz.hash(data, 0, data.length, 0);
 
@@ -98,6 +104,8 @@ public class TestXxHash64
             assertEquals(hash(slice), expected);
             assertEquals(new XxHash64().update(slice).hash(), expected);
             assertEquals(new XxHash64().update(data).hash(), expected);
+
+            assertEquals(hash(new ByteArrayInputStream(data)), expected);
         }
     }
 
