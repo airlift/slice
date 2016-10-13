@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
 
 import static io.airlift.slice.JvmUtils.getAddress;
+import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -35,6 +36,9 @@ public final class Slices
      * A slice with size {@code 0}.
      */
     public static final Slice EMPTY_SLICE = new Slice();
+
+    // see java.util.ArrayList for an explanation
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
     private static final int SLICE_ALLOC_THRESHOLD = 524_288; // 2^19
     private static final double SLICE_ALLOW_SKEW = 1.25; // must be > 1!
@@ -78,6 +82,7 @@ public final class Slices
         if (capacity == 0) {
             return EMPTY_SLICE;
         }
+        checkArgument(capacity <= MAX_ARRAY_SIZE, "cannot allocate slice larger than %s bytes", MAX_ARRAY_SIZE);
         return new Slice(new byte[capacity]);
     }
 
