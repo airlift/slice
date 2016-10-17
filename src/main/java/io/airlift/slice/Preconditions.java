@@ -39,13 +39,6 @@ final class Preconditions
         }
     }
 
-    public static void checkArgument(boolean expression, @Nullable String errorMessageTemplate, @Nullable Object... errorMessageArgs)
-    {
-        if (!expression) {
-            throw new IllegalArgumentException(format(errorMessageTemplate, errorMessageArgs));
-        }
-    }
-
     public static int checkPositionIndex(int index, int size)
     {
         return checkPositionIndex(index, size, "index");
