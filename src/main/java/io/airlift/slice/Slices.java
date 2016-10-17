@@ -82,7 +82,7 @@ public final class Slices
         if (capacity == 0) {
             return EMPTY_SLICE;
         }
-        checkArgument(capacity <= MAX_ARRAY_SIZE, "cannot allocate slice larger than %s bytes", MAX_ARRAY_SIZE);
+        checkArgument(capacity <= MAX_ARRAY_SIZE, "Cannot allocate slice larger than " + MAX_ARRAY_SIZE + " bytes");
         return new Slice(new byte[capacity]);
     }
 

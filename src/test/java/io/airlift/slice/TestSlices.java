@@ -66,4 +66,10 @@ public class TestSlices
             assertEquals(slice.getByte(i), i + 10);
         }
     }
+
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Cannot allocate slice larger than 2147483639 bytes")
+    public void testAllocationLimit()
+    {
+        Slices.allocate(Integer.MAX_VALUE - 1);
+    }
 }
