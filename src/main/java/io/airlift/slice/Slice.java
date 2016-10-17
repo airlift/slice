@@ -27,7 +27,6 @@ import java.nio.charset.Charset;
 import static io.airlift.slice.JvmUtils.newByteBuffer;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -39,6 +38,7 @@ import static io.airlift.slice.StringDecoder.decodeString;
 import static java.lang.Math.min;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -120,7 +120,7 @@ public final class Slice
      */
     Slice(byte[] base)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         this.base = base;
         this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = base.length;
@@ -133,7 +133,7 @@ public final class Slice
      */
     Slice(byte[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
@@ -148,7 +148,7 @@ public final class Slice
      */
     Slice(boolean[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
@@ -163,7 +163,7 @@ public final class Slice
      */
     Slice(short[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
@@ -178,7 +178,7 @@ public final class Slice
      */
     Slice(int[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
@@ -193,7 +193,7 @@ public final class Slice
      */
     Slice(long[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
@@ -208,7 +208,7 @@ public final class Slice
      */
     Slice(float[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
@@ -223,7 +223,7 @@ public final class Slice
      */
     Slice(double[] base, int offset, int length)
     {
-        checkNotNull(base, "base is null");
+        requireNonNull(base, "base is null");
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;

@@ -17,13 +17,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndex;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.util.Objects.requireNonNull;
 
 @SuppressWarnings("JavaDoc") // IDEA-81310
 public final class BasicSliceInput
@@ -34,7 +34,7 @@ public final class BasicSliceInput
 
     public BasicSliceInput(Slice slice)
     {
-        this.slice = checkNotNull(slice, "slice is null");
+        this.slice = requireNonNull(slice, "slice is null");
     }
 
     @Override

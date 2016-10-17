@@ -23,7 +23,7 @@ import java.nio.charset.CodingErrorAction;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-import static io.airlift.slice.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 final class StringDecoder
 {
@@ -64,7 +64,7 @@ final class StringDecoder
      */
     private static CharsetDecoder getDecoder(Charset charset)
     {
-        checkNotNull(charset, "charset is null");
+        requireNonNull(charset, "charset is null");
 
         Map<Charset, CharsetDecoder> map = decoders.get();
         CharsetDecoder d = map.get(charset);

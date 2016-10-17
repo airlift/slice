@@ -25,9 +25,9 @@ import java.nio.charset.Charset;
 
 import static io.airlift.slice.JvmUtils.getAddress;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class Slices
@@ -223,8 +223,8 @@ public final class Slices
 
     public static Slice copiedBuffer(String string, Charset charset)
     {
-        checkNotNull(string, "string is null");
-        checkNotNull(charset, "charset is null");
+        requireNonNull(string, "string is null");
+        requireNonNull(charset, "charset is null");
 
         return wrappedBuffer(string.getBytes(charset));
     }
@@ -237,7 +237,7 @@ public final class Slices
     public static Slice mapFileReadOnly(File file)
             throws IOException
     {
-        checkNotNull(file, "file is null");
+        requireNonNull(file, "file is null");
 
         if (!file.exists()) {
             throw new FileNotFoundException(file.toString());

@@ -20,13 +20,13 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.Preconditions.checkNotNull;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.util.Objects.requireNonNull;
 
 public class BasicSliceOutput
         extends SliceOutput
@@ -38,7 +38,7 @@ public class BasicSliceOutput
 
     protected BasicSliceOutput(Slice slice)
     {
-        this.slice = checkNotNull(slice, "slice is null");
+        this.slice = requireNonNull(slice, "slice is null");
     }
 
     @Override
