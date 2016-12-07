@@ -21,10 +21,12 @@ import org.testng.annotations.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 import static com.google.common.primitives.Bytes.concat;
 import static io.airlift.slice.SliceUtf8.codePointToUtf8;
+import static io.airlift.slice.SliceUtf8.compareUtf16BE;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
 import static io.airlift.slice.SliceUtf8.getCodePointAt;
@@ -49,10 +51,13 @@ import static java.lang.Character.MAX_CODE_POINT;
 import static java.lang.Character.MIN_SURROGATE;
 import static java.lang.Character.SURROGATE;
 import static java.lang.Character.getType;
+import static java.lang.Integer.signum;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.IntStream.concat;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class TestSliceUtf8
 {
@@ -132,6 +137,17 @@ public class TestSliceUtf8
         invalidSequences.add(new byte[] {(byte) 0b11110000, (byte) 0x8F, (byte) 0xBF, (byte) 0xBF}); // 4-byte encoding of 0xFFFF
 
         INVALID_SEQUENCES = invalidSequences.build();
+    }
+
+    private static final int[] UTF_16_BOUNDARY_CODE_POINTS = new int[] {0x0000, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10FFFF};
+    private static final int[] UTF_16_TESTING_CODE_POINTS;
+    static {
+        Random random = new Random(0);
+        IntStream utf16TestCodePoints = IntStream.of(UTF_16_BOUNDARY_CODE_POINTS);
+        utf16TestCodePoints = concat(utf16TestCodePoints, random.ints(200, 0x0000, 0xD800));
+        utf16TestCodePoints = concat(utf16TestCodePoints, random.ints(200, 0xE000, 0x10000));
+        utf16TestCodePoints = concat(utf16TestCodePoints, random.ints(200, 0x10000, 0x110000));
+        UTF_16_TESTING_CODE_POINTS = utf16TestCodePoints.toArray();
     }
 
     private static final String STRING_EMPTY = "";
@@ -316,6 +332,82 @@ public class TestSliceUtf8
         assertEquals(
                 reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence, new byte[] {'x', 'y', 'z'}))),
                 wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence, new byte[] {'c', 'b', 'a'})));
+    }
+
+    @Test
+    public void testCompareUtf16BE()
+    {
+        testCompareUtf16BESequence(STRING_HELLO);
+        testCompareUtf16BESequence(STRING_OESTERREICH);
+        testCompareUtf16BESequence(STRING_DULIOE_DULIOE);
+        testCompareUtf16BESequence(STRING_FAITH_HOPE_LOVE);
+        testCompareUtf16BESequence(STRING_NAIVE);
+        testCompareUtf16BESequence(STRING_OO);
+    }
+
+    private static void testCompareUtf16BESequence(String prefix)
+    {
+        for (String leftSuffix : ImmutableList.of("", "a", "\uD801\uDC2D")) {
+            for (String rightSuffix : ImmutableList.of("", "a", "\uD801\uDC2D")) {
+                for (int leftCodePoint : UTF_16_BOUNDARY_CODE_POINTS) {
+                    String leftString = prefix + new String(Character.toChars(leftCodePoint)) + leftSuffix;
+                    Slice leftSlice = utf8Slice(leftString);
+
+                    // try the UTF-16 code points at the boundaries
+                    for (int rightCodePoint : UTF_16_BOUNDARY_CODE_POINTS) {
+                        String rightString = prefix + new String(Character.toChars(rightCodePoint)) + rightSuffix;
+                        Slice rightSlice = utf8Slice(rightString);
+
+                        int expected = signum(leftString.compareTo(rightString));
+
+                        int actual = compareUtf16BE(leftSlice, rightSlice);
+                        assertEquals(actual, expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                        actual = compareUtf16BE(rightSlice, leftSlice);
+                        assertEquals(actual, -expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testCompareUtf16BEIllegalSequences()
+    {
+        for (byte[] invalidSequence : INVALID_SEQUENCES) {
+            Slice leftSlice = new Slice(concat(new byte[] {'F', 'O', 'O'}, invalidSequence));
+            Slice rightSlice = new Slice(new byte[] {'F', 'O', 'O', 'B', 'a', 'r'});
+            try {
+                compareUtf16BE(leftSlice, rightSlice);
+                fail("Expected exception for invalid UTF-8");
+            }
+            catch (InvalidUtf8Exception e) {
+            }
+            try {
+                compareUtf16BE(rightSlice, leftSlice);
+                fail("Expected exception for invalid UTF-8");
+            }
+            catch (InvalidUtf8Exception e) {
+            }
+        }
+    }
+
+    @Test
+    public void testCompareUtf16BECodePoint()
+    {
+        for (int leftCodePoint : UTF_16_TESTING_CODE_POINTS) {
+            String leftString = new String(Character.toChars(leftCodePoint));
+
+            // try the UTF-16 code points at the boundaries
+            for (int rightCodePoint : UTF_16_TESTING_CODE_POINTS) {
+                String rightString = new String(Character.toChars(rightCodePoint));
+                int expected = signum(leftString.compareTo(rightString));
+
+                int actual = compareUtf16BE(leftCodePoint, rightCodePoint);
+                assertEquals(actual, expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                actual = compareUtf16BE(rightCodePoint, leftCodePoint);
+                assertEquals(actual, -expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+            }
+        }
     }
 
     @Test

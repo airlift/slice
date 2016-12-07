@@ -20,6 +20,7 @@ import static io.airlift.slice.Preconditions.checkPositionIndex;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.Character.MAX_CODE_POINT;
 import static java.lang.Character.MAX_SURROGATE;
+import static java.lang.Character.MIN_SUPPLEMENTARY_CODE_POINT;
 import static java.lang.Character.MIN_SURROGATE;
 import static java.lang.Integer.toHexString;
 
@@ -30,6 +31,7 @@ public final class SliceUtf8
 {
     private SliceUtf8() {}
 
+    private static final int MIN_HIGH_SURROGATE_CODE_POINT = 0xD800;
     private static final int REPLACEMENT_CODE_POINT = 0xFFFD;
 
     private static final int TOP_MASK32 = 0x8080_8080;
@@ -198,6 +200,78 @@ public final class SliceUtf8
             forwardPosition += codePointLength;
         }
         return reverse;
+    }
+
+    /**
+     * Compares to UTF-8 sequences using UTF-16 big endian semantics.  This is
+     * equivilant to the {@link java.lang.String#compareTo(Object)}.
+     * {@code java.lang.String}.
+     * @throws InvalidUtf8Exception if the UTF-8 are invalid
+     */
+    public static int compareUtf16BE(Slice utf8Left, Slice utf8Right)
+    {
+        int leftLength = utf8Left.length();
+        int rightLength = utf8Right.length();
+
+        int leftOffset = 0;
+        int rightOffset = 0;
+        while (leftOffset < leftLength) {
+            // if there are no more right code points, right is less
+            if (rightOffset >= rightLength) {
+                return 1; // left.compare(right) > 0
+            }
+
+            int leftCodePoint = tryGetCodePointAt(utf8Left, leftOffset);
+            if (leftCodePoint < 0) {
+                throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Left at " + leftOffset);
+            }
+
+            int rightCodePoint = tryGetCodePointAt(utf8Right, rightOffset);
+            if (rightCodePoint < 0) {
+                throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Right at " + rightOffset);
+            }
+
+            int result = compareUtf16BE(leftCodePoint, rightCodePoint);
+            if (result != 0) {
+                return result;
+            }
+
+            // Since we are reading code point at a time, after this advance,
+            // these sequences when encoded in UTF-16 will be a the start of
+            // a single 16 bit code point or a 32 bit surrogate pair.
+            leftOffset += lengthOfCodePoint(leftCodePoint);
+            rightOffset += lengthOfCodePoint(rightCodePoint);
+        }
+
+        // there are no more left code points, so if there are more right code points,
+        // left is less
+        if (rightOffset < rightLength) {
+            return -1; // left.compare(right) < 0
+        }
+
+        return 0;
+    }
+
+    static int compareUtf16BE(int leftCodePoint, int rightCodePoint)
+    {
+        if (leftCodePoint < MIN_SUPPLEMENTARY_CODE_POINT) {
+            if (rightCodePoint < MIN_SUPPLEMENTARY_CODE_POINT) {
+                return Integer.compare(leftCodePoint, rightCodePoint);
+            }
+            else {
+                // left simple, right complex
+                return leftCodePoint < MIN_HIGH_SURROGATE_CODE_POINT ? -1 : 1;
+            }
+        }
+        else {
+            if (rightCodePoint >= MIN_SUPPLEMENTARY_CODE_POINT) {
+                return Integer.compare(leftCodePoint, rightCodePoint);
+            }
+            else {
+                // left complex, right simple
+                return rightCodePoint < MIN_HIGH_SURROGATE_CODE_POINT ? 1 : -1;
+            }
+        }
     }
 
     /**
