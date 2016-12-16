@@ -213,22 +213,21 @@ public final class SliceUtf8
         int leftLength = utf8Left.length();
         int rightLength = utf8Right.length();
 
-        int leftOffset = 0;
-        int rightOffset = 0;
-        while (leftOffset < leftLength) {
+        int offset = 0;
+        while (offset < leftLength) {
             // if there are no more right code points, right is less
-            if (rightOffset >= rightLength) {
+            if (offset >= rightLength) {
                 return 1; // left.compare(right) > 0
             }
 
-            int leftCodePoint = tryGetCodePointAt(utf8Left, leftOffset);
+            int leftCodePoint = tryGetCodePointAt(utf8Left, offset);
             if (leftCodePoint < 0) {
-                throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Left at " + leftOffset);
+                throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Left at " + offset);
             }
 
-            int rightCodePoint = tryGetCodePointAt(utf8Right, rightOffset);
+            int rightCodePoint = tryGetCodePointAt(utf8Right, offset);
             if (rightCodePoint < 0) {
-                throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Right at " + rightOffset);
+                throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Right at " + offset);
             }
 
             int result = compareUtf16BE(leftCodePoint, rightCodePoint);
@@ -236,16 +235,14 @@ public final class SliceUtf8
                 return result;
             }
 
-            // Since we are reading code point at a time, after this advance,
-            // these sequences when encoded in UTF-16 will be a the start of
-            // a single 16 bit code point or a 32 bit surrogate pair.
-            leftOffset += lengthOfCodePoint(leftCodePoint);
-            rightOffset += lengthOfCodePoint(rightCodePoint);
+            // the code points are the same and non-canonical sequences are not allowed,
+            // so we advance a single offset through both sequences
+            offset += lengthOfCodePoint(leftCodePoint);
         }
 
         // there are no more left code points, so if there are more right code points,
         // left is less
-        if (rightOffset < rightLength) {
+        if (offset < rightLength) {
             return -1; // left.compare(right) < 0
         }
 
