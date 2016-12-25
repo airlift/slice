@@ -27,7 +27,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 
-public final class OutputStreamSliceOutput
+public class OutputStreamSliceOutput
         extends SliceOutput
 {
     private static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
