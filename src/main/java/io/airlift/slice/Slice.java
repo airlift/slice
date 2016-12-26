@@ -130,6 +130,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(byte[] base, int offset, int length)
     {
@@ -145,6 +148,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(boolean[] base, int offset, int length)
     {
@@ -152,7 +158,7 @@ public final class Slice
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
-        this.address = ARRAY_BOOLEAN_BASE_OFFSET + offset;
+        this.address = ARRAY_BOOLEAN_BASE_OFFSET + offset * ARRAY_BOOLEAN_INDEX_SCALE;
         this.size = length * ARRAY_BOOLEAN_INDEX_SCALE;
         this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_BOOLEAN_INDEX_SCALE;
         this.reference = null;
@@ -160,6 +166,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(short[] base, int offset, int length)
     {
@@ -167,7 +176,7 @@ public final class Slice
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
-        this.address = ARRAY_SHORT_BASE_OFFSET + offset;
+        this.address = ARRAY_SHORT_BASE_OFFSET + offset * ARRAY_SHORT_INDEX_SCALE;
         this.size = length * ARRAY_SHORT_INDEX_SCALE;
         this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_SHORT_INDEX_SCALE;
         this.reference = null;
@@ -175,6 +184,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(int[] base, int offset, int length)
     {
@@ -182,7 +194,7 @@ public final class Slice
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
-        this.address = ARRAY_INT_BASE_OFFSET + offset;
+        this.address = ARRAY_INT_BASE_OFFSET + offset * ARRAY_INT_INDEX_SCALE;
         this.size = length * ARRAY_INT_INDEX_SCALE;
         this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_INT_INDEX_SCALE;
         this.reference = null;
@@ -190,6 +202,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(long[] base, int offset, int length)
     {
@@ -197,7 +212,7 @@ public final class Slice
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
-        this.address = ARRAY_LONG_BASE_OFFSET + offset;
+        this.address = ARRAY_LONG_BASE_OFFSET + offset * ARRAY_LONG_INDEX_SCALE;
         this.size = length * ARRAY_LONG_INDEX_SCALE;
         this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_LONG_INDEX_SCALE;
         this.reference = null;
@@ -205,6 +220,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(float[] base, int offset, int length)
     {
@@ -212,7 +230,7 @@ public final class Slice
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
-        this.address = ARRAY_FLOAT_BASE_OFFSET + offset;
+        this.address = ARRAY_FLOAT_BASE_OFFSET + offset * ARRAY_FLOAT_INDEX_SCALE;
         this.size = length * ARRAY_FLOAT_INDEX_SCALE;
         this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_FLOAT_INDEX_SCALE;
         this.reference = null;
@@ -220,6 +238,9 @@ public final class Slice
 
     /**
      * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
      */
     Slice(double[] base, int offset, int length)
     {
@@ -227,7 +248,7 @@ public final class Slice
         checkPositionIndexes(offset, offset + length, base.length);
 
         this.base = base;
-        this.address = ARRAY_DOUBLE_BASE_OFFSET + offset;
+        this.address = ARRAY_DOUBLE_BASE_OFFSET + offset * ARRAY_DOUBLE_INDEX_SCALE;
         this.size = length * ARRAY_DOUBLE_INDEX_SCALE;
         this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_DOUBLE_INDEX_SCALE;
         this.reference = null;

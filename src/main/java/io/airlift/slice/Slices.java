@@ -127,6 +127,9 @@ public final class Slices
         throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedBuffer(byte... array)
     {
         if (array.length == 0) {
@@ -135,6 +138,12 @@ public final class Slices
         return new Slice(array);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedBuffer(byte[] array, int offset, int length)
     {
         if (length == 0) {
@@ -143,11 +152,20 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedBooleanArray(boolean... array)
     {
         return wrappedBooleanArray(array, 0, array.length);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedBooleanArray(boolean[] array, int offset, int length)
     {
         if (length == 0) {
@@ -156,11 +174,20 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedShortArray(short... array)
     {
         return wrappedShortArray(array, 0, array.length);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedShortArray(short[] array, int offset, int length)
     {
         if (length == 0) {
@@ -169,11 +196,20 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedIntArray(int... array)
     {
         return wrappedIntArray(array, 0, array.length);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedIntArray(int[] array, int offset, int length)
     {
         if (length == 0) {
@@ -182,11 +218,20 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedLongArray(long... array)
     {
         return wrappedLongArray(array, 0, array.length);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedLongArray(long[] array, int offset, int length)
     {
         if (length == 0) {
@@ -195,11 +240,20 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedFloatArray(float... array)
     {
         return wrappedFloatArray(array, 0, array.length);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedFloatArray(float[] array, int offset, int length)
     {
         if (length == 0) {
@@ -208,11 +262,20 @@ public final class Slices
         return new Slice(array, offset, length);
     }
 
+    /**
+     * Creates a slice over the specified array.
+     */
     public static Slice wrappedDoubleArray(double... array)
     {
         return wrappedDoubleArray(array, 0, array.length);
     }
 
+    /**
+     * Creates a slice over the specified array range.
+     *
+     * @param offset the array position at which the slice begins
+     * @param length the number of array positions to include in the slice
+     */
     public static Slice wrappedDoubleArray(double[] array, int offset, int length)
     {
         if (length == 0) {
