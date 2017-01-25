@@ -14,29 +14,17 @@
 package io.airlift.slice;
 
 import org.openjdk.jmh.annotations.AuxCounters;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
+@SuppressWarnings("PublicField")
 @AuxCounters
 @State(Scope.Thread)
 public class ByteCounter
 {
-    private long bytes;
+    public long bytes;
 
-    @Setup(Level.Iteration)
-    public void clean()
-    {
-        bytes = 0;
-    }
-
-    public long megabytes()
-    {
-        return bytes / 1024 / 1024;
-    }
-
-    public void add(long bytes)
+    void add(long bytes)
     {
         this.bytes += bytes;
     }
