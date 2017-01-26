@@ -56,6 +56,36 @@ public final class ByteArrays
         return unsafe.getDouble(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index);
     }
 
+    public static void setShort(byte[] bytes, int index, short value)
+    {
+        checkIndexLength(bytes.length, index, SIZE_OF_SHORT);
+        unsafe.putShort(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
+    }
+
+    public static void setInt(byte[] bytes, int index, int value)
+    {
+        checkIndexLength(bytes.length, index, SIZE_OF_INT);
+        unsafe.putInt(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
+    }
+
+    public static void setLong(byte[] bytes, int index, long value)
+    {
+        checkIndexLength(bytes.length, index, SIZE_OF_LONG);
+        unsafe.putLong(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
+    }
+
+    public static void setFloat(byte[] bytes, int index, float value)
+    {
+        checkIndexLength(bytes.length, index, SIZE_OF_FLOAT);
+        unsafe.putFloat(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
+    }
+
+    public static void setDouble(byte[] bytes, int index, double value)
+    {
+        checkIndexLength(bytes.length, index, SIZE_OF_DOUBLE);
+        unsafe.putDouble(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
+    }
+
     private static void checkIndexLength(int arrayLength, int index, int typeLength)
     {
         checkPositionIndexes(index, index + typeLength, arrayLength);
