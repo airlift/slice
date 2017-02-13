@@ -18,6 +18,7 @@ import org.openjdk.jol.info.ClassLayout;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
@@ -341,7 +342,7 @@ public class OutputStreamSliceOutput
             outputStream.write(source, sourceIndex, length);
         }
         catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -351,7 +352,7 @@ public class OutputStreamSliceOutput
             source.getBytes(sourceIndex, outputStream, length);
         }
         catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new UncheckedIOException(e);
         }
     }
 

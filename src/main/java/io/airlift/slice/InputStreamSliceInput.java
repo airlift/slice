@@ -16,6 +16,7 @@ package io.airlift.slice;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
@@ -194,7 +195,7 @@ public final class InputStreamSliceInput
             return availableBytes + inputStreamSkip;
         }
         catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -276,7 +277,7 @@ public final class InputStreamSliceInput
             inputStream.close();
         }
         catch (IOException e) {
-            throw new RuntimeIOException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -317,7 +318,7 @@ public final class InputStreamSliceInput
                 bufferFill += bytesRead;
             }
             catch (IOException e) {
-                throw new RuntimeIOException(e);
+                throw new UncheckedIOException(e);
             }
         }
 
