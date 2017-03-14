@@ -97,4 +97,9 @@ public class UnsafeSliceFactory
         }
         return new Slice(null, address, size, size, reference);
     }
+
+    public Slice newSlice(Object base, long address, int size)
+    {
+        return new Slice(base, address, size, size, null);
+    }
 }
