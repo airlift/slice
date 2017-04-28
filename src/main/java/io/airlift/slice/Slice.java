@@ -101,7 +101,7 @@ public final class Slice
      */
     private final Object reference;
 
-    private int hash;
+    private long hash;
 
     /**
      * Creates an empty slice.
@@ -1018,20 +1018,39 @@ public final class Slice
     @Override
     public int hashCode()
     {
+        return (int) longHashCode();
+    }
+
+    /**
+     * Returns the hash code of this slice.  The hash code is cached once calculated
+     * and any future changes to the slice will not effect the hash code.
+     */
+    public long longHashCode()
+    {
         if (hash != 0) {
             return hash;
         }
 
-        hash = hashCode(0, size);
+        hash = longHashCode(0, size);
         return hash;
     }
 
     /**
      * Returns the hash code of a portion of this slice.
+     * @deprecated use longHashCode
      */
+    @Deprecated
     public int hashCode(int offset, int length)
     {
-        return (int) XxHash64.hash(this, offset, length);
+        return (int) longHashCode(0, size);
+    }
+
+    /**
+     * Returns the hash code of a portion of this slice.
+     */
+    public long longHashCode(int offset, int length)
+    {
+        return XxHash64.hash(this, offset, length);
     }
 
     /**
