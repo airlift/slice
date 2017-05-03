@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 public final class Murmur3Hash32
 {
     private static final int C1 = 0xcc9e2d51;
@@ -32,6 +34,7 @@ public final class Murmur3Hash32
         return hash(DEFAULT_SEED, data, offset, length);
     }
 
+    @SuppressFBWarnings({"SF_SWITCH_NO_DEFAULT", "SF_SWITCH_FALLTHROUGH"})
     public static int hash(int seed, Slice data, int offset, int length)
     {
         final int fastLimit = offset + length - SizeOf.SIZE_OF_INT + 1;

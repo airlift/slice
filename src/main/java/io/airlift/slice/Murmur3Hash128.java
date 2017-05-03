@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 public class Murmur3Hash128
 {
     private static final long C1 = 0x87c37b91114253d5L;
@@ -30,6 +32,7 @@ public class Murmur3Hash128
         return hash(DEFAULT_SEED, data, offset, length);
     }
 
+    @SuppressFBWarnings("SF_SWITCH_NO_DEFAULT")
     public static Slice hash(long seed, Slice data, int offset, int length)
     {
         final int fastLimit = offset + length - (2 * SizeOf.SIZE_OF_LONG) + 1;
@@ -143,6 +146,7 @@ public class Murmur3Hash128
         return hash64(DEFAULT_SEED, data, offset, length);
     }
 
+    @SuppressFBWarnings({"SF_SWITCH_NO_DEFAULT", "SF_SWITCH_FALLTHROUGH"})
     public static long hash64(long seed, Slice data, int offset, int length)
     {
         final int fastLimit = offset + length - (2 * SizeOf.SIZE_OF_LONG) + 1;
