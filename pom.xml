@@ -13,15 +13,12 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>61</version>
+        <version>63</version>
     </parent>
 
     <inceptionYear>2012</inceptionYear>
 
     <properties>
-        <air.check.skip-findbugs>true</air.check.skip-findbugs>
-        <air.check.skip-pmd>true</air.check.skip-pmd>
-        <air.check.skip-jacoco>true</air.check.skip-jacoco>
         <air.javadoc.lint>-missing</air.javadoc.lint>
     </properties>
 
