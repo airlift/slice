@@ -33,6 +33,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.sizeOfByteArray;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Double.doubleToLongBits;
@@ -682,10 +683,10 @@ public class TestSlice
     {
         int sliceInstanceSize = ClassLayout.parseClass(Slice.class).instanceSize();
         Slice slice = Slices.allocate(10);
-        assertEquals(slice.getRetainedSize(), 10 + sliceInstanceSize);
+        assertEquals(slice.getRetainedSize(), sizeOfByteArray(10) + sliceInstanceSize);
         assertEquals(slice.length(), 10);
         Slice subSlice = slice.slice(0, 1);
-        assertEquals(subSlice.getRetainedSize(), 10 + sliceInstanceSize);
+        assertEquals(subSlice.getRetainedSize(), sizeOfByteArray(10) + sliceInstanceSize);
         assertEquals(subSlice.length(), 1);
     }
 

@@ -34,8 +34,10 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.sizeOf;
 import static io.airlift.slice.StringDecoder.decodeString;
 import static java.lang.Math.min;
+import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -124,7 +126,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = base.length;
-        this.retainedSize = INSTANCE_SIZE + base.length;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -142,7 +144,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_BYTE_BASE_OFFSET + offset;
         this.size = length;
-        this.retainedSize = INSTANCE_SIZE + base.length;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -160,7 +162,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_BOOLEAN_BASE_OFFSET + offset * ARRAY_BOOLEAN_INDEX_SCALE;
         this.size = length * ARRAY_BOOLEAN_INDEX_SCALE;
-        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_BOOLEAN_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -178,7 +180,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_SHORT_BASE_OFFSET + offset * ARRAY_SHORT_INDEX_SCALE;
         this.size = length * ARRAY_SHORT_INDEX_SCALE;
-        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_SHORT_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -196,7 +198,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_INT_BASE_OFFSET + offset * ARRAY_INT_INDEX_SCALE;
         this.size = length * ARRAY_INT_INDEX_SCALE;
-        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_INT_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -214,7 +216,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_LONG_BASE_OFFSET + offset * ARRAY_LONG_INDEX_SCALE;
         this.size = length * ARRAY_LONG_INDEX_SCALE;
-        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_LONG_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -232,7 +234,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_FLOAT_BASE_OFFSET + offset * ARRAY_FLOAT_INDEX_SCALE;
         this.size = length * ARRAY_FLOAT_INDEX_SCALE;
-        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_FLOAT_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
@@ -250,7 +252,7 @@ public final class Slice
         this.base = base;
         this.address = ARRAY_DOUBLE_BASE_OFFSET + offset * ARRAY_DOUBLE_INDEX_SCALE;
         this.size = length * ARRAY_DOUBLE_INDEX_SCALE;
-        this.retainedSize = INSTANCE_SIZE + base.length * ARRAY_DOUBLE_INDEX_SCALE;
+        this.retainedSize = INSTANCE_SIZE + toIntExact(sizeOf(base));
         this.reference = null;
     }
 
