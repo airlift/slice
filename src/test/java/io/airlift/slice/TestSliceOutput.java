@@ -88,7 +88,7 @@ public class TestSliceOutput
         int sliceOutputInstanceSize = ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize();
         DynamicSliceOutput output = new DynamicSliceOutput(10);
 
-        int originalRetainedSize = output.getRetainedSize();
+        long originalRetainedSize = output.getRetainedSize();
         assertEquals(originalRetainedSize, sliceOutputInstanceSize + output.getUnderlyingSlice().getRetainedSize());
         assertEquals(output.size(), 0);
         output.appendLong(0);
