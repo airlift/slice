@@ -42,7 +42,7 @@ public abstract class SliceOutput
     /**
      * Approximate number of bytes retained by this.
      */
-    public abstract int getRetainedSize();
+    public abstract long getRetainedSize();
 
     /**
      * Returns the number of writable bytes which is equal to
