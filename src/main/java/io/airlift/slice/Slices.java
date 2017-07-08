@@ -28,7 +28,6 @@ import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class Slices
 {
@@ -116,12 +115,11 @@ public final class Slices
     {
         if (buffer.isDirect()) {
             long address = getAddress(buffer);
-            return new Slice(null, address + buffer.position(), buffer.limit() - buffer.position(), buffer.capacity(), buffer);
+            return new Slice(null, address + buffer.position(), buffer.remaining(), buffer.capacity(), buffer);
         }
 
         if (buffer.hasArray()) {
-            int address = ARRAY_BYTE_BASE_OFFSET + buffer.arrayOffset() + buffer.position();
-            return new Slice(buffer.array(), address, buffer.limit() - buffer.position(), buffer.array().length, null);
+            return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         }
 
         throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
