@@ -59,6 +59,8 @@ public final class Slice
         implements Comparable<Slice>
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(Slice.class).instanceSize();
+    private static final Object COMPACT = new byte[0];
+    private static final Object NOT_COMPACT = null;
 
     /**
      * @deprecated use {@link Slices#wrappedBuffer(java.nio.ByteBuffer)}
@@ -97,9 +99,21 @@ public final class Slice
     private final long retainedSize;
 
     /**
-     * Reference is typically a ByteBuffer object, but can be any object this
-     * slice must hold onto to assure that the underlying memory is not
-     * freed by the garbage collector.
+     * Reference has two use cases:
+     * <p>
+     * 1. It can be an object this slice must hold onto to assure that the
+     * underlying memory is not freed by the garbage collector.
+     * It is typically a ByteBuffer object, but can be any object.
+     * This is not needed for arrays, since the array is referenced by {@code base}.
+     * <p>
+     * 2. If reference is not used to prevent garbage collector from freeing the
+     * underlying memory, it will be used to indicate if the slice is compact.
+     * When {@code reference == COMPACT}, the slice is considered as compact.
+     * Otherwise, it will be null.
+     * <p>
+     * A slice is considered compact if the base object is an heap array and
+     * it contains the whole array.
+     * Thus, for the first use case, the slice is always considered as not compact.
      */
     private final Object reference;
 
@@ -114,7 +128,7 @@ public final class Slice
         this.address = 0;
         this.size = 0;
         this.retainedSize = INSTANCE_SIZE;
-        this.reference = null;
+        this.reference = COMPACT;
     }
 
     /**
@@ -127,7 +141,7 @@ public final class Slice
         this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = base.length;
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = COMPACT;
     }
 
     /**
@@ -145,7 +159,7 @@ public final class Slice
         this.address = ARRAY_BYTE_BASE_OFFSET + offset;
         this.size = length;
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -163,7 +177,7 @@ public final class Slice
         this.address = sizeOfBooleanArray(offset);
         this.size = multiplyExact(length, ARRAY_BOOLEAN_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -181,7 +195,7 @@ public final class Slice
         this.address = sizeOfShortArray(offset);
         this.size = multiplyExact(length, ARRAY_SHORT_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -199,7 +213,7 @@ public final class Slice
         this.address = sizeOfIntArray(offset);
         this.size = multiplyExact(length, ARRAY_INT_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -217,7 +231,7 @@ public final class Slice
         this.address = sizeOfLongArray(offset);
         this.size = multiplyExact(length, ARRAY_LONG_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -235,7 +249,7 @@ public final class Slice
         this.address = sizeOfFloatArray(offset);
         this.size = multiplyExact(length, ARRAY_FLOAT_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -253,7 +267,7 @@ public final class Slice
         this.address = sizeOfDoubleArray(offset);
         this.size = multiplyExact(length, ARRAY_DOUBLE_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = null;
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -309,6 +323,15 @@ public final class Slice
     public long getRetainedSize()
     {
         return retainedSize;
+    }
+
+    /**
+     * A slice is considered compact if the base object is an array and it contains the whole array.
+     * As a result, it cannot be a view of a bigger slice.
+     */
+    public boolean isCompact()
+    {
+        return reference == COMPACT;
     }
 
     /**
@@ -814,6 +837,10 @@ public final class Slice
         checkIndexLength(index, length);
         if (length == 0) {
             return Slices.EMPTY_SLICE;
+        }
+
+        if (reference == COMPACT) {
+            return new Slice(base, address + index, length, retainedSize, NOT_COMPACT);
         }
         return new Slice(base, address + index, length, retainedSize, reference);
     }
