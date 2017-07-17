@@ -15,6 +15,7 @@ package io.airlift.slice;
 
 import org.openjdk.jol.info.ClassLayout;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -79,8 +80,9 @@ public class OutputStreamSliceOutput
     public void close()
             throws IOException
     {
-        flushBufferToOutputStream();
-        outputStream.close();
+        try (Closeable ignored = outputStream) {
+            flushBufferToOutputStream();
+        }
     }
 
     @Override
