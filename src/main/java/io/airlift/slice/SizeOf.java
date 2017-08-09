@@ -43,76 +43,48 @@ public final class SizeOf
 
     public static long sizeOf(boolean[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_BOOLEAN_BASE_OFFSET + (((long) ARRAY_BOOLEAN_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfBooleanArray(array.length);
     }
 
     public static long sizeOf(byte[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_BYTE_BASE_OFFSET + (((long) ARRAY_BYTE_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfByteArray(array.length);
     }
 
     public static long sizeOf(short[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_SHORT_BASE_OFFSET + (((long) ARRAY_SHORT_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfShortArray(array.length);
     }
 
     public static long sizeOf(char[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_CHAR_BASE_OFFSET + (((long) ARRAY_CHAR_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfCharArray(array.length);
     }
 
     public static long sizeOf(int[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_INT_BASE_OFFSET + (((long) ARRAY_INT_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfIntArray(array.length);
     }
 
     public static long sizeOf(long[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_LONG_BASE_OFFSET + (((long) ARRAY_LONG_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfLongArray(array.length);
     }
 
     public static long sizeOf(float[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_FLOAT_BASE_OFFSET + (((long) ARRAY_FLOAT_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfFloatArray(array.length);
     }
 
     public static long sizeOf(double[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_DOUBLE_BASE_OFFSET + (((long) ARRAY_DOUBLE_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfDoubleArray(array.length);
     }
 
     public static long sizeOf(Object[] array)
     {
-        if (array == null) {
-            return 0;
-        }
-        return ARRAY_OBJECT_BASE_OFFSET + (((long) ARRAY_OBJECT_INDEX_SCALE) * array.length);
+        return (array == null) ? 0 : sizeOfObjectArray(array.length);
     }
-
 
     public static long sizeOfBooleanArray(int length)
     {
