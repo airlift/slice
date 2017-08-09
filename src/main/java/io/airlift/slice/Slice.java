@@ -43,6 +43,7 @@ import static io.airlift.slice.SizeOf.sizeOfLongArray;
 import static io.airlift.slice.SizeOf.sizeOfShortArray;
 import static io.airlift.slice.StringDecoder.decodeString;
 import static java.lang.Math.min;
+import static java.lang.Math.multiplyExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -160,7 +161,7 @@ public final class Slice
 
         this.base = base;
         this.address = sizeOfBooleanArray(offset);
-        this.size = length * ARRAY_BOOLEAN_INDEX_SCALE;
+        this.size = multiplyExact(length, ARRAY_BOOLEAN_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
         this.reference = null;
     }
@@ -178,7 +179,7 @@ public final class Slice
 
         this.base = base;
         this.address = sizeOfShortArray(offset);
-        this.size = length * ARRAY_SHORT_INDEX_SCALE;
+        this.size = multiplyExact(length, ARRAY_SHORT_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
         this.reference = null;
     }
@@ -196,7 +197,7 @@ public final class Slice
 
         this.base = base;
         this.address = sizeOfIntArray(offset);
-        this.size = length * ARRAY_INT_INDEX_SCALE;
+        this.size = multiplyExact(length, ARRAY_INT_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
         this.reference = null;
     }
@@ -214,7 +215,7 @@ public final class Slice
 
         this.base = base;
         this.address = sizeOfLongArray(offset);
-        this.size = length * ARRAY_LONG_INDEX_SCALE;
+        this.size = multiplyExact(length, ARRAY_LONG_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
         this.reference = null;
     }
@@ -232,7 +233,7 @@ public final class Slice
 
         this.base = base;
         this.address = sizeOfFloatArray(offset);
-        this.size = length * ARRAY_FLOAT_INDEX_SCALE;
+        this.size = multiplyExact(length, ARRAY_FLOAT_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
         this.reference = null;
     }
@@ -250,7 +251,7 @@ public final class Slice
 
         this.base = base;
         this.address = sizeOfDoubleArray(offset);
-        this.size = length * ARRAY_DOUBLE_INDEX_SCALE;
+        this.size = multiplyExact(length, ARRAY_DOUBLE_INDEX_SCALE);
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
         this.reference = null;
     }
