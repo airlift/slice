@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-@SuppressWarnings("JavaDoc") // IDEA-81310
 public abstract class SliceInput
         extends InputStream
         implements DataInput

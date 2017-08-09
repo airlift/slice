@@ -25,7 +25,6 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static java.util.Objects.requireNonNull;
 
-@SuppressWarnings("JavaDoc") // IDEA-81310
 public final class BasicSliceInput
         extends FixedLengthSliceInput
 {

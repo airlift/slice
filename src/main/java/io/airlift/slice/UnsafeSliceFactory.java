@@ -41,7 +41,6 @@ public class UnsafeSliceFactory
      *
      * @return an unsafe slice factory
      */
-    @SuppressWarnings("JavaDoc") // IDEA-81310
     public static UnsafeSliceFactory getInstance()
     {
         // see setAccessible() in AccessibleObject

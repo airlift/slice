@@ -19,7 +19,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-@SuppressWarnings("JavaDoc") // IDEA-81310
 public abstract class SliceOutput
         extends OutputStream
         implements DataOutput
