@@ -79,8 +79,12 @@ public class OutputStreamSliceOutput
     public void close()
             throws IOException
     {
-        flushBufferToOutputStream();
-        outputStream.close();
+        try{
+            flushBufferToOutputStream();
+        }
+        finally {
+            outputStream.close();
+        }
     }
 
     @Override
