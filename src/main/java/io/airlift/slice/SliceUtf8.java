@@ -204,7 +204,7 @@ public final class SliceUtf8
 
     /**
      * Compares to UTF-8 sequences using UTF-16 big endian semantics.  This is
-     * equivilant to the {@link java.lang.String#compareTo(Object)}.
+     * equivalent to the {@link java.lang.String#compareTo(Object)}.
      * {@code java.lang.String}.
      * @throws InvalidUtf8Exception if the UTF-8 are invalid
      */
@@ -775,7 +775,7 @@ public final class SliceUtf8
 
     /**
      * Finds the index of the first byte of the code point at a position, or
-     * {@code -1} if the position is not withing the slice.
+     * {@code -1} if the position is not within the slice.
      * <p>
      * Note: This method does not explicitly check for valid UTF-8, and may
      * return incorrect results or throw an exception for invalid UTF-8.
