@@ -24,6 +24,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
 public final class ChunkedSliceInput
@@ -98,7 +99,7 @@ public final class ChunkedSliceInput
         bufferPosition = 0;
 
         // this will reread unused data in the buffer
-        long readSize = Math.min(buffer.length(), globalLength - globalPosition);
+        long readSize = min(buffer.length(), globalLength - globalPosition);
         if (readSize > Integer.MAX_VALUE) {
             readSize = Integer.MAX_VALUE;
         }
@@ -208,14 +209,14 @@ public final class ChunkedSliceInput
         checkBound(position() + length, globalLength, "End of stream");
 
         while (length > 0) {
-            int bytesToRead = Math.min(available(), length);
+            int bytesToRead = min(available(), length);
             buffer.getBytes(bufferPosition, destination, destinationIndex, bytesToRead);
 
             bufferPosition += bytesToRead;
             length -= bytesToRead;
             destinationIndex += bytesToRead;
 
-            ensureAvailable(Math.min(length, buffer.length()));
+            ensureAvailable(min(length, buffer.length()));
         }
     }
 
@@ -231,7 +232,7 @@ public final class ChunkedSliceInput
         }
 
         // limit read to stream size
-        length = (int) Math.min(length, globalLength - position());
+        length = (int) min(length, globalLength - position());
 
         // do a full read of the available data
         readBytes(destination, destinationIndex, length);
@@ -244,14 +245,14 @@ public final class ChunkedSliceInput
         checkBound(position() + length, globalLength, "End of stream");
 
         while (length > 0) {
-            int bytesToRead = Math.min(available(), length);
+            int bytesToRead = min(available(), length);
             buffer.getBytes(bufferPosition, destination, destinationIndex, bytesToRead);
 
             bufferPosition += bytesToRead;
             length -= bytesToRead;
             destinationIndex += bytesToRead;
 
-            ensureAvailable(Math.min(length, buffer.length()));
+            ensureAvailable(min(length, buffer.length()));
         }
     }
 
@@ -262,13 +263,13 @@ public final class ChunkedSliceInput
         checkBound(position() + length, globalLength, "End of stream");
 
         while (length > 0) {
-            int bytesToRead = Math.min(available(), length);
+            int bytesToRead = min(available(), length);
             buffer.getBytes(bufferPosition, out, bytesToRead);
 
             bufferPosition += bytesToRead;
             length -= bytesToRead;
 
-            ensureAvailable(Math.min(length, buffer.length()));
+            ensureAvailable(min(length, buffer.length()));
         }
     }
 
@@ -287,7 +288,7 @@ public final class ChunkedSliceInput
         bufferLength = 0;
 
         // trim length to stream size
-        length = Math.min(length, remaining());
+        length = min(length, remaining());
 
         // skip
         globalPosition += length;
@@ -355,7 +356,8 @@ public final class ChunkedSliceInput
         public InternalLoader(SliceLoader<T> loader, int bufferSize)
         {
             this.loader = loader;
-            checkArgument(bufferSize >= 128, "Buffer size must be at least 128");
+            long minBufferSize = min(loader.getSize(), 128);
+            checkArgument(bufferSize >= minBufferSize, "Buffer size must be at least minBufferSize");
             this.bufferReference = loader.createBuffer(bufferSize);
         }
 
