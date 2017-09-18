@@ -169,6 +169,8 @@ public class TestSlice
         assertTrue(slice.equals(0, size, other, 0, size));
         assertEquals(slice.hashCode(), other.hashCode());
         assertEquals(slice.hashCode(), other.hashCode(0, size));
+        assertEquals(slice.longHashCode(), other.longHashCode());
+        assertEquals(slice.longHashCode(), other.longHashCode(0, size));
         assertEquals(slice.compareTo(other), 0);
         assertEquals(slice.compareTo(0, size, other, 0, size), 0);
         for (int i = 0; i < slice.length(); i++) {
