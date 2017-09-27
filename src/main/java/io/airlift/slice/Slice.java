@@ -310,7 +310,15 @@ public final class Slice
     {
         return retainedSize;
     }
-
+    
+    /**
+     * Return the reference object
+     */
+     public Object getReference() 
+     {
+         return reference;
+     }
+     
     /**
      * Fill the slice with the specified value;
      */
