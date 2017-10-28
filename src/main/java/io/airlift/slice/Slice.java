@@ -99,21 +99,21 @@ public final class Slice
     private final long retainedSize;
 
     /**
-     * Reference have two use cases:
-     *
+     * Reference has two use cases:
+     * <p>
      * 1. It can be an object this slice must hold onto to assure that the
      * underlying memory is not freed by the garbage collector.
      * It is typically a ByteBuffer object, but can be any object.
-     *
-     * 2. If reference is not used to prevent garbage collector to free
-     * underlying memory, it will be used as the flag to indicate whether
-     * the slice is compact.
-     * When reference == COMPACT, the slice is considered as compact.
+     * This is not needed for arrays, since the array is referenced by {@code base}.
+     * <p>
+     * 2. If reference is not used to prevent garbage collector from freeing the
+     * underlying memory, it will be used to indicate if the slice is compact.
+     * When {@code reference == COMPACT}, the slice is considered as compact.
      * Otherwise, it will be null.
-     *
+     * <p>
      * A slice is considered compact if the base object is an heap array and
      * it contains the whole array.
-     * Thus for the first use case, the slice is always considered as not compact.
+     * Thus, for the first use case, the slice is always considered as not compact.
      */
     private final Object reference;
 
@@ -159,7 +159,7 @@ public final class Slice
         this.address = ARRAY_BYTE_BASE_OFFSET + offset;
         this.size = length;
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length ? COMPACT : NOT_COMPACT);
+        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
@@ -842,9 +842,7 @@ public final class Slice
         if (reference == COMPACT) {
             return new Slice(base, address + index, length, retainedSize, NOT_COMPACT);
         }
-        else {
-            return new Slice(base, address + index, length, retainedSize, reference);
-        }
+        return new Slice(base, address + index, length, retainedSize, reference);
     }
 
     public int indexOfByte(int b)

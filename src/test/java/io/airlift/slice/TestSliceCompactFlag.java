@@ -17,8 +17,9 @@ import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 
-import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotSame;
+import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 public class TestSliceCompactFlag
@@ -71,8 +72,13 @@ public class TestSliceCompactFlag
     {
         byte[] byteArray = {(byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5};
         Slice slice = new Slice(byteArray);
+
+        assertCompact(slice);
         assertCompact(slice.slice(0, slice.length()));
+        assertSame(slice.slice(0, slice.length()), slice);
+
         assertCompact(Slices.copyOf(slice));
+        assertNotSame(Slices.copyOf(slice).getBase(), slice.getBase());
         assertCompact(Slices.copyOf(slice, 0, slice.length() - 1));
         assertCompact(Slices.copyOf(slice, 1, slice.length() - 1));
 
@@ -88,11 +94,9 @@ public class TestSliceCompactFlag
     public void testWrapDirectBuffer()
             throws Exception
     {
-        /**
-         * For DirectByteBuffer, the slice is always considered as not compacted
-         * because there is no easy way to tell whether the DirectByteBuffer itself
-         * is a slice of consecutive native memory.
-         */
+        // For DirectByteBuffer, the slice is always considered as not compacted
+        // because there is no easy way to tell whether the DirectByteBuffer itself
+        // is a view over a larger allocation.
         ByteBuffer buffer = ByteBuffer.allocateDirect(50);
 
         // initialize buffer
