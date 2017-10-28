@@ -115,11 +115,11 @@ public final class Slices
     {
         if (buffer.isDirect()) {
             long address = getAddress(buffer);
-            return new Slice(null, address + buffer.position(), buffer.limit() - buffer.position(), buffer.capacity(), buffer);
+            return new Slice(null, address + buffer.position(), buffer.remaining(), buffer.capacity(), buffer);
         }
 
         if (buffer.hasArray()) {
-            return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.limit() - buffer.position());
+            return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
         }
 
         throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
