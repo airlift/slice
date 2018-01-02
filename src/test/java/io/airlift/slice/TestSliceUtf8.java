@@ -141,6 +141,7 @@ public class TestSliceUtf8
 
     private static final int[] UTF_16_BOUNDARY_CODE_POINTS = new int[] {0x0000, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10FFFF};
     private static final int[] UTF_16_TESTING_CODE_POINTS;
+
     static {
         Random random = new Random(0);
         IntStream utf16TestCodePoints = IntStream.of(UTF_16_BOUNDARY_CODE_POINTS);
@@ -558,7 +559,6 @@ public class TestSliceUtf8
         assertEquals(
                 toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'}))),
                 wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'})));
-
     }
 
     private static void assertCaseChange(String string)
@@ -610,7 +610,7 @@ public class TestSliceUtf8
     {
         assertEquals(leftTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
         assertEquals(leftTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-        assertEquals(leftTrim(wrappedBuffer(concat(new byte[] {'@'}, sequence)), new int[]{'@'}), wrappedBuffer(sequence));
+        assertEquals(leftTrim(wrappedBuffer(concat(new byte[] {'@'}, sequence)), new int[] {'@'}), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
@@ -642,7 +642,7 @@ public class TestSliceUtf8
     {
         assertEquals(rightTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
         assertEquals(rightTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-        assertEquals(rightTrim(wrappedBuffer(concat(sequence, new byte[]{'@'})), new int[]{'@'}), wrappedBuffer(sequence));
+        assertEquals(rightTrim(wrappedBuffer(concat(sequence, new byte[] {'@'})), new int[] {'@'}), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
@@ -674,7 +674,7 @@ public class TestSliceUtf8
     {
         assertEquals(trim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
         assertEquals(trim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-        assertEquals(trim(wrappedBuffer(concat(new byte[] {'@'}, sequence, new byte[]{'@'})), new int[]{'@'}), wrappedBuffer(sequence));
+        assertEquals(trim(wrappedBuffer(concat(new byte[] {'@'}, sequence, new byte[] {'@'})), new int[] {'@'}), wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
@@ -818,6 +818,7 @@ public class TestSliceUtf8
     {
         setCodePointAt(-1, Slices.allocate(8), 0);
     }
+
     @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0xD800")
     public void testSetSurrogateCodePoint()
     {
@@ -835,5 +836,4 @@ public class TestSliceUtf8
     {
         setCodePointAt(CONTINUATION_BYTE, Slices.allocate(8), 0);
     }
-
 }

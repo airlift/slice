@@ -82,4 +82,3 @@ public class BenchmarkMurmur3Hash128
         new Runner(options).run();
     }
 }
-

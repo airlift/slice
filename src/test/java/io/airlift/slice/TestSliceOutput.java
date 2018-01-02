@@ -77,7 +77,7 @@ public class TestSliceOutput
                 .appendByte(4)
                 .slice();
 
-        Slice expected = Slices.wrappedBuffer(new byte[] { 0, 1, 2, 3, 4 });
+        Slice expected = Slices.wrappedBuffer(new byte[] {0, 1, 2, 3, 4});
         assertEquals(actual, expected);
     }
 

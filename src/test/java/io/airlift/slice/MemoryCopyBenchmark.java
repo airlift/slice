@@ -205,53 +205,50 @@ public class MemoryCopyBenchmark
 
     private enum CopyStrategy
     {
-        SLICE
-                {
-                    @Override
-                    public void doCopy(Slice data, long src, long dest, int length)
-                    {
-                        data.setBytes((int) dest, data, (int) src, length);
-                    }
-                },
+        SLICE {
+            @Override
+            public void doCopy(Slice data, long src, long dest, int length)
+            {
+                data.setBytes((int) dest, data, (int) src, length);
+            }
+        },
 
-        CUSTOM_LOOP
-                {
-                    @Override
-                    public void doCopy(Slice data, long src, long dest, int length)
-                    {
-                        Object base = data.getBase();
-                        long offset = data.getAddress();
-                        while (length >= SizeOf.SIZE_OF_LONG) {
-                            long srcLong = unsafe.getLong(base, src + offset);
-                            unsafe.putLong(base, dest + offset, srcLong);
+        CUSTOM_LOOP {
+            @Override
+            public void doCopy(Slice data, long src, long dest, int length)
+            {
+                Object base = data.getBase();
+                long offset = data.getAddress();
+                while (length >= SizeOf.SIZE_OF_LONG) {
+                    long srcLong = unsafe.getLong(base, src + offset);
+                    unsafe.putLong(base, dest + offset, srcLong);
 
-                            offset += SizeOf.SIZE_OF_LONG;
-                            length -= SizeOf.SIZE_OF_LONG;
-                        }
+                    offset += SizeOf.SIZE_OF_LONG;
+                    length -= SizeOf.SIZE_OF_LONG;
+                }
 
-                        while (length > 0) {
-                            byte srcByte = unsafe.getByte(base, src + offset);
-                            unsafe.putByte(base, dest + offset, srcByte);
+                while (length > 0) {
+                    byte srcByte = unsafe.getByte(base, src + offset);
+                    unsafe.putByte(base, dest + offset, srcByte);
 
-                            offset++;
-                            length--;
-                        }
-                    }
-                },
+                    offset++;
+                    length--;
+                }
+            }
+        },
 
-        UNSAFE
-                {
-                    @Override
-                    public void doCopy(Slice data, long srcOffset, long destOffset, int length)
-                    {
-                        Object base = data.getBase();
-                        srcOffset += data.getAddress();
-                        destOffset += data.getAddress();
-                        int bytesToCopy = length - (length % 8);
-                        unsafe.copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
-                        unsafe.copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);
-                    }
-                };
+        UNSAFE {
+            @Override
+            public void doCopy(Slice data, long srcOffset, long destOffset, int length)
+            {
+                Object base = data.getBase();
+                srcOffset += data.getAddress();
+                destOffset += data.getAddress();
+                int bytesToCopy = length - (length % 8);
+                unsafe.copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
+                unsafe.copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);
+            }
+        };
 
         public abstract void doCopy(Slice data, long src, long dest, int length);
     }
