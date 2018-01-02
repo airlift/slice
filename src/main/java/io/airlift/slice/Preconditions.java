@@ -93,4 +93,11 @@ final class Preconditions
         // end < start
         return format("end index (%s) must not be less than start index (%s)", end, start);
     }
+
+    public static void verify(boolean condition)
+    {
+        if (!condition) {
+            throw new AssertionError();
+        }
+    }
 }

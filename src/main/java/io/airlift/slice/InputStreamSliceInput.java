@@ -19,6 +19,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 
 import static io.airlift.slice.Preconditions.checkArgument;
+import static io.airlift.slice.Preconditions.verify;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
@@ -169,7 +170,7 @@ public final class InputStreamSliceInput
             return -1;
         }
 
-        assert availableBytes() > 0;
+        verify(availableBytes() > 0);
         int v = slice.getByteUnchecked(bufferPosition) & 0xFF;
         bufferPosition += SIZE_OF_BYTE;
         return v;
@@ -206,7 +207,7 @@ public final class InputStreamSliceInput
             return -1;
         }
 
-        assert availableBytes() > 0;
+        verify(availableBytes() > 0);
         int batch = Math.min(availableBytes(), length);
         slice.getBytes(bufferPosition, destination, destinationIndex, batch);
         bufferPosition += batch;
