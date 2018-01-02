@@ -142,7 +142,6 @@ public class SliceUtf8Benchmark
         return trim(data.getBothWhitespace());
     }
 
-
     @State(Thread)
     public static class BenchmarkData
     {
@@ -157,10 +156,10 @@ public class SliceUtf8Benchmark
                     .toArray();
         }
 
-        @Param({ "2", "5", "10", "100", "1000", "10000" })
+        @Param({"2", "5", "10", "100", "1000", "10000"})
         private int length;
 
-        @Param({ "true", "false" })
+        @Param({"true", "false"})
         private boolean ascii;
 
         private Slice slice;
@@ -208,10 +207,10 @@ public class SliceUtf8Benchmark
                     .toArray();
         }
 
-        @Param({ "2", "5", "10", "100", "1000", "10000" })
+        @Param({"2", "5", "10", "100", "1000", "10000"})
         private int length;
 
-        @Param({ "true", "false" })
+        @Param({"true", "false"})
         private boolean ascii;
 
         private Slice leftWhitespace;

@@ -27,7 +27,7 @@ public class TestUnsignedGetters
     public void fillTestData()
     {
         slice = allocate(8);
-        slice.fill((byte)0xA5);
+        slice.fill((byte) 0xA5);
     }
 
     @Test

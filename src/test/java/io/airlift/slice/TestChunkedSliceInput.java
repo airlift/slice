@@ -51,7 +51,8 @@ public class TestChunkedSliceInput
         public BufferReference createBuffer(int bufferSize)
         {
             final Slice slice = Slices.allocate(bufferSize);
-            return new BufferReference() {
+            return new BufferReference()
+            {
                 @Override
                 public Slice getSlice()
                 {
