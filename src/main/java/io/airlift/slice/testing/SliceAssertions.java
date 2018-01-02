@@ -15,8 +15,10 @@ package io.airlift.slice.testing;
 
 import io.airlift.slice.Slice;
 
-public class SliceAssertions
+public final class SliceAssertions
 {
+    private SliceAssertions() {}
+
     public static void assertSlicesEqual(Slice actual, Slice expected)
     {
         if (actual == null && expected == null) {
