@@ -30,6 +30,7 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.JvmUtils.unsafe;
 
 @SuppressWarnings("restriction")
@@ -194,10 +195,10 @@ public class MemoryCopyBenchmark
 
     static Slice doCopy(Buffers buffers, CopyStrategy strategy, int length)
     {
-        assert buffers.startOffset >= 0 : "startOffset < 0";
-        assert buffers.destOffset >= 0 : "destOffset < 0";
-        assert buffers.startOffset + length < ALLOC_SIZE : "startOffset + length >= ALLOC_SIZE";
-        assert buffers.destOffset + length < ALLOC_SIZE : "destOffset + length >= ALLOC_SIZE";
+        verify(buffers.startOffset >= 0, "startOffset < 0");
+        verify(buffers.destOffset >= 0, "destOffset < 0");
+        verify(buffers.startOffset + length < ALLOC_SIZE, "startOffset + length >= ALLOC_SIZE");
+        verify(buffers.destOffset + length < ALLOC_SIZE, "destOffset + length >= ALLOC_SIZE");
 
         strategy.doCopy(buffers.data, buffers.startOffset, buffers.destOffset, length);
         return buffers.data;

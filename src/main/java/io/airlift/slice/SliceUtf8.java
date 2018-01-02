@@ -18,6 +18,7 @@ import java.util.OptionalInt;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkPositionIndex;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
+import static io.airlift.slice.Preconditions.verify;
 import static java.lang.Character.MAX_CODE_POINT;
 import static java.lang.Character.MAX_SURROGATE;
 import static java.lang.Character.MIN_SUPPLEMENTARY_CODE_POINT;
@@ -139,7 +140,7 @@ public final class SliceUtf8
             continuationBytesCount += countContinuationBytes(utf8.getByteUnchecked(offset));
         }
 
-        assert continuationBytesCount <= length;
+        verify(continuationBytesCount <= length);
         return length - continuationBytesCount;
     }
 
