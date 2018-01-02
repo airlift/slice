@@ -20,7 +20,7 @@ public final class Murmur3Hash128
     private static final long C1 = 0x87c37b91114253d5L;
     private static final long C2 = 0x4cf5ad432745937fL;
 
-    private final static long DEFAULT_SEED = 0;
+    private static final long DEFAULT_SEED = 0;
 
     private Murmur3Hash128() {}
 
