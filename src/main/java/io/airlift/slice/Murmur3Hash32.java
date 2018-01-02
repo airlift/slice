@@ -20,7 +20,7 @@ public final class Murmur3Hash32
     private static final int C1 = 0xcc9e2d51;
     private static final int C2 = 0x1b873593;
 
-    private final static int DEFAULT_SEED = 0;
+    private static final int DEFAULT_SEED = 0;
 
     private Murmur3Hash32() {}
 
