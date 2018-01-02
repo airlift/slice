@@ -14,8 +14,10 @@
 package io.airlift.slice;
 
 @Deprecated
-public class Murmur3
+public final class Murmur3
 {
+    private Murmur3() {}
+
     public static Slice hash(Slice data)
     {
         return Murmur3Hash128.hash(data);
