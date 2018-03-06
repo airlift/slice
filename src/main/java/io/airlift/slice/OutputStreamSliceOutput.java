@@ -100,7 +100,12 @@ public class OutputStreamSliceOutput
     @Override
     public int size()
     {
-        return checkedCast(bufferOffset + bufferPosition);
+        return checkedCast(longSize());
+    }
+
+    public long longSize()
+    {
+        return bufferOffset + bufferPosition;
     }
 
     @Override
