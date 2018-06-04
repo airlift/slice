@@ -606,6 +606,27 @@ public class TestSlice
             assertEquals(tempValue, slice.slice(index, length));
             assertTrue(tempValue.equals(0, length, slice, index, length));
         }
+
+        try {
+            slice.getBytes(slice.length() - 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getBytes(slice.length() - 1, new byte[20]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getBytes(slice.length() - 1, new byte[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
     }
 
     @Test

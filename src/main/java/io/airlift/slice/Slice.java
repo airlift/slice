@@ -783,6 +783,7 @@ public final class Slice
      */
     public void setBytes(int index, byte[] source, int sourceIndex, int length)
     {
+        checkIndexLength(index, length);
         checkPositionIndexes(sourceIndex, sourceIndex + length, source.length);
         copyMemory(source, (long) ARRAY_BYTE_BASE_OFFSET + sourceIndex, base, address + index, length);
     }
