@@ -553,6 +553,20 @@ public class TestSlice
             slice.setBytes(index, value, 0, length);
             assertEquals(slice.getBytes(index, length), Arrays.copyOf(value, length));
         }
+
+        try {
+            slice.setBytes(slice.length() - 1, new byte[10]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.setBytes(slice.length() - 1, new byte[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
     }
 
     @Test
