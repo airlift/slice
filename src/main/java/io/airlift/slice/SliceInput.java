@@ -273,6 +273,11 @@ public abstract class SliceInput
     {
     }
 
+    /**
+     * Approximate number of bytes retained by this instance.
+     */
+    public abstract long getRetainedSize();
+
     //
     // Unsupported operations
     //

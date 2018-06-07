@@ -13,10 +13,12 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
 
+import static io.airlift.slice.SizeOf.sizeOfByteArray;
 import static org.testng.Assert.assertEquals;
 
 public class TestInputStreamSliceInput
@@ -148,6 +150,14 @@ public class TestInputStreamSliceInput
         assertEquals(buildSliceInput(new byte[] {0, 0, -64, 127}).readFloat(), Float.NaN);
         assertEquals(buildSliceInput(new byte[] {0, 0, -128, -1}).readFloat(), Float.NEGATIVE_INFINITY);
         assertEquals(buildSliceInput(new byte[] {0, 0, -128, 127}).readFloat(), Float.POSITIVE_INFINITY);
+    }
+
+    @Test
+    public void testRetainedSize()
+    {
+        int bufferSize = 1024;
+        InputStreamSliceInput input = new InputStreamSliceInput(new ByteArrayInputStream(new byte[] {0, 1}), bufferSize);
+        assertEquals(input.getRetainedSize(), ClassLayout.parseClass(InputStreamSliceInput.class).instanceSize() + sizeOfByteArray(bufferSize));
     }
 
     private SliceInput buildSliceInput(byte[] bytes)

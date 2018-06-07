@@ -13,6 +13,11 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
+import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertEquals;
+
 public class TestBasicSliceInput
         extends AbstractSliceInputTest
 {
@@ -20,5 +25,13 @@ public class TestBasicSliceInput
     protected SliceInput createSliceInput(Slice slice)
     {
         return new BasicSliceInput(slice);
+    }
+
+    @Test
+    public void testRetainedSize()
+    {
+        Slice slice = Slices.allocate(1024);
+        SliceInput input = new BasicSliceInput(slice);
+        assertEquals(input.getRetainedSize(), ClassLayout.parseClass(BasicSliceInput.class).instanceSize() + slice.getRetainedSize());
     }
 }
