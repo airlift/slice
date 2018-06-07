@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,6 +32,8 @@ import static java.util.Objects.requireNonNull;
 public final class ChunkedSliceInput
         extends FixedLengthSliceInput
 {
+    private static final int INSTANCE_SIZE = ClassLayout.parseClass(ChunkedSliceInput.class).instanceSize();
+
     private final InternalLoader<?> loader;
     private final Slice buffer;
 
@@ -312,6 +316,12 @@ public final class ChunkedSliceInput
     }
 
     @Override
+    public long getRetainedSize()
+    {
+        return INSTANCE_SIZE + loader.getRetainedSize() + buffer.getRetainedSize();
+    }
+
+    @Override
     public String toString()
     {
         StringBuilder builder = new StringBuilder("SliceStreamInput{");
@@ -350,6 +360,8 @@ public final class ChunkedSliceInput
 
     private static class InternalLoader<T extends BufferReference>
     {
+        private static final int INSTANCE_SIZE = ClassLayout.parseClass(InternalLoader.class).instanceSize();
+
         private final SliceLoader<T> loader;
         private final T bufferReference;
 
@@ -369,6 +381,11 @@ public final class ChunkedSliceInput
         public void load(long position, int length)
         {
             loader.load(position, bufferReference, length);
+        }
+
+        public long getRetainedSize()
+        {
+            return INSTANCE_SIZE;
         }
 
         public void close()
