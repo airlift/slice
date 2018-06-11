@@ -32,6 +32,6 @@ public class TestBasicSliceInput
     {
         Slice slice = Slices.allocate(1024);
         SliceInput input = new BasicSliceInput(slice);
-        assertEquals(input.getRetainedSize(), ClassLayout.parseClass(BasicSliceInput.class).instanceSize() + slice.getRetainedSize());
+        assertEquals(input.getRetainedSize(), ClassLayout.parseClass(BasicSliceInput.class).instanceSize() + slice.length());
     }
 }

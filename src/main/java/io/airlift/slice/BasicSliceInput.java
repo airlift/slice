@@ -217,7 +217,10 @@ public final class BasicSliceInput
     @Override
     public long getRetainedSize()
     {
-        return INSTANCE_SIZE + slice.getRetainedSize();
+        // Multiple slices can share the same underlying base array, so instead of
+        // slice.getRetainedSize() we use slice.length() here to approximate the memory usage.
+        // Using slice.getRetainedSize() will result in over-accounting.
+        return INSTANCE_SIZE + slice.length();
     }
 
     /**
