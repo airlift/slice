@@ -25,6 +25,10 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static io.airlift.slice.Slices.MAX_ARRAY_SIZE;
+import static io.airlift.slice.Slices.SLICE_ALLOC_THRESHOLD;
+import static io.airlift.slice.Slices.SLICE_ALLOW_SKEW;
+import static io.airlift.slice.Slices.allocate;
 import static io.airlift.slice.Slices.ensureSize;
 import static io.airlift.slice.Slices.wrappedBooleanArray;
 import static io.airlift.slice.Slices.wrappedBuffer;
@@ -141,7 +145,7 @@ public class TestSlices
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Cannot allocate slice larger than 2147483639 bytes")
     public void testAllocationLimit()
     {
-        Slices.allocate(Integer.MAX_VALUE - 1);
+        allocate(Integer.MAX_VALUE - 1);
     }
 
     @Test
@@ -153,5 +157,12 @@ public class TestSlices
         assertSame(ensureSize(fourBytes, 3), fourBytes);
         assertEquals(ensureSize(fourBytes, 8), wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
         assertEquals(ensureSize(fourBytes, 5), wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
+
+        // Test that `ensureSize(s, slightly less than Integer.MAX_VALUE)` won't allocate a Slice beyond limit
+        double initialSize = Integer.MAX_VALUE + 100L;
+        while (initialSize > 50_000_000 && initialSize / SLICE_ALLOW_SKEW > SLICE_ALLOC_THRESHOLD) {
+            initialSize /= SLICE_ALLOW_SKEW;
+        }
+        assertEquals(ensureSize(allocate((int) initialSize), Integer.MAX_VALUE - 50).length(), MAX_ARRAY_SIZE);
     }
 }

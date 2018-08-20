@@ -20,6 +20,7 @@
 
     <properties>
         <air.javadoc.lint>-missing</air.javadoc.lint>
+        <air.test.jvmsize>3584m</air.test.jvmsize>
     </properties>
 
     <dependencies>

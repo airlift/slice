@@ -37,10 +37,10 @@ public final class Slices
     public static final Slice EMPTY_SLICE = new Slice();
 
     // see java.util.ArrayList for an explanation
-    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
+    static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
-    private static final int SLICE_ALLOC_THRESHOLD = 524_288; // 2^19
-    private static final double SLICE_ALLOW_SKEW = 1.25; // must be > 1!
+    static final int SLICE_ALLOC_THRESHOLD = 524_288; // 2^19
+    static final double SLICE_ALLOW_SKEW = 1.25; // must be > 1!
 
     private Slices() {}
 
@@ -66,7 +66,10 @@ public final class Slices
                 newCapacity <<= 1;
             }
             else {
-                newCapacity *= SLICE_ALLOW_SKEW;
+                newCapacity *= SLICE_ALLOW_SKEW; // double to int cast is saturating
+                if (newCapacity > MAX_ARRAY_SIZE && minWritableBytes <= MAX_ARRAY_SIZE) {
+                    newCapacity = MAX_ARRAY_SIZE;
+                }
             }
         }
 
