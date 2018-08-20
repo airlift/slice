@@ -61,8 +61,7 @@ public final class Slices
         else {
             newCapacity = existingSlice.length();
         }
-        int minNewCapacity = minWritableBytes;
-        while (newCapacity < minNewCapacity) {
+        while (newCapacity < minWritableBytes) {
             if (newCapacity < SLICE_ALLOC_THRESHOLD) {
                 newCapacity <<= 1;
             }
