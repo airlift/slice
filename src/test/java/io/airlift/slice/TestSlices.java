@@ -25,6 +25,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static io.airlift.slice.Slices.ensureSize;
 import static io.airlift.slice.Slices.wrappedBooleanArray;
 import static io.airlift.slice.Slices.wrappedBuffer;
 import static io.airlift.slice.Slices.wrappedDoubleArray;
@@ -33,6 +34,7 @@ import static io.airlift.slice.Slices.wrappedIntArray;
 import static io.airlift.slice.Slices.wrappedLongArray;
 import static io.airlift.slice.Slices.wrappedShortArray;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertSame;
 
 public class TestSlices
 {
@@ -54,7 +56,7 @@ public class TestSlices
     public void testWrapHeapBufferRetainedSize()
     {
         ByteBuffer heapByteBuffer = ByteBuffer.allocate(50);
-        Slice slice = Slices.wrappedBuffer(heapByteBuffer);
+        Slice slice = wrappedBuffer(heapByteBuffer);
         assertEquals(slice.getRetainedSize(), ClassLayout.parseClass(Slice.class).instanceSize() + sizeOf(heapByteBuffer.array()));
     }
 
@@ -67,7 +69,7 @@ public class TestSlices
 
         // test full buffer
         buffer.rewind();
-        Slice slice = Slices.wrappedBuffer(buffer);
+        Slice slice = wrappedBuffer(buffer);
         assertEquals(slice.length(), 50);
         for (int i = 0; i < 50; i++) {
             assertEquals(slice.getByte(i), i);
@@ -75,7 +77,7 @@ public class TestSlices
 
         // test limited buffer
         buffer.position(10).limit(30);
-        slice = Slices.wrappedBuffer(buffer);
+        slice = wrappedBuffer(buffer);
         assertEquals(slice.length(), 20);
         for (int i = 0; i < 20; i++) {
             assertEquals(slice.getByte(i), i + 10);
@@ -83,7 +85,7 @@ public class TestSlices
 
         // test limited buffer after slicing
         buffer = buffer.slice();
-        slice = Slices.wrappedBuffer(buffer);
+        slice = wrappedBuffer(buffer);
         assertEquals(slice.length(), 20);
         for (int i = 0; i < 20; i++) {
             assertEquals(slice.getByte(i), i + 10);
@@ -140,5 +142,16 @@ public class TestSlices
     public void testAllocationLimit()
     {
         Slices.allocate(Integer.MAX_VALUE - 1);
+    }
+
+    @Test
+    public void testEnsureSize()
+    {
+        Slice fourBytes = wrappedBuffer(new byte[] {1, 2, 3, 4});
+
+        assertEquals(ensureSize(null, 42).length(), 42);
+        assertSame(ensureSize(fourBytes, 3), fourBytes);
+        assertEquals(ensureSize(fourBytes, 8), wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
+        assertEquals(ensureSize(fourBytes, 5), wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
     }
 }
