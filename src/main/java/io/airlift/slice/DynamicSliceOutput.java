@@ -232,13 +232,6 @@ public class DynamicSliceOutput
         return slice.slice(0, size);
     }
 
-    public Slice copySlice()
-    {
-        Slice copy = Slices.allocate(size);
-        slice.getBytes(0, copy);
-        return copy;
-    }
-
     @Override
     public Slice getUnderlyingSlice()
     {
