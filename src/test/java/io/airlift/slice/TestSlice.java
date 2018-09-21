@@ -19,6 +19,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -821,6 +822,25 @@ public class TestSlice
         }
 
         assertEquals(bruteForce, indexOf);
+    }
+
+    @Test
+    public void testToByteBuffer()
+    {
+        Slice full = allocate(10);
+        for (int i = 0; i < 10; i++) {
+            full.setByte(i, i);
+        }
+        Slice chunk = full.slice(5, 5);
+        ByteBuffer zeroOffsetBuffer = chunk.toByteBuffer();
+        assertEquals(zeroOffsetBuffer.position(), 0);
+        for (int i = 0; i < 5; i++) {
+            assertEquals(zeroOffsetBuffer.get(i), chunk.getByte(i));
+        }
+        ByteBuffer nonZeroOffsetBuffer = chunk.toByteBuffer(1, 4);
+        for (int i = 0; i < 4; i++) {
+            assertEquals(nonZeroOffsetBuffer.get(i), chunk.getByte(i + 1));
+        }
     }
 
     private static List<Long> createRandomLongs(int count)

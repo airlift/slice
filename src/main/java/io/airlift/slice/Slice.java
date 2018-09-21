@@ -24,7 +24,8 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.JvmUtils.newByteBuffer;
+import static io.airlift.slice.JvmUtils.newDirectByteBuffer;
+import static io.airlift.slice.JvmUtils.newHeapByteBuffer;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
@@ -1208,11 +1209,36 @@ public final class Slice
         checkIndexLength(index, length);
 
         if (base instanceof byte[]) {
-            return ByteBuffer.wrap((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
+            int offset = (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index);
+            return createHeapByteBuffer((byte[]) base, offset, length);
         }
 
+        return createDirectByteBuffer(address + index, length, reference);
+    }
+
+    private static ByteBuffer createHeapByteBuffer(byte[] base, int offset, int length)
+    {
         try {
-            return (ByteBuffer) newByteBuffer.invokeExact(address + index, length, (Object) reference);
+            return (ByteBuffer) newHeapByteBuffer.invokeExact(base, -1, 0, length, length, offset);
+        }
+        catch (Throwable throwable) {
+            if (throwable instanceof Error) {
+                throw (Error) throwable;
+            }
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException) throwable;
+            }
+            if (throwable instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            throw new RuntimeException(throwable);
+        }
+    }
+
+    private ByteBuffer createDirectByteBuffer(long address, int length, Object reference)
+    {
+        try {
+            return (ByteBuffer) newDirectByteBuffer.invokeExact(address, length, reference);
         }
         catch (Throwable throwable) {
             if (throwable instanceof Error) {

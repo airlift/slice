@@ -34,7 +34,8 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 final class JvmUtils
 {
     static final Unsafe unsafe;
-    static final MethodHandle newByteBuffer;
+    static final MethodHandle newDirectByteBuffer;
+    static final MethodHandle newHeapByteBuffer;
 
     private static final Field ADDRESS_ACCESSOR;
 
@@ -59,10 +60,16 @@ final class JvmUtils
 
             // fetch a method handle for the hidden constructor for DirectByteBuffer
             Class<?> directByteBufferClass = ClassLoader.getSystemClassLoader().loadClass("java.nio.DirectByteBuffer");
-            Constructor<?> constructor = directByteBufferClass.getDeclaredConstructor(long.class, int.class, Object.class);
-            constructor.setAccessible(true);
-            newByteBuffer = MethodHandles.lookup().unreflectConstructor(constructor)
+            Constructor<?> directByteBufferConstructor = directByteBufferClass.getDeclaredConstructor(long.class, int.class, Object.class);
+            directByteBufferConstructor.setAccessible(true);
+            newDirectByteBuffer = MethodHandles.lookup().unreflectConstructor(directByteBufferConstructor)
                     .asType(MethodType.methodType(ByteBuffer.class, long.class, int.class, Object.class));
+
+            Class<?> heapByteBufferClass = ClassLoader.getSystemClassLoader().loadClass("java.nio.HeapByteBuffer");
+            Constructor<?> heapByteBufferConstructor = heapByteBufferClass.getDeclaredConstructor(byte[].class, int.class, int.class, int.class, int.class, int.class);
+            heapByteBufferConstructor.setAccessible(true);
+            newHeapByteBuffer = MethodHandles.lookup().unreflectConstructor(heapByteBufferConstructor)
+                    .asType(MethodType.methodType(ByteBuffer.class, byte[].class, int.class, int.class, int.class, int.class, int.class));
 
             ADDRESS_ACCESSOR = Buffer.class.getDeclaredField("address");
             ADDRESS_ACCESSOR.setAccessible(true);
