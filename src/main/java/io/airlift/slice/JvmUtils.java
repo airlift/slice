@@ -74,7 +74,7 @@ final class JvmUtils
             ADDRESS_ACCESSOR = Buffer.class.getDeclaredField("address");
             ADDRESS_ACCESSOR.setAccessible(true);
         }
-        catch (Exception e) {
+        catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
         }
     }
