@@ -15,6 +15,7 @@ package io.airlift.slice;
 
 import java.util.stream.Stream;
 
+import static java.lang.Math.toIntExact;
 import static org.openjdk.jol.info.ClassLayout.parseClass;
 
 public final class InstanceSize
@@ -24,7 +25,7 @@ public final class InstanceSize
     public static int instanceSize(Class<?>... classes)
     {
         return Stream.of(classes)
-                .mapToInt(clazz -> parseClass(clazz).instanceSize())
+                .mapToInt(clazz -> toIntExact(parseClass(clazz).instanceSize()))
                 .reduce(0, Math::addExact);
     }
 }
