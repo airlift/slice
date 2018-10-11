@@ -13,25 +13,18 @@
  */
 package io.airlift.slice;
 
-import org.testng.annotations.Test;
+import java.util.stream.Stream;
 
-import static io.airlift.slice.InstanceSize.instanceSize;
-import static org.testng.Assert.assertEquals;
+import static org.openjdk.jol.info.ClassLayout.parseClass;
 
-public class TestBasicSliceInput
-        extends AbstractSliceInputTest
+public final class InstanceSize
 {
-    @Override
-    protected SliceInput createSliceInput(Slice slice)
-    {
-        return new BasicSliceInput(slice);
-    }
+    private InstanceSize() {}
 
-    @Test
-    public void testRetainedSize()
+    public static int instanceSize(Class<?>... classes)
     {
-        Slice slice = Slices.allocate(1024);
-        SliceInput input = new BasicSliceInput(slice);
-        assertEquals(input.getRetainedSize(), instanceSize(BasicSliceInput.class) + slice.getRetainedSize());
+        return Stream.of(classes)
+                .mapToInt(clazz -> parseClass(clazz).instanceSize())
+                .reduce(0, Math::addExact);
     }
 }
