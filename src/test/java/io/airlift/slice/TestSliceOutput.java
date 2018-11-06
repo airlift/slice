@@ -13,9 +13,9 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
+import static io.airlift.slice.InstanceSize.instanceSize;
 import static org.testng.Assert.assertEquals;
 
 public class TestSliceOutput
@@ -85,7 +85,7 @@ public class TestSliceOutput
     public void testRetainedSize()
             throws Exception
     {
-        int sliceOutputInstanceSize = ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize();
+        int sliceOutputInstanceSize = instanceSize(DynamicSliceOutput.class);
         DynamicSliceOutput output = new DynamicSliceOutput(10);
 
         long originalRetainedSize = output.getRetainedSize();

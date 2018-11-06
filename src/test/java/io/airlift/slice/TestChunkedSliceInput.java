@@ -16,7 +16,6 @@ package io.airlift.slice;
 import com.google.common.base.Strings;
 import io.airlift.slice.ChunkedSliceInput.BufferReference;
 import io.airlift.slice.ChunkedSliceInput.SliceLoader;
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import java.lang.reflect.Field;
@@ -28,6 +27,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkPositionIndex;
+import static io.airlift.slice.InstanceSize.instanceSize;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -139,7 +139,7 @@ public class TestChunkedSliceInput
 
     protected void assertRetainedSize(SliceInput input)
     {
-        long retainedSize = ClassLayout.parseClass(input.getClass()).instanceSize();
+        long retainedSize = instanceSize(input.getClass());
         Field[] fields = input.getClass().getDeclaredFields();
 
         for (Field field : fields) {

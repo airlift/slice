@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -27,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import static io.airlift.slice.InstanceSize.instanceSize;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
@@ -716,7 +716,7 @@ public class TestSlice
     public void testRetainedSize()
             throws Exception
     {
-        int sliceInstanceSize = ClassLayout.parseClass(Slice.class).instanceSize();
+        int sliceInstanceSize = instanceSize(Slice.class);
         Slice slice = Slices.allocate(10);
         assertEquals(slice.getRetainedSize(), sizeOfByteArray(10) + sliceInstanceSize);
         assertEquals(slice.length(), 10);

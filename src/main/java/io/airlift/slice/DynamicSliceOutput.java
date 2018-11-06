@@ -13,12 +13,11 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
+import static io.airlift.slice.InstanceSize.instanceSize;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -30,7 +29,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 public class DynamicSliceOutput
         extends SliceOutput
 {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize();
+    private static final int INSTANCE_SIZE = instanceSize(DynamicSliceOutput.class);
 
     private Slice slice;
     private int size;
