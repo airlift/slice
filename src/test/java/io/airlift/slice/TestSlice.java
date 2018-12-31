@@ -838,6 +838,26 @@ public class TestSlice
         assertToByteBuffer(slice, original);
     }
 
+    @Test
+    public void testToByteBufferDirect()
+    {
+        byte[] original = "hello world".getBytes(UTF_8);
+
+        ByteBuffer buffer = ByteBuffer.allocateDirect(original.length + 5);
+        buffer.putShort((short) 0xABCD);
+        buffer.put(original);
+        buffer.flip().position(2);
+
+        Slice slice = Slices.wrappedBuffer(buffer);
+        assertEquals(slice.getBytes(), original);
+
+        assertToByteBuffer(slice, original);
+
+        // conversion does not depend on wrapped buffer position or limit
+        buffer.position(8).limit(12);
+        assertToByteBuffer(slice, original);
+    }
+
     private static void assertToByteBuffer(Slice slice, byte[] original)
     {
         for (int index = 0; index < original.length; index++) {
