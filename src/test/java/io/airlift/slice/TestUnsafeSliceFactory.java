@@ -19,7 +19,7 @@ import org.testng.annotations.Test;
 import java.nio.ByteBuffer;
 import java.security.Permission;
 
-import static io.airlift.slice.JvmUtils.getAddress;
+import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -55,7 +55,7 @@ public class TestUnsafeSliceFactory
     {
         ByteBuffer buffer = ByteBuffer.allocateDirect(100);
         assertTrue(buffer.isDirect());
-        long address = getAddress(buffer);
+        long address = bufferAddress(buffer);
 
         UnsafeSliceFactory factory = UnsafeSliceFactory.getInstance();
 
