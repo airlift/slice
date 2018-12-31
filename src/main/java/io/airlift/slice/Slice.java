@@ -1206,7 +1206,7 @@ public final class Slice
         checkIndexLength(index, length);
 
         if (base instanceof byte[]) {
-            return ByteBuffer.wrap((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
+            return ByteBuffer.wrap((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length).slice();
         }
 
         try {

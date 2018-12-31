@@ -851,6 +851,7 @@ public class TestSlice
 
     private static byte[] getBytes(ByteBuffer buffer)
     {
+        assertEquals(buffer.position(), 0);
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data);
         return data;
