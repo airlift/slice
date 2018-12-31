@@ -41,7 +41,6 @@ import static io.airlift.slice.SizeOf.sizeOfFloatArray;
 import static io.airlift.slice.SizeOf.sizeOfIntArray;
 import static io.airlift.slice.SizeOf.sizeOfLongArray;
 import static io.airlift.slice.SizeOf.sizeOfShortArray;
-import static io.airlift.slice.StringDecoder.decodeString;
 import static java.lang.Math.min;
 import static java.lang.Math.multiplyExact;
 import static java.lang.String.format;
@@ -1194,8 +1193,7 @@ public final class Slice
         if (base instanceof byte[]) {
             return new String((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length, charset);
         }
-        // direct memory can only be converted to a string using a ByteBuffer
-        return decodeString(toByteBuffer(index, length), charset);
+        return new String(getBytes(index, length), charset);
     }
 
     public ByteBuffer toByteBuffer()
