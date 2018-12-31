@@ -23,7 +23,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.JvmUtils.getAddress;
+import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -118,7 +118,7 @@ public final class Slices
     public static Slice wrappedBuffer(ByteBuffer buffer)
     {
         if (buffer.isDirect()) {
-            long address = getAddress(buffer);
+            long address = bufferAddress(buffer);
             return new Slice(null, address + buffer.position(), buffer.remaining(), buffer.capacity(), buffer);
         }
 
