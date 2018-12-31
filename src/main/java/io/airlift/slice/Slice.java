@@ -24,7 +24,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.JvmUtils.newByteBuffer;
+import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.checkPositionIndexes;
@@ -43,6 +43,7 @@ import static io.airlift.slice.SizeOf.sizeOfLongArray;
 import static io.airlift.slice.SizeOf.sizeOfShortArray;
 import static java.lang.Math.min;
 import static java.lang.Math.multiplyExact;
+import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -1209,21 +1210,16 @@ public final class Slice
             return ByteBuffer.wrap((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length).slice();
         }
 
-        try {
-            return (ByteBuffer) newByteBuffer.invokeExact(address + index, length, (Object) reference);
+        if ((reference instanceof ByteBuffer) && ((ByteBuffer) reference).isDirect()) {
+            ByteBuffer buffer = (ByteBuffer) reference;
+            int position = toIntExact(address - bufferAddress(buffer)) + index;
+            buffer = buffer.duplicate();
+            buffer.position(position);
+            buffer.limit(position + length);
+            return buffer.slice();
         }
-        catch (Throwable throwable) {
-            if (throwable instanceof Error) {
-                throw (Error) throwable;
-            }
-            if (throwable instanceof RuntimeException) {
-                throw (RuntimeException) throwable;
-            }
-            if (throwable instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new RuntimeException(throwable);
-        }
+
+        throw new UnsupportedOperationException("Conversion to ByteBuffer not supported for this Slice");
     }
 
     /**
