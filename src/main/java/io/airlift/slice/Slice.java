@@ -869,7 +869,7 @@ public final class Slice
 
     /**
      * Returns the index of the first occurrence of the pattern with this slice.
-     * If the pattern is not found -1 is returned If patten is empty, the offset
+     * If the pattern is not found -1 is returned. If patten is empty, the offset
      * is returned.
      */
     public int indexOf(Slice pattern, int offset)
