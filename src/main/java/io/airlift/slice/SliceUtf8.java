@@ -1118,7 +1118,7 @@ public final class SliceUtf8
         // Count the number of bytes that match 0b10xx_xxxx as follows:
         // 1. Mask off the 8th bit of every byte and shift it into the 7th position.
         // 2. Then invert the bytes, which turns the 0 in the 7th bit to a one.
-        // 3. And together the restults of step 1 and 2, giving us a one in the 7th
+        // 3. And together the results of step 1 and 2, giving us a one in the 7th
         //    position if the byte matched.
         // 4. Count the number of bits in the result, which is the number of bytes
         //    that matched.
