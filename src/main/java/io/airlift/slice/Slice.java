@@ -907,7 +907,7 @@ public final class Slice
             int valueXor = value ^ firstByteMask;
             int hasZeroBytes = (valueXor - 0x01010101) & ~valueXor & 0x80808080;
 
-            // If valueXor doesn't not have any zero byte then there is no match and we can advance
+            // If valueXor doesn't have any zero byte then there is no match and we can advance
             if (hasZeroBytes == 0) {
                 index += SIZE_OF_INT;
                 continue;
