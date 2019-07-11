@@ -334,6 +334,46 @@ public final class Slice
         return reference == COMPACT;
     }
 
+    private void checkHasByteArray()
+            throws UnsupportedOperationException
+    {
+        if (!hasByteArray()) {
+            throw new UnsupportedOperationException("Slice is not backed by a byte array");
+        }
+    }
+
+    public boolean hasByteArray()
+    {
+        return base instanceof byte[];
+    }
+
+    /**
+     * Returns the byte array wrapped by this Slice, if any. Callers are expected to check {@link Slice#hasByteArray()} before calling
+     * this method since not all instances are backed by a byte array. Callers should also take care to use {@link Slice#byteArrayOffset()}
+     * since the contents of this Slice may not start at array index 0.
+     *
+     * @throws UnsupportedOperationException if this Slice has no underlying byte array
+     */
+    public byte[] byteArray()
+            throws UnsupportedOperationException
+    {
+        checkHasByteArray();
+        return (byte[]) base;
+    }
+
+    /**
+     * Returns the start index the content of this slice within the byte array wrapped by this slice. Callers should
+     * check {@link Slice#hasByteArray()} before calling this method since not all Slices wrap a heap byte array
+     *
+     * @throws UnsupportedOperationException if this Slice has no underlying byte array
+     */
+    public int byteArrayOffset()
+            throws UnsupportedOperationException
+    {
+        checkHasByteArray();
+        return (int) (address - ARRAY_BYTE_BASE_OFFSET);
+    }
+
     /**
      * Fill the slice with the specified value;
      */
@@ -612,8 +652,8 @@ public final class Slice
     {
         checkIndexLength(index, length);
 
-        if (base instanceof byte[]) {
-            out.write((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
+        if (hasByteArray()) {
+            out.write(byteArray(), byteArrayOffset() + index, length);
             return;
         }
 
@@ -799,9 +839,9 @@ public final class Slice
             throws IOException
     {
         checkIndexLength(index, length);
-        if (base instanceof byte[]) {
-            byte[] bytes = (byte[]) base;
-            int offset = (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index);
+        if (hasByteArray()) {
+            byte[] bytes = byteArray();
+            int offset = byteArrayOffset() + index;
             while (length > 0) {
                 int bytesRead = in.read(bytes, offset, length);
                 if (bytesRead < 0) {
@@ -1170,9 +1210,9 @@ public final class Slice
             return "";
         }
 
-        if (base instanceof byte[]) {
+        if (hasByteArray()) {
             //noinspection deprecation
-            return new String((byte[]) base, 0, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length);
+            return new String(byteArray(), 0, byteArrayOffset() + index, length);
         }
 
         char[] chars = new char[length];
@@ -1191,8 +1231,8 @@ public final class Slice
         if (length == 0) {
             return "";
         }
-        if (base instanceof byte[]) {
-            return new String((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length, charset);
+        if (hasByteArray()) {
+            return new String(byteArray(), byteArrayOffset() + index, length, charset);
         }
         return new String(getBytes(index, length), charset);
     }
@@ -1206,8 +1246,8 @@ public final class Slice
     {
         checkIndexLength(index, length);
 
-        if (base instanceof byte[]) {
-            return ByteBuffer.wrap((byte[]) base, (int) ((address - ARRAY_BYTE_BASE_OFFSET) + index), length).slice();
+        if (hasByteArray()) {
+            return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
         }
 
         if ((reference instanceof ByteBuffer) && ((ByteBuffer) reference).isDirect()) {
