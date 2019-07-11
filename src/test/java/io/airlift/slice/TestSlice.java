@@ -162,6 +162,20 @@ public class TestSlice
         }
     }
 
+    @Test
+    public void testBackingByteArray()
+    {
+        byte[] bytes = new byte[Byte.MAX_VALUE];
+        for (int i = 0; i < bytes.length; i++) {
+            Slice slice = Slices.wrappedBuffer(bytes, i, bytes.length - i);
+            assertTrue(slice.hasByteArray());
+            assertEquals(slice.byteArrayOffset(), i);
+            assertSame(slice.byteArray(), bytes);
+            bytes[i] = (byte) i;
+            assertEquals(slice.getByte(0), (byte) i);
+        }
+    }
+
     private static void assertSlicesEquals(Slice slice, Slice other)
     {
         int size = slice.length();
