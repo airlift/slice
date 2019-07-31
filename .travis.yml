@@ -1,8 +1,9 @@
 language: java
 
-jdk:
-  - openjdk8
-  - openjdk9
-  - openjdk10
-  - openjdk11
-  - openjdk12
+matrix:
+  include:
+  - jdk: openjdk8
+  - jdk: openjdk9
+  - jdk: openjdk10
+  - jdk: openjdk11
+  - jdk: openjdk12
