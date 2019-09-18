@@ -1,0 +1,13 @@
+task:
+  name: CI
+  container:
+    matrix:
+      - image: maven:3-jdk-8
+      - image: maven:3-jdk-11
+      - image: maven:3-jdk-12
+      - image: maven:3-ibmjava-8
+      - image: maven:3-amazoncorretto-8
+      - image: maven:3-amazoncorretto-11
+  maven_cache:
+    folder: ~/.m2
+  test_script: mvn install -B -V
