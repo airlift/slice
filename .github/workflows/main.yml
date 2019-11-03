@@ -1,0 +1,20 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: ['1.8', '9', '11', '12']
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up JDK ${{ matrix.java }}
+      uses: actions/setup-java@v1
+      with:
+        java-version: ${{ matrix.java }}
+    - name: Maven Install Dependencies
+      run: mvn install -B -V -DskipTests -Dair.check.skip-all
+    - name: Maven Test
+      run: mvn install -B
