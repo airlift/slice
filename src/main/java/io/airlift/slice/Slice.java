@@ -888,7 +888,7 @@ public final class Slice
 
     public int indexOfByte(int b)
     {
-        b = b & 0xFF;
+        b &= 0xFF;
         for (int i = 0; i < size; i++) {
             if (getByteUnchecked(i) == b) {
                 return i;
