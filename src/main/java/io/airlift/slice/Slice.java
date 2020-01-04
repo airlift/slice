@@ -888,7 +888,12 @@ public final class Slice
 
     public int indexOfByte(int b)
     {
-        b &= 0xFF;
+        checkArgument((b >> Byte.SIZE) == 0, "byte value out of range");
+        return indexOfByte((byte) b);
+    }
+
+    public int indexOfByte(byte b)
+    {
         for (int i = 0; i < size; i++) {
             if (getByteUnchecked(i) == b) {
                 return i;
