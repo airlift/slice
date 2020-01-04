@@ -46,6 +46,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -836,6 +837,27 @@ public class TestSlice
         }
 
         assertEquals(bruteForce, indexOf);
+    }
+
+    @Test
+    public void testIndexOfByte()
+    {
+        Slice slice = utf8Slice("apple");
+
+        assertEquals(slice.indexOfByte((byte) 'a'), 0);
+        assertEquals(slice.indexOfByte((byte) 'p'), 1);
+        assertEquals(slice.indexOfByte((byte) 'e'), 4);
+        assertEquals(slice.indexOfByte((byte) 'x'), -1);
+
+        assertEquals(slice.indexOfByte('a'), 0);
+        assertEquals(slice.indexOfByte('p'), 1);
+        assertEquals(slice.indexOfByte('e'), 4);
+        assertEquals(slice.indexOfByte('x'), -1);
+
+        assertThrows(IllegalArgumentException.class, () -> slice.indexOfByte(-1));
+        assertThrows(IllegalArgumentException.class, () -> slice.indexOfByte(-123));
+        assertThrows(IllegalArgumentException.class, () -> slice.indexOfByte(256));
+        assertThrows(IllegalArgumentException.class, () -> slice.indexOfByte(500));
     }
 
     @Test
