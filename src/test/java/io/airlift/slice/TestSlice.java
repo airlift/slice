@@ -872,6 +872,14 @@ public class TestSlice
         assertToByteBuffer(slice, original);
     }
 
+    @Test
+    public void testToByteBufferEmpty()
+    {
+        ByteBuffer buffer = allocate(0).toByteBuffer();
+        assertEquals(buffer.position(), 0);
+        assertEquals(buffer.remaining(), 0);
+    }
+
     private static void assertToByteBuffer(Slice slice, byte[] original)
     {
         for (int index = 0; index < original.length; index++) {
