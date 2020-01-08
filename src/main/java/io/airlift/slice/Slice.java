@@ -63,15 +63,6 @@ public final class Slice
     private static final Object NOT_COMPACT = null;
 
     /**
-     * @deprecated use {@link Slices#wrappedBuffer(java.nio.ByteBuffer)}
-     */
-    @Deprecated
-    public static Slice toUnsafeSlice(ByteBuffer byteBuffer)
-    {
-        return Slices.wrappedBuffer(byteBuffer);
-    }
-
-    /**
      * Base object for relative addresses.  If null, the address is an
      * absolute location in memory.
      */
