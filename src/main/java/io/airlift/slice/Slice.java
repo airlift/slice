@@ -61,6 +61,7 @@ public final class Slice
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(Slice.class).instanceSize();
     private static final Object COMPACT = new byte[0];
     private static final Object NOT_COMPACT = null;
+    private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
     /**
      * @deprecated use {@link Slices#wrappedBuffer(java.nio.ByteBuffer)}
@@ -1250,6 +1251,10 @@ public final class Slice
     public ByteBuffer toByteBuffer(int index, int length)
     {
         checkIndexLength(index, length);
+
+        if (length() == 0) {
+            return EMPTY_BYTE_BUFFER;
+        }
 
         if (hasByteArray()) {
             return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
