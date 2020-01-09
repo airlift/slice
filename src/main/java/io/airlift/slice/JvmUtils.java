@@ -60,7 +60,7 @@ final class JvmUtils
         }
     }
 
-    private static void assertArrayIndexScale(final String name, int actualIndexScale, int expectedIndexScale)
+    private static void assertArrayIndexScale(String name, int actualIndexScale, int expectedIndexScale)
     {
         if (actualIndexScale != expectedIndexScale) {
             throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
