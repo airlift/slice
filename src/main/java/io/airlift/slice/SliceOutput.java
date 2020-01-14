@@ -128,6 +128,29 @@ public abstract class SliceOutput
     public abstract void writeDouble(double value);
 
     /**
+     * Write doubles in {@code source} into the slice at the current position,
+     * increasing the {@code writerIndex} by {@code length * 8} in this buffer.
+     *
+     * @param sourceIndex start reading from this index in {@code source}
+     * @param length read and write exactly this many doubles
+     * @throws IndexOutOfBoundsException if {@code this.writableBytes} is less than {@code length * 8},
+     * or {@code sourceIndex < 0},
+     * or {@code source.length < sourceIndex + length}
+     */
+    public abstract void writeDoubles(double[] source, int sourceIndex, int length);
+
+    /**
+     * Write the doubles in {@code value} into the slice at the current position,
+     * increasing the {@code writerIndex} by {@code values.length * 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.writableBytes} is less than {@code values.length * 8}
+     */
+    public void writeDoubles(double[] source)
+    {
+        writeDoubles(source, 0, source.length);
+    }
+
+    /**
      * Transfers the specified source buffer's data to this buffer starting at
      * the current {@code writerIndex} until the source buffer becomes
      * unreadable, and increases the {@code writerIndex} by the number of

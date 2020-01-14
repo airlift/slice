@@ -16,7 +16,9 @@ package io.airlift.slice;
 import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
+import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 public class TestSliceOutput
 {
@@ -103,6 +105,71 @@ public class TestSliceOutput
     {
         assertReset(new DynamicSliceOutput(1));
         assertReset(Slices.allocate(50).getOutput());
+    }
+
+    @Test
+    public void testAddDoublesDynamic()
+    {
+        int arrayLength = 100;
+        double[] values = new double[arrayLength];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = (double) i;
+        }
+
+        for (int offset = 0; offset < arrayLength; offset++) {
+            for (int writeLength = 0; writeLength < arrayLength - offset; writeLength++) {
+                SliceOutput output = new DynamicSliceOutput(arrayLength * SIZE_OF_DOUBLE / 2);
+                output.writeDoubles(values, offset, writeLength);
+                Slice actual = output.slice();
+                for (int i = 0; i < writeLength; i++) {
+                    assertEquals(actual.getDouble(i * SIZE_OF_DOUBLE), (double) offset + i);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testAddDoublesBasic()
+    {
+        int arrayLength = 100;
+        double[] values = new double[arrayLength];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = (double) i;
+        }
+
+        for (int offset = 0; offset < arrayLength; offset++) {
+            for (int writeLength = 0; writeLength < arrayLength - offset; writeLength++) {
+                Slice actual = new Slice(new byte[arrayLength * SIZE_OF_DOUBLE]);
+                SliceOutput output = new BasicSliceOutput(actual);
+                output.writeDoubles(values, offset, writeLength);
+                for (int i = 0; i < writeLength; i++) {
+                    assertEquals(actual.getDouble(i * SIZE_OF_DOUBLE), (double) offset + i);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testAddDoublesBasicIndexError()
+    {
+        double[] values = new double[10];
+
+        SliceOutput output = new BasicSliceOutput(new Slice(new byte[values.length * SIZE_OF_DOUBLE - 1]));
+        try {
+            output.writeDoubles(values);
+            fail("Should fail with IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+            // Expected
+        }
+
+        try {
+            output.writeDoubles(values, 6, 5);
+            fail("Should fail with IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+            // Expected
+        }
     }
 
     private static void assertReset(SliceOutput output)

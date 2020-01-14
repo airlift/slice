@@ -22,6 +22,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 
 import static com.google.common.collect.Iterables.cycle;
@@ -31,6 +32,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.lang.Double.doubleToLongBits;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -245,6 +247,14 @@ public abstract class AbstractSliceInputTest
                 assertEquals(input.readDouble(), valueIndex + 0.12);
             }
         });
+    }
+
+    @Test
+    public void testReadDoubles()
+    {
+        testSliceInput(new DoublesSliceInputTester(1));
+        testSliceInput(new DoublesSliceInputTester(4));
+        testSliceInput(new DoublesSliceInputTester(13));
     }
 
     @Test
@@ -561,5 +571,84 @@ public abstract class AbstractSliceInputTest
         }
 
         protected abstract String readActual(SliceInput input);
+    }
+
+    private abstract static class ByteArraySliceInputTester
+            extends SliceInputTester
+    {
+        protected final int valueBytes;
+        protected final int arrayLength;
+
+        public ByteArraySliceInputTester(int valueBytes, int arrayLength)
+        {
+            super(valueBytes * arrayLength);
+            this.valueBytes = valueBytes;
+            this.arrayLength = arrayLength;
+        }
+
+        @Override
+        public final void loadValue(SliceOutput output, int valueIndex)
+        {
+            byte[] value = expectedByteArray(valueIndex);
+            output.writeBytes(value);
+        }
+
+        @Override
+        public final void verifyValue(SliceInput input, int valueIndex)
+        {
+            byte[] actual = readActual(input);
+            byte[] expected = expectedByteArray(valueIndex);
+            assertEquals(actual, expected);
+        }
+
+        protected abstract byte[] readActual(SliceInput input);
+
+        protected abstract byte[] expectedByteArray(int valueIndex);
+    }
+
+    private static class DoublesSliceInputTester
+            extends ByteArraySliceInputTester
+    {
+        public DoublesSliceInputTester(int arrayLength)
+        {
+            super(SIZE_OF_DOUBLE, arrayLength);
+        }
+
+        @Override
+        protected byte[] readActual(SliceInput input)
+        {
+            double[] doubles = input.readDoubles(arrayLength);
+            ByteBuffer buffer = ByteBuffer.allocate(arrayLength * valueBytes);
+            for (int i = 0; i < doubles.length; i++) {
+                buffer.put(doubleToBytes(doubles[i]));
+            }
+            return buffer.array();
+        }
+
+        @Override
+        protected byte[] expectedByteArray(int valueIndex)
+        {
+            ByteBuffer buffer = ByteBuffer.allocate(arrayLength * valueBytes);
+            for (int i = 0; i < arrayLength; i++) {
+                byte[] bytes = doubleToBytes(valueIndex);
+                buffer.put(bytes);
+            }
+            return buffer.array();
+        }
+
+        private byte[] doubleToBytes(double value)
+        {
+            long bits = doubleToLongBits(value);
+            return new byte[] {
+                    (byte) bits,
+                    (byte) (bits >> 8),
+                    (byte) (bits >> 16),
+                    (byte) (bits >> 24),
+                    (byte) (bits >> 32),
+                    (byte) (bits >> 40),
+                    (byte) (bits >> 48),
+                    (byte) (bits >> 56),
+            };
+        }
     }
 }

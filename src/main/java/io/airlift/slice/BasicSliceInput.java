@@ -151,6 +151,13 @@ public final class BasicSliceInput
     }
 
     @Override
+    public void readDoubles(double[] destination, int destinationIndex, int length)
+    {
+        slice.getDoubles(position, destination, destinationIndex, length);
+        position += length * SIZE_OF_DOUBLE;
+    }
+
+    @Override
     public Slice readSlice(int length)
     {
         if (length == 0) {

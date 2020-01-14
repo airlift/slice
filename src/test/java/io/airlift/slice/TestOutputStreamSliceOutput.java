@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
+import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
+import static io.airlift.slice.Slices.wrappedDoubleArray;
 import static org.testng.Assert.assertEquals;
 
 public class TestOutputStreamSliceOutput
@@ -160,6 +162,35 @@ public class TestOutputStreamSliceOutput
         assertEncoding(sliceOutput -> sliceOutput.writeZero(227), new byte[227]);
         assertEncoding(sliceOutput -> sliceOutput.writeZero(4227), new byte[4227]);
         assertEncoding(sliceOutput -> sliceOutput.writeZero(18349), new byte[18349]);
+    }
+
+    @Test
+    public void testWriteDoubles()
+            throws Exception
+    {
+        int doubleArrayLength = 100;
+        int byteArrayLength = doubleArrayLength * SIZE_OF_DOUBLE;
+        double[] values = new double[doubleArrayLength];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = (double) i;
+        }
+        Slice outputSlice = wrappedDoubleArray(values);
+
+        assertEncoding(sliceOutput -> sliceOutput.writeDoubles(values, 0, 0), 0, outputSlice.getBytes(0, 0));
+        assertEncoding(sliceOutput -> sliceOutput.writeDoubles(values, 0, doubleArrayLength), 0, outputSlice.getBytes(0, byteArrayLength));
+        assertEncoding(sliceOutput -> sliceOutput.writeDoubles(values, 0, doubleArrayLength / 2), 0, outputSlice.getBytes(0, byteArrayLength / 2));
+        assertEncoding(sliceOutput -> sliceOutput.writeDoubles(values, doubleArrayLength / 2, doubleArrayLength / 2), 0, outputSlice.getBytes(byteArrayLength / 2, byteArrayLength / 2));
+        assertEncoding(sliceOutput -> sliceOutput.writeDoubles(values, doubleArrayLength / 4, doubleArrayLength / 4), 0, outputSlice.getBytes(byteArrayLength / 4, byteArrayLength / 4));
+
+        // Test direct-to-buffer write by writing > MINIMUM_CHUNK_SIZE
+        int largeDoubleArrayLength = 2049;
+        int largeByteArrayLength = largeDoubleArrayLength * SIZE_OF_DOUBLE;
+        double[] largeValues = new double[largeDoubleArrayLength];
+        for (int i = 0; i < largeValues.length; i++) {
+            largeValues[i] = (double) i;
+        }
+        Slice largeOutputSlice = wrappedDoubleArray(largeValues);
+        assertEncoding(sliceOutput -> sliceOutput.writeDoubles(largeValues, 0, largeDoubleArrayLength), 0, largeOutputSlice.getBytes(0, largeByteArrayLength));
     }
 
     /**

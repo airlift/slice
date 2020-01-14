@@ -25,6 +25,7 @@ import java.util.Arrays;
 
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
+import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
@@ -168,6 +169,23 @@ public class OutputStreamSliceOutput
     public void writeDouble(double value)
     {
         writeLong(Double.doubleToLongBits(value));
+    }
+
+    @Override
+    public void writeDoubles(double[] source, int sourceIndex, int length)
+    {
+        int lengthInBytes = length * SIZE_OF_DOUBLE;
+        if (lengthInBytes >= MINIMUM_CHUNK_SIZE) {
+            flushBufferToOutputStream();
+            Slice slice = new Slice(source, sourceIndex, length);
+            writeToOutputStream(slice, 0, lengthInBytes);
+            bufferOffset += lengthInBytes;
+        }
+        else {
+            ensureWritableBytes(lengthInBytes);
+            slice.setDoubles(bufferPosition, source, sourceIndex, length);
+            bufferPosition += lengthInBytes;
+        }
     }
 
     @Override

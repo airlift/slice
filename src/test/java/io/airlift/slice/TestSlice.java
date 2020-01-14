@@ -538,6 +538,68 @@ public class TestSlice
     }
 
     @Test
+    public void testDoubles()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < (size - SIZE_OF_DOUBLE); index++) {
+                assertDoubles(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertDoubles(Slice slice, int index)
+    {
+        double[] value = new double[(slice.length() - index) / SIZE_OF_DOUBLE];
+        Arrays.fill(value, longBitsToDouble(0xAAAA_AAAA_5555_5555L));
+
+        slice.fill((byte) 0xFF);
+        slice.setDoubles(index, value);
+        assertEquals(slice.getDoubles(index, value.length), value);
+
+        value = new double[(slice.length() - index) / SIZE_OF_DOUBLE / 2];
+        Arrays.fill(value, longBitsToDouble(0xAAAA_AAAA_5555_5555L));
+
+        slice.fill((byte) 0xFF);
+        slice.setDoubles(index, value);
+        assertEquals(slice.getDoubles(index, value.length), value);
+
+        try {
+            slice.getDoubles(-1, 1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getDoubles((slice.length() - SIZE_OF_DOUBLE) + 1, 1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getDoubles(slice.length(), 1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getDoubles(slice.length() + 1, 1);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+
+        try {
+            slice.getDoubles(slice.length() / 2, slice.length() / 4);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException e) {
+        }
+    }
+
+    @Test
     public void testBytesArray()
     {
         for (int size = 0; size < 100; size++) {
