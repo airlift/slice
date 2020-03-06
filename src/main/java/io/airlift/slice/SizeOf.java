@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassLayout;
+
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -40,6 +42,8 @@ public final class SizeOf
     public static final byte SIZE_OF_LONG = 8;
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
+
+    private static final int STRING_INSTANCE_SIZE = ClassLayout.parseClass(String.class).instanceSize();
 
     public static long sizeOf(boolean[] array)
     {
@@ -84,6 +88,11 @@ public final class SizeOf
     public static long sizeOf(Object[] array)
     {
         return (array == null) ? 0 : sizeOfObjectArray(array.length);
+    }
+
+    public static long estimatedSizeOf(String string)
+    {
+        return (string == null) ? 0 : (STRING_INSTANCE_SIZE + string.length() * Character.BYTES);
     }
 
     public static long sizeOfBooleanArray(int length)
