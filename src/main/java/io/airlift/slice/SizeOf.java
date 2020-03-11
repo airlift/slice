@@ -15,6 +15,11 @@ package io.airlift.slice;
 
 import org.openjdk.jol.info.ClassLayout;
 
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.ToLongFunction;
+
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -43,6 +48,7 @@ public final class SizeOf
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
 
+    private static final int SIMPLE_ENTRY_INSTANCE_SIZE = ClassLayout.parseClass(AbstractMap.SimpleEntry.class).instanceSize();
     private static final int STRING_INSTANCE_SIZE = ClassLayout.parseClass(String.class).instanceSize();
 
     public static long sizeOf(boolean[] array)
@@ -93,6 +99,21 @@ public final class SizeOf
     public static long estimatedSizeOf(String string)
     {
         return (string == null) ? 0 : (STRING_INSTANCE_SIZE + string.length() * Character.BYTES);
+    }
+
+    public static <K, V> long estimatedSizeOf(Map<K, V> map, ToLongFunction<K> keySize, ToLongFunction<V> valueSize)
+    {
+        if (map == null) {
+            return 0;
+        }
+
+        long result = sizeOfObjectArray(map.size());
+        for (Entry<K, V> entry : map.entrySet()) {
+            result += SIMPLE_ENTRY_INSTANCE_SIZE +
+                    keySize.applyAsLong(entry.getKey()) +
+                    valueSize.applyAsLong(entry.getValue());
+        }
+        return result;
     }
 
     public static long sizeOfBooleanArray(int length)
