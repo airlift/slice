@@ -16,6 +16,7 @@ package io.airlift.slice;
 import org.openjdk.jol.info.ClassLayout;
 
 import java.util.AbstractMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.ToLongFunction;
@@ -99,6 +100,19 @@ public final class SizeOf
     public static long estimatedSizeOf(String string)
     {
         return (string == null) ? 0 : (STRING_INSTANCE_SIZE + string.length() * Character.BYTES);
+    }
+
+    public static <T> long estimatedSizeOf(List<T> list, ToLongFunction<T> valueSize)
+    {
+        if (list == null) {
+            return 0;
+        }
+
+        long result = sizeOfObjectArray(list.size());
+        for (T value : list) {
+            result += valueSize.applyAsLong(value);
+        }
+        return result;
     }
 
     public static <K, V> long estimatedSizeOf(Map<K, V> map, ToLongFunction<K> keySize, ToLongFunction<V> valueSize)
