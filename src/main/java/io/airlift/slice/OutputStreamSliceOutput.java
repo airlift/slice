@@ -28,6 +28,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.lang.Math.toIntExact;
 
 public class OutputStreamSliceOutput
         extends SliceOutput
@@ -88,19 +89,19 @@ public class OutputStreamSliceOutput
     @Override
     public void reset()
     {
-        throw new UnsupportedOperationException("OutputStream can not be reset");
+        throw new UnsupportedOperationException("OutputStream cannot be reset");
     }
 
     @Override
     public void reset(int position)
     {
-        throw new UnsupportedOperationException("OutputStream can not be reset");
+        throw new UnsupportedOperationException("OutputStream cannot be reset");
     }
 
     @Override
     public int size()
     {
-        return checkedCast(longSize());
+        return toIntExact(longSize());
     }
 
     public long longSize()
@@ -361,12 +362,5 @@ public class OutputStreamSliceOutput
         catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static int checkedCast(long value)
-    {
-        int result = (int) value;
-        checkArgument(result == value, "Size is greater than maximum int value");
-        return result;
     }
 }
