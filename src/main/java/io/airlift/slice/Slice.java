@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 
 import static io.airlift.slice.JvmUtils.bufferAddress;
@@ -58,6 +59,12 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 public final class Slice
         implements Comparable<Slice>
 {
+    static {
+        if (ByteOrder.nativeOrder() != ByteOrder.LITTLE_ENDIAN) {
+            throw new IllegalStateException("Slice requires a little endian platform");
+        }
+    }
+
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(Slice.class).instanceSize();
     private static final Object COMPACT = new byte[0];
     private static final Object NOT_COMPACT = null;
