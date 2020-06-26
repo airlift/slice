@@ -54,6 +54,12 @@ public class TestUnsignedGetters
         assertEquals(slice.getUnsignedInt(0), expected);
     }
 
+    @Test(expectedExceptions=IllegalStateException.class)
+    public void testUnsignedLong()
+    {
+        slice.getUnsignedLongOrThrow(0);
+    }
+
     protected Slice allocate(int size)
     {
         return Slices.allocate(size);
