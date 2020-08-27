@@ -316,7 +316,15 @@ public final class Slice
     {
         return retainedSize;
     }
-
+    
+    /**
+     * Return the reference object
+     */
+     public Object getReference() 
+     {
+         return reference;
+     }
+     
     /**
      * A slice is considered compact if the base object is an array and it contains the whole array.
      * As a result, it cannot be a view of a bigger slice.
