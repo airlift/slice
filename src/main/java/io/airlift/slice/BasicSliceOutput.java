@@ -122,6 +122,13 @@ public class BasicSliceOutput
     }
 
     @Override
+    public void writeDoubles(double[] source, int sourceIndex, int length)
+    {
+        slice.setDoubles(size, source, sourceIndex, length);
+        size += length * SIZE_OF_DOUBLE;
+    }
+
+    @Override
     public void writeBytes(byte[] source, int sourceIndex, int length)
     {
         slice.setBytes(size, source, sourceIndex, length);

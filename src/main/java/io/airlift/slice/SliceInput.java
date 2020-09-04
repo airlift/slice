@@ -146,6 +146,28 @@ public abstract class SliceInput
     public abstract double readDouble();
 
     /**
+     * Transfers {@code length * 8} bytes this buffer's data as doubles to the
+     * specified destination starting at the current {@code position} and
+     * increases the {@code position} by the number of the transferred bytes.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code length * 8}
+     */
+    public abstract void readDoubles(double[] destination, int destinationIndex, int length);
+
+    /**
+     * Gets exactly {@code length} doubles at the current {@code position},
+     * increasing the {@code position} by {@code length * 8} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if {@code this.available()} is less than {@code length * 8}
+     */
+    public double[] readDoubles(int length)
+    {
+        double[] destination = new double[length];
+        readDoubles(destination, 0, length);
+        return destination;
+    }
+
+    /**
      * Returns a new slice of this buffer's sub-region starting at the current
      * {@code position} and increases the {@code position} by the size
      * of the new slice (= {@code length}).

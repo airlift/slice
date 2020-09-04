@@ -540,7 +540,47 @@ public final class Slice
     public double getDouble(int index)
     {
         checkIndexLength(index, SIZE_OF_DOUBLE);
+        return getDoubleUnchecked(index);
+    }
+
+    double getDoubleUnchecked(int index)
+    {
         return unsafe.getDouble(base, address + index);
+    }
+
+    /**
+     * Transfers portion of data from this slice as doubles into the specified
+     * destination starting at the specified absolute {@code index}.
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of doubles to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code index + length * 8} is greater than * {@code this.length()},
+     * or if {@code destinationIndex + length} is greater than {@code destination.length}
+     */
+    public void getDoubles(int index, double[] destination, int destinationIndex, int length)
+    {
+        int lengthInBytes = length * SIZE_OF_DOUBLE;
+        checkIndexLength(index, lengthInBytes);
+        checkPositionIndexes(destinationIndex, destinationIndex + length, destination.length);
+        for (int i = 0; i < length; i++) {
+            destination[i] = getDoubleUnchecked(index + i * SIZE_OF_DOUBLE);
+        }
+    }
+
+    /**
+     * Gets an array of {@code length} 64-bit doubles from the absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + 8 * length} is greater than {@code this.length()}
+     */
+    public double[] getDoubles(int index, int length)
+    {
+        double[] doubles = new double[length];
+        getDoubles(index, doubles, 0, length);
+        return doubles;
     }
 
     /**
@@ -756,6 +796,38 @@ public final class Slice
     {
         checkIndexLength(index, SIZE_OF_DOUBLE);
         unsafe.putDouble(base, address + index, value);
+    }
+
+    /**
+     * Sets the specified 64-bit doubles at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @param sourceIndex start reading from this index in {@code source}
+     * @param length read and write exactly this many doubles
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * or {@code index + length * 8} is greater than {@code this.length()},
+     * or {@code sourceIndex < 0},
+     * or {@code source.length < sourceIndex + length}
+     */
+    public void setDoubles(int index, double[] source, int sourceIndex, int length)
+    {
+        checkPositionIndexes(sourceIndex, sourceIndex + length, source.length);
+        checkIndexLength(index, length * SIZE_OF_DOUBLE);
+        for (int i = 0; i < length; i++) {
+            unsafe.putDouble(base, address + index + i * SIZE_OF_DOUBLE, source[sourceIndex + i]);
+        }
+    }
+
+    /**
+     * Sets the specified 64-bit doubles at the specified absolute
+     * {@code index} in this buffer.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
+     * {@code index + values.length * 8} is greater than {@code this.length()}
+     */
+    public void setDoubles(int index, double[] source)
+    {
+        setDoubles(index, source, 0, source.length);
     }
 
     /**

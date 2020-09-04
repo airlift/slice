@@ -197,6 +197,15 @@ public final class ChunkedSliceInput
     }
 
     @Override
+    public void readDoubles(double[] destination, int destinationIndex, int length)
+    {
+        int lengthInBytes = length * SIZE_OF_DOUBLE;
+        ensureAvailable(lengthInBytes);
+        buffer.getDoubles(bufferPosition, destination, destinationIndex, length);
+        bufferPosition += lengthInBytes;
+    }
+
+    @Override
     public Slice readSlice(int length)
     {
         if (length == 0) {

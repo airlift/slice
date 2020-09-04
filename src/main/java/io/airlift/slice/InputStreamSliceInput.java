@@ -23,6 +23,7 @@ import java.io.UncheckedIOException;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.verify;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
+import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
@@ -165,6 +166,15 @@ public final class InputStreamSliceInput
     public double readDouble()
     {
         return Double.longBitsToDouble(readLong());
+    }
+
+    @Override
+    public void readDoubles(double[] destination, int destinationIndex, int length)
+    {
+        int lengthInBytes = length * SIZE_OF_DOUBLE;
+        ensureAvailable(lengthInBytes);
+        slice.getDoubles(bufferPosition, destination, destinationIndex, length);
+        bufferPosition += lengthInBytes;
     }
 
     @Override

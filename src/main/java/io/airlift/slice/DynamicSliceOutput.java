@@ -127,6 +127,14 @@ public class DynamicSliceOutput
     }
 
     @Override
+    public void writeDoubles(double[] source, int sourceIndex, int length)
+    {
+        slice = Slices.ensureSize(slice, size + length * SIZE_OF_DOUBLE);
+        slice.setDoubles(size, source, sourceIndex, length);
+        size += length * SIZE_OF_DOUBLE;
+    }
+
+    @Override
     public void writeBytes(byte[] source)
     {
         writeBytes(source, 0, source.length);
