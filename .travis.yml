@@ -17,3 +17,17 @@ matrix:
     before_install:
     - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
     - source ./install-jdk.sh --url 'https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.1.0/graalvm-ce-java11-linux-amd64-20.1.0.tar.gz'
+    
+  #PPC64LE
+  - arch: ppc64le
+    env: JDK=adoptopenjdk-11-hotspot
+    before_insall:
+      - wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+      - sudo add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
+      - sudo apt-get install -y maven adoptopenjdk-11-hotspot
+  - arch: ppc64le
+    env: JDK=adoptopenjdk-14-hotspot
+    before_insall:
+      - wget -qO - https://adoptopenjdk.jfrog.io/adoptopenjdk/api/gpg/key/public | sudo apt-key add -
+      - sudo add-apt-repository --yes https://adoptopenjdk.jfrog.io/adoptopenjdk/deb/
+      - sudo apt-get install -y maven adoptopenjdk-14-hotspot
