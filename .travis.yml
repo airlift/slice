@@ -1,6 +1,8 @@
 language: java
 
 matrix:
+  
+    
   include:
   - jdk: openjdk8
   - jdk: openjdk11
@@ -17,3 +19,14 @@ matrix:
     before_install:
     - wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
     - source ./install-jdk.sh --url 'https://github.com/graalvm/graalvm-ce-builds/releases/download/vm-20.1.0/graalvm-ce-java11-linux-amd64-20.1.0.tar.gz'
+    
+  #PPC64LE
+  - arch: ppc64le
+    jdk: openjdk8
+  - arch: ppc64le
+    jdk: openjdk11
+  - arch: ppc64le
+    jdk: openjdk14
+
+before_install:
+  - if [ "$TRAVIS_CPU_ARCH" == "ppc64le" ]; then sudo apt-get install -y maven; fi
