@@ -150,6 +150,8 @@ public abstract class SliceInput
      * {@code position} and increases the {@code position} by the size
      * of the new slice (= {@code length}).
      *
+     * The new slice could be either COMPACT or NOT_COMPACT.
+     *
      * @param length the size of the new slice
      * @return the newly created slice
      * @throws IndexOutOfBoundsException if {@code length} is greater than {@code this.available()}
