@@ -150,6 +150,9 @@ public final class BasicSliceInput
         return v;
     }
 
+    /**
+     * Returned slice is a view over {@code slice}
+     */
     @Override
     public Slice readSlice(int length)
     {
