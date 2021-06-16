@@ -2,7 +2,6 @@ language: java
 
 matrix:
   include:
-  - jdk: openjdk8
   - jdk: openjdk11
   - jdk: openjdk14
   - env: JDK=adoptopenjdk11-openj9
