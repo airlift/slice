@@ -14,7 +14,6 @@
 package io.airlift.slice;
 
 import sun.misc.Unsafe;
-import sun.nio.ch.DirectBuffer;
 
 import java.lang.reflect.Field;
 import java.nio.Buffer;
@@ -32,6 +31,7 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 final class JvmUtils
 {
     static final Unsafe unsafe;
+    private static final Field ADDRESS_ACCESSOR;
 
     static {
         if (!ByteOrder.LITTLE_ENDIAN.equals(ByteOrder.nativeOrder())) {
@@ -55,6 +55,17 @@ final class JvmUtils
             assertArrayIndexScale("Long", ARRAY_LONG_INDEX_SCALE, 8);
             assertArrayIndexScale("Float", ARRAY_FLOAT_INDEX_SCALE, 4);
             assertArrayIndexScale("Double", ARRAY_DOUBLE_INDEX_SCALE, 8);
+
+            Field addressAccessor;
+            try {
+                addressAccessor = Buffer.class.getDeclaredField("address");
+                addressAccessor.setAccessible(true);
+            }
+            catch (Exception e) {
+                addressAccessor = null;
+            }
+
+            ADDRESS_ACCESSOR = addressAccessor;
         }
         catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
@@ -70,8 +81,18 @@ final class JvmUtils
 
     static long bufferAddress(Buffer buffer)
     {
+        if (ADDRESS_ACCESSOR == null) {
+            throw new RuntimeException("direct buffer not supported");
+        }
+
         checkArgument(buffer.isDirect(), "buffer is not direct");
-        return ((DirectBuffer) buffer).address();
+
+        try {
+            return (long) ADDRESS_ACCESSOR.get(buffer);
+        }
+        catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private JvmUtils() {}
