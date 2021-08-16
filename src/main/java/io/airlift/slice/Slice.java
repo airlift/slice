@@ -1302,21 +1302,17 @@ public final class Slice
         checkPositionIndexes(index, index + length, length());
     }
 
+    private static long fillLong(byte value)
+    {
+        long longValue = ((value & 0xFF) << 8) | (value & 0xFF);
+        longValue = (longValue << 16) | longValue;
+        longValue = (longValue << 32) | longValue;
+        return longValue;
+    }
+
     //
     // The following methods were forked from Guava primitives
     //
-
-    private static long fillLong(byte value)
-    {
-        return (value & 0xFFL) << 56
-                | (value & 0xFFL) << 48
-                | (value & 0xFFL) << 40
-                | (value & 0xFFL) << 32
-                | (value & 0xFFL) << 24
-                | (value & 0xFFL) << 16
-                | (value & 0xFFL) << 8
-                | (value & 0xFFL);
-    }
 
     private static int compareUnsignedBytes(byte thisByte, byte thatByte)
     {
