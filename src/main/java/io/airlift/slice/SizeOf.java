@@ -19,6 +19,10 @@ import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.function.ToLongFunction;
 
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
@@ -48,6 +52,11 @@ public final class SizeOf
     public static final byte SIZE_OF_LONG = 8;
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
+
+    private static final int OPTIONAL_INSTANCE_SIZE = ClassLayout.parseClass(Optional.class).instanceSize();
+    private static final int OPTIONAL_INT_INSTANCE_SIZE = ClassLayout.parseClass(OptionalInt.class).instanceSize();
+    private static final int OPTIONAL_LONG_INSTANCE_SIZE = ClassLayout.parseClass(OptionalLong.class).instanceSize();
+    private static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(OptionalDouble.class).instanceSize();
 
     private static final int SIMPLE_ENTRY_INSTANCE_SIZE = ClassLayout.parseClass(AbstractMap.SimpleEntry.class).instanceSize();
     private static final int STRING_INSTANCE_SIZE = ClassLayout.parseClass(String.class).instanceSize();
@@ -95,6 +104,26 @@ public final class SizeOf
     public static long sizeOf(Object[] array)
     {
         return (array == null) ? 0 : sizeOfObjectArray(array.length);
+    }
+
+    public static <T> long sizeOf(Optional<T> optional, ToLongFunction<T> valueSize)
+    {
+        return optional != null && optional.isPresent() ? OPTIONAL_INSTANCE_SIZE + valueSize.applyAsLong(optional.get()) : 0;
+    }
+
+    public static <T> long sizeOf(OptionalInt optional)
+    {
+        return optional != null && optional.isPresent() ? OPTIONAL_INT_INSTANCE_SIZE : 0;
+    }
+
+    public static <T> long sizeOf(OptionalLong optional)
+    {
+        return optional != null && optional.isPresent() ? OPTIONAL_LONG_INSTANCE_SIZE : 0;
+    }
+
+    public static <T> long sizeOf(OptionalDouble optional)
+    {
+        return optional != null && optional.isPresent() ? OPTIONAL_DOUBLE_INSTANCE_SIZE : 0;
     }
 
     public static long estimatedSizeOf(String string)
