@@ -54,6 +54,15 @@ public final class SizeOf
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
 
+    private static final int BOOLEAN_INSTANCE_SIZE = ClassLayout.parseClass(Boolean.class).instanceSize();
+    private static final int BYTE_INSTANCE_SIZE = ClassLayout.parseClass(Byte.class).instanceSize();
+    private static final int SHORT_INSTANCE_SIZE = ClassLayout.parseClass(Short.class).instanceSize();
+    private static final int CHARACTER_INSTANCE_SIZE = ClassLayout.parseClass(Character.class).instanceSize();
+    private static final int INTEGER_INSTANCE_SIZE = ClassLayout.parseClass(Integer.class).instanceSize();
+    private static final int LONG_INSTANCE_SIZE = ClassLayout.parseClass(Long.class).instanceSize();
+    private static final int FLOAT_INSTANCE_SIZE = ClassLayout.parseClass(Float.class).instanceSize();
+    private static final int DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(Double.class).instanceSize();
+
     private static final int OPTIONAL_INSTANCE_SIZE = ClassLayout.parseClass(Optional.class).instanceSize();
     private static final int OPTIONAL_INT_INSTANCE_SIZE = ClassLayout.parseClass(OptionalInt.class).instanceSize();
     private static final int OPTIONAL_LONG_INSTANCE_SIZE = ClassLayout.parseClass(OptionalLong.class).instanceSize();
@@ -105,6 +114,46 @@ public final class SizeOf
     public static long sizeOf(Object[] array)
     {
         return (array == null) ? 0 : sizeOfObjectArray(array.length);
+    }
+
+    public static long sizeOf(Boolean value)
+    {
+        return value == null ? 0 : BOOLEAN_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Byte value)
+    {
+        return value == null ? 0 : BYTE_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Short value)
+    {
+        return value == null ? 0 : SHORT_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Character value)
+    {
+        return value == null ? 0 : CHARACTER_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Integer value)
+    {
+        return value == null ? 0 : INTEGER_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Long value)
+    {
+        return value == null ? 0 : LONG_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Float value)
+    {
+        return value == null ? 0 : FLOAT_INSTANCE_SIZE;
+    }
+
+    public static long sizeOf(Double value)
+    {
+        return value == null ? 0 : DOUBLE_INSTANCE_SIZE;
     }
 
     public static <T> long sizeOf(Optional<T> optional, ToLongFunction<T> valueSize)
