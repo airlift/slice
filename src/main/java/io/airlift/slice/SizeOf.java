@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.function.ToLongFunction;
 
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
@@ -140,6 +141,19 @@ public final class SizeOf
         long result = sizeOfObjectArray(list.size());
         for (T value : list) {
             result += valueSize.applyAsLong(value);
+        }
+        return result;
+    }
+
+    public static <T> long estimatedSizeOf(Set<T> set, ToLongFunction<T> valueSize)
+    {
+        if (set == null) {
+            return 0;
+        }
+
+        long result = sizeOfObjectArray(set.size());
+        for (T value : set) {
+            result += SIMPLE_ENTRY_INSTANCE_SIZE + valueSize.applyAsLong(value);
         }
         return result;
     }
