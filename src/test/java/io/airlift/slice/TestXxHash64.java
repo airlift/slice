@@ -24,6 +24,7 @@ import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.XxHash64.hash;
 import static java.lang.Math.min;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 
 public class TestXxHash64
 {
@@ -139,6 +140,10 @@ public class TestXxHash64
     @Test
     public void testHashLong()
     {
+        // Different seed
+        assertNotEquals(hash(42, buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
+        // Matching seed
         assertEquals(hash(buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
+        assertEquals(hash(42, buffer.getLong(0)), hash(42, buffer, 0, SizeOf.SIZE_OF_LONG));
     }
 }
