@@ -159,7 +159,12 @@ public final class XxHash64
 
     public static long hash(long value)
     {
-        long hash = DEFAULT_SEED + PRIME64_5 + SizeOf.SIZE_OF_LONG;
+        return hash(DEFAULT_SEED, value);
+    }
+
+    public static long hash(long seed, long value)
+    {
+        long hash = seed + PRIME64_5 + SizeOf.SIZE_OF_LONG;
         hash = updateTail(hash, value);
         hash = finalShuffle(hash);
 
