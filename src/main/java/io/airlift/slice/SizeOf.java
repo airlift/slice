@@ -222,6 +222,17 @@ public final class SizeOf
         return result;
     }
 
+    public static <K, V> long estimatedSizeOf(Map<K, V> map, long keySize, long valueSize)
+    {
+        if (map == null) {
+            return 0;
+        }
+
+        long result = sizeOfObjectArray(map.size());
+        result += map.size() * (SIMPLE_ENTRY_INSTANCE_SIZE + keySize + valueSize);
+        return result;
+    }
+
     public static long sizeOfBooleanArray(int length)
     {
         return ARRAY_BOOLEAN_BASE_OFFSET + (((long) ARRAY_BOOLEAN_INDEX_SCALE) * length);
