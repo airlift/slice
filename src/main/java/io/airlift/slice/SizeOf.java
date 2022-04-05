@@ -54,22 +54,23 @@ public final class SizeOf
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
 
-    private static final int BOOLEAN_INSTANCE_SIZE = ClassLayout.parseClass(Boolean.class).instanceSize();
-    private static final int BYTE_INSTANCE_SIZE = ClassLayout.parseClass(Byte.class).instanceSize();
-    private static final int SHORT_INSTANCE_SIZE = ClassLayout.parseClass(Short.class).instanceSize();
-    private static final int CHARACTER_INSTANCE_SIZE = ClassLayout.parseClass(Character.class).instanceSize();
-    private static final int INTEGER_INSTANCE_SIZE = ClassLayout.parseClass(Integer.class).instanceSize();
-    private static final int LONG_INSTANCE_SIZE = ClassLayout.parseClass(Long.class).instanceSize();
-    private static final int FLOAT_INSTANCE_SIZE = ClassLayout.parseClass(Float.class).instanceSize();
-    private static final int DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(Double.class).instanceSize();
+    public static final int BOOLEAN_INSTANCE_SIZE = ClassLayout.parseClass(Boolean.class).instanceSize();
+    public static final int BYTE_INSTANCE_SIZE = ClassLayout.parseClass(Byte.class).instanceSize();
+    public static final int SHORT_INSTANCE_SIZE = ClassLayout.parseClass(Short.class).instanceSize();
+    public static final int CHARACTER_INSTANCE_SIZE = ClassLayout.parseClass(Character.class).instanceSize();
+    public static final int INTEGER_INSTANCE_SIZE = ClassLayout.parseClass(Integer.class).instanceSize();
+    public static final int LONG_INSTANCE_SIZE = ClassLayout.parseClass(Long.class).instanceSize();
+    public static final int FLOAT_INSTANCE_SIZE = ClassLayout.parseClass(Float.class).instanceSize();
+    public static final int DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(Double.class).instanceSize();
 
-    private static final int OPTIONAL_INSTANCE_SIZE = ClassLayout.parseClass(Optional.class).instanceSize();
-    private static final int OPTIONAL_INT_INSTANCE_SIZE = ClassLayout.parseClass(OptionalInt.class).instanceSize();
-    private static final int OPTIONAL_LONG_INSTANCE_SIZE = ClassLayout.parseClass(OptionalLong.class).instanceSize();
-    private static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(OptionalDouble.class).instanceSize();
+    public static final int OPTIONAL_INSTANCE_SIZE = ClassLayout.parseClass(Optional.class).instanceSize();
+    public static final int OPTIONAL_INT_INSTANCE_SIZE = ClassLayout.parseClass(OptionalInt.class).instanceSize();
+    public static final int OPTIONAL_LONG_INSTANCE_SIZE = ClassLayout.parseClass(OptionalLong.class).instanceSize();
+    public static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(OptionalDouble.class).instanceSize();
+
+    public static final int STRING_INSTANCE_SIZE = ClassLayout.parseClass(String.class).instanceSize();
 
     private static final int SIMPLE_ENTRY_INSTANCE_SIZE = ClassLayout.parseClass(AbstractMap.SimpleEntry.class).instanceSize();
-    private static final int STRING_INSTANCE_SIZE = ClassLayout.parseClass(String.class).instanceSize();
 
     public static long sizeOf(boolean[] array)
     {
