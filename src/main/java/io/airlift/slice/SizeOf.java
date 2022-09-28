@@ -26,6 +26,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.ToLongFunction;
 
+import static java.lang.Math.toIntExact;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -54,23 +55,23 @@ public final class SizeOf
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
 
-    public static final int BOOLEAN_INSTANCE_SIZE = ClassLayout.parseClass(Boolean.class).instanceSize();
-    public static final int BYTE_INSTANCE_SIZE = ClassLayout.parseClass(Byte.class).instanceSize();
-    public static final int SHORT_INSTANCE_SIZE = ClassLayout.parseClass(Short.class).instanceSize();
-    public static final int CHARACTER_INSTANCE_SIZE = ClassLayout.parseClass(Character.class).instanceSize();
-    public static final int INTEGER_INSTANCE_SIZE = ClassLayout.parseClass(Integer.class).instanceSize();
-    public static final int LONG_INSTANCE_SIZE = ClassLayout.parseClass(Long.class).instanceSize();
-    public static final int FLOAT_INSTANCE_SIZE = ClassLayout.parseClass(Float.class).instanceSize();
-    public static final int DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(Double.class).instanceSize();
+    public static final int BOOLEAN_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Boolean.class).instanceSize());
+    public static final int BYTE_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Byte.class).instanceSize());
+    public static final int SHORT_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Short.class).instanceSize());
+    public static final int CHARACTER_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Character.class).instanceSize());
+    public static final int INTEGER_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Integer.class).instanceSize());
+    public static final int LONG_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Long.class).instanceSize());
+    public static final int FLOAT_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Float.class).instanceSize());
+    public static final int DOUBLE_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Double.class).instanceSize());
 
-    public static final int OPTIONAL_INSTANCE_SIZE = ClassLayout.parseClass(Optional.class).instanceSize();
-    public static final int OPTIONAL_INT_INSTANCE_SIZE = ClassLayout.parseClass(OptionalInt.class).instanceSize();
-    public static final int OPTIONAL_LONG_INSTANCE_SIZE = ClassLayout.parseClass(OptionalLong.class).instanceSize();
-    public static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = ClassLayout.parseClass(OptionalDouble.class).instanceSize();
+    public static final int OPTIONAL_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Optional.class).instanceSize());
+    public static final int OPTIONAL_INT_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OptionalInt.class).instanceSize());
+    public static final int OPTIONAL_LONG_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OptionalLong.class).instanceSize());
+    public static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OptionalDouble.class).instanceSize());
 
-    public static final int STRING_INSTANCE_SIZE = ClassLayout.parseClass(String.class).instanceSize();
+    public static final int STRING_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(String.class).instanceSize());
 
-    private static final int SIMPLE_ENTRY_INSTANCE_SIZE = ClassLayout.parseClass(AbstractMap.SimpleEntry.class).instanceSize();
+    private static final int SIMPLE_ENTRY_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(AbstractMap.SimpleEntry.class).instanceSize());
 
     public static long sizeOf(boolean[] array)
     {

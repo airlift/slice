@@ -26,11 +26,12 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.lang.Math.toIntExact;
 
 public class DynamicSliceOutput
         extends SliceOutput
 {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize();
+    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize());
 
     private Slice slice;
     private int size;
