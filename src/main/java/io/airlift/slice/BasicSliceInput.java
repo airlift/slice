@@ -25,12 +25,13 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
 
 public final class BasicSliceInput
         extends FixedLengthSliceInput
 {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(BasicSliceInput.class).instanceSize();
+    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(BasicSliceInput.class).instanceSize());
 
     private final Slice slice;
     private int position;

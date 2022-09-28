@@ -36,7 +36,7 @@ public class OutputStreamSliceOutput
     private static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
     private static final int MINIMUM_CHUNK_SIZE = 1024;
 
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(OutputStreamSliceOutput.class).instanceSize();
+    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OutputStreamSliceOutput.class).instanceSize());
 
     private final OutputStream outputStream;
 

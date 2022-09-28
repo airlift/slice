@@ -58,7 +58,7 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 public final class Slice
         implements Comparable<Slice>
 {
-    private static final int INSTANCE_SIZE = ClassLayout.parseClass(Slice.class).instanceSize();
+    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Slice.class).instanceSize());
     private static final Object COMPACT = new byte[0];
     private static final Object NOT_COMPACT = null;
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
