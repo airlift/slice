@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Queue;
 import java.util.Set;
 import java.util.function.ToLongFunction;
 
@@ -191,6 +192,19 @@ public final class SizeOf
 
         long result = sizeOfObjectArray(list.size());
         for (T value : list) {
+            result += valueSize.applyAsLong(value);
+        }
+        return result;
+    }
+
+    public static <T> long estimatedSizeOf(Queue<T> queue, ToLongFunction<T> valueSize)
+    {
+        if (queue == null) {
+            return 0;
+        }
+
+        long result = sizeOfObjectArray(queue.size());
+        for (T value : queue) {
             result += valueSize.applyAsLong(value);
         }
         return result;
