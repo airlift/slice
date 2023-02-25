@@ -21,7 +21,8 @@
     <properties>
         <air.javadoc.lint>-missing</air.javadoc.lint>
         <air.test.jvmsize>3584m</air.test.jvmsize>
-        <project.build.targetJdk>11</project.build.targetJdk>
+        <project.build.targetJdk>17</project.build.targetJdk>
+        <air.java.version>17</air.java.version>
         <air.modernizer.java-version>8</air.modernizer.java-version>
     </properties>
 
