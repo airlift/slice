@@ -13,9 +13,9 @@
  */
 package io.airlift.slice;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import org.testng.annotations.Test;
 
@@ -24,7 +24,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.List;
 
-import static com.google.common.collect.Iterables.cycle;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
@@ -486,12 +485,8 @@ public abstract class AbstractSliceInputTest
 
     private static String getExpectedStringValue(int index, int size)
     {
-        try {
-            return ByteSource.concat(cycle(ByteSource.wrap(String.valueOf(index).getBytes(UTF_8)))).slice(0, size).asCharSource(UTF_8).read();
-        }
-        catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
+        String value = String.valueOf(index);
+        return Strings.repeat(value, (size / value.length()) + 1).substring(0, size);
     }
 
     protected abstract static class SliceInputTester
