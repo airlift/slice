@@ -37,7 +37,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEmptyInput()
-            throws Exception
     {
         SliceInput input = buildSliceInput(new byte[0]);
         assertEquals(input.position(), 0);
@@ -45,7 +44,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEmptyRead()
-            throws Exception
     {
         SliceInput input = buildSliceInput(new byte[0]);
         assertEquals(input.read(), -1);
@@ -53,7 +51,6 @@ public class TestInputStreamSliceInput
 
     @Test(expectedExceptions = IndexOutOfBoundsException.class)
     public void testReadByteBeyondEnd()
-            throws Exception
     {
         SliceInput input = buildSliceInput(new byte[0]);
         input.readByte();
@@ -61,7 +58,6 @@ public class TestInputStreamSliceInput
 
     @Test(expectedExceptions = IndexOutOfBoundsException.class)
     public void testReadShortBeyondEnd()
-            throws Exception
     {
         SliceInput input = buildSliceInput(new byte[1]);
         input.readShort();
@@ -69,7 +65,6 @@ public class TestInputStreamSliceInput
 
     @Test(expectedExceptions = IndexOutOfBoundsException.class)
     public void testReadIntBeyondEnd()
-            throws Exception
     {
         SliceInput input = buildSliceInput(new byte[3]);
         input.readInt();
@@ -77,7 +72,6 @@ public class TestInputStreamSliceInput
 
     @Test(expectedExceptions = IndexOutOfBoundsException.class)
     public void testReadLongBeyondEnd()
-            throws Exception
     {
         SliceInput input = buildSliceInput(new byte[7]);
         input.readLong();
@@ -85,7 +79,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingBoolean()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {1}).readBoolean(), true);
         assertEquals(buildSliceInput(new byte[] {0}).readBoolean(), false);
@@ -93,7 +86,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingByte()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {92}).readByte(), 92);
         assertEquals(buildSliceInput(new byte[] {-100}).readByte(), -100);
@@ -106,7 +98,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingShort()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {109, 92}).readShort(), 23661);
         assertEquals(buildSliceInput(new byte[] {109, -100}).readShort(), -25491);
@@ -118,7 +109,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingInteger()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {109, 92, 75, 58}).readInt(), 978017389);
         assertEquals(buildSliceInput(new byte[] {-16, -60, -120, -1}).readInt(), -7813904);
@@ -126,7 +116,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingLong()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {49, -114, -96, -23, -32, -96, -32, 127}).readLong(), 9214541725452766769L);
         assertEquals(buildSliceInput(new byte[] {109, 92, 75, 58, 18, 120, -112, -17}).readLong(), -1184314682315678611L);
@@ -134,7 +123,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingDouble()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {31, -123, -21, 81, -72, 30, 9, 64}).readDouble(), 3.14);
         assertEquals(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -8, 127}).readDouble(), Double.NaN);
@@ -144,7 +132,6 @@ public class TestInputStreamSliceInput
 
     @Test
     public void testEncodingFloat()
-            throws Exception
     {
         assertEquals(buildSliceInput(new byte[] {-61, -11, 72, 64}).readFloat(), 3.14f);
         assertEquals(buildSliceInput(new byte[] {0, 0, -64, 127}).readFloat(), Float.NaN);

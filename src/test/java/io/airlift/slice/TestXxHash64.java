@@ -111,7 +111,6 @@ public class TestXxHash64
 
     @Test
     public void testEmpty()
-            throws Exception
     {
         long expected = 0xEF46DB3751D8E999L;
 
@@ -139,7 +138,6 @@ public class TestXxHash64
 
     @Test
     public void testHashLong()
-            throws Exception
     {
         assertEquals(hash(buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
     }

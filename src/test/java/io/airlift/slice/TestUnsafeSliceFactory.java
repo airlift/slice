@@ -29,7 +29,6 @@ public class TestUnsafeSliceFactory
 {
     @Test
     public void testRawAddress()
-            throws Exception
     {
         UnsafeSliceFactory factory = UnsafeSliceFactory.getInstance();
 
@@ -51,7 +50,6 @@ public class TestUnsafeSliceFactory
 
     @Test
     public void testRawAddressWithReference()
-            throws Exception
     {
         ByteBuffer buffer = ByteBuffer.allocateDirect(100);
         assertTrue(buffer.isDirect());
@@ -67,7 +65,6 @@ public class TestUnsafeSliceFactory
 
     @Test(expectedExceptions = SecurityException.class)
     public void testSecurity()
-            throws Exception
     {
         SecurityManager saved = System.getSecurityManager();
         System.setSecurityManager(new SecurityManager()

@@ -1251,8 +1251,7 @@ public final class Slice
             return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
         }
 
-        if ((reference instanceof ByteBuffer) && ((ByteBuffer) reference).isDirect()) {
-            ByteBuffer buffer = (ByteBuffer) reference;
+        if ((reference instanceof ByteBuffer buffer) && buffer.isDirect()) {
             int position = toIntExact(address - bufferAddress(buffer)) + index;
             buffer = buffer.duplicate();
             buffer.position(position);

@@ -26,7 +26,6 @@ public class TestSliceCompactFlag
 {
     @Test
     public void testSliceConstructors()
-            throws Exception
     {
         assertCompact(new Slice());
 
@@ -56,7 +55,7 @@ public class TestSliceCompactFlag
         assertNotCompact(new Slice(longArray, 0, longArray.length - 1));
         assertNotCompact(new Slice(longArray, 1, longArray.length - 1));
 
-        float[] floatArray = {0f, 1f, 2f, 3f, 4f, 5f};
+        float[] floatArray = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
         assertCompact(new Slice(floatArray, 0, floatArray.length));
         assertNotCompact(new Slice(floatArray, 0, floatArray.length - 1));
         assertNotCompact(new Slice(floatArray, 1, floatArray.length - 1));
@@ -92,7 +91,6 @@ public class TestSliceCompactFlag
 
     @Test
     public void testWrapDirectBuffer()
-            throws Exception
     {
         // For DirectByteBuffer, the slice is always considered as not compacted
         // because there is no easy way to tell whether the DirectByteBuffer itself
@@ -122,7 +120,6 @@ public class TestSliceCompactFlag
 
     @Test
     public void testWrapHeapBuffer()
-            throws Exception
     {
         ByteBuffer buffer = ByteBuffer.allocate(50);
 

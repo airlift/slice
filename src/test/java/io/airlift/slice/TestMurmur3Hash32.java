@@ -24,11 +24,10 @@ public class TestMurmur3Hash32
 {
     @Test(invocationCount = 100)
     public void testLessThan4Bytes()
-            throws Exception
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(4));
 
-        int expected = Hashing.murmur3_32().hashBytes(data).asInt();
+        int expected = Hashing.murmur3_32_fixed().hashBytes(data).asInt();
         int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data));
 
         assertEquals(actual, expected);
@@ -36,11 +35,10 @@ public class TestMurmur3Hash32
 
     @Test(invocationCount = 100)
     public void testMoreThan4Bytes()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
-        int expected = Hashing.murmur3_32().hashBytes(data).asInt();
+        int expected = Hashing.murmur3_32_fixed().hashBytes(data).asInt();
         int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data));
 
         assertEquals(actual, expected);
@@ -48,14 +46,13 @@ public class TestMurmur3Hash32
 
     @Test(invocationCount = 100)
     public void testOffsetAndLength()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
         int offset = 13;
         int length = 55;
 
-        int expected = Hashing.murmur3_32().hashBytes(data, offset, length).asInt();
+        int expected = Hashing.murmur3_32_fixed().hashBytes(data, offset, length).asInt();
         int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data), offset, length);
 
         assertEquals(actual, expected);
@@ -63,13 +60,12 @@ public class TestMurmur3Hash32
 
     @Test(invocationCount = 100)
     public void testNonDefaultSeed()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
         int seed = 123456789;
 
-        int expected = Hashing.murmur3_32(seed).hashBytes(data).asInt();
+        int expected = Hashing.murmur3_32_fixed(seed).hashBytes(data).asInt();
         int actual = Murmur3Hash32.hash(seed, Slices.wrappedBuffer(data), 0, data.length);
 
         assertEquals(actual, expected);
@@ -77,12 +73,11 @@ public class TestMurmur3Hash32
 
     @Test
     public void testTail()
-            throws Exception
     {
         for (int i = 0; i < 4; i++) {
             byte[] data = randomBytes(50 + i);
 
-            int expected = Hashing.murmur3_32().hashBytes(data).asInt();
+            int expected = Hashing.murmur3_32_fixed().hashBytes(data).asInt();
             int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data));
 
             assertEquals(actual, expected);
@@ -91,7 +86,6 @@ public class TestMurmur3Hash32
 
     @Test(invocationCount = 100)
     public void testSingleInt()
-            throws Exception
     {
         int value = ThreadLocalRandom.current().nextInt();
 
@@ -104,7 +98,6 @@ public class TestMurmur3Hash32
 
     @Test(invocationCount = 100)
     public void testSingleLong()
-            throws Exception
     {
         long value = ThreadLocalRandom.current().nextLong();
 
