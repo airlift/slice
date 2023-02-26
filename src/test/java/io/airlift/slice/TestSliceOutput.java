@@ -13,10 +13,9 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
-import static java.lang.Math.toIntExact;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static org.testng.Assert.assertEquals;
 
 public class TestSliceOutput
@@ -81,7 +80,7 @@ public class TestSliceOutput
     @Test
     public void testRetainedSize()
     {
-        int sliceOutputInstanceSize = toIntExact(ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize());
+        int sliceOutputInstanceSize = instanceSize(DynamicSliceOutput.class);
         DynamicSliceOutput output = new DynamicSliceOutput(10);
 
         long originalRetainedSize = output.getRetainedSize();

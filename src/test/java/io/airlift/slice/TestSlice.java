@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
@@ -34,6 +33,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.utf8Slice;
@@ -41,7 +41,6 @@ import static java.lang.Double.doubleToLongBits;
 import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.floatToIntBits;
 import static java.lang.Float.intBitsToFloat;
-import static java.lang.Math.toIntExact;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -733,7 +732,7 @@ public class TestSlice
     public void testRetainedSize()
             throws Exception
     {
-        int sliceInstanceSize = toIntExact(ClassLayout.parseClass(Slice.class).instanceSize());
+        int sliceInstanceSize = instanceSize(Slice.class);
         Slice slice = Slices.allocate(10);
         assertEquals(slice.getRetainedSize(), sizeOfByteArray(10) + sliceInstanceSize);
         assertEquals(slice.length(), 10);

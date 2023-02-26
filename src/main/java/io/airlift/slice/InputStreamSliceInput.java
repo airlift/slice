@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,13 +24,13 @@ import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
-import static java.lang.Math.toIntExact;
 
 public final class InputStreamSliceInput
         extends SliceInput
 {
-    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(InputStreamSliceInput.class).instanceSize());
+    private static final int INSTANCE_SIZE = instanceSize(InputStreamSliceInput.class);
     private static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
     private static final int MINIMUM_CHUNK_SIZE = 1024;
 
