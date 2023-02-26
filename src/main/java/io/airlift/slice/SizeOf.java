@@ -13,7 +13,12 @@
  */
 package io.airlift.slice;
 
+import org.openjdk.jol.info.ClassData;
 import org.openjdk.jol.info.ClassLayout;
+import org.openjdk.jol.info.FieldData;
+import org.openjdk.jol.util.MathUtil;
+import org.openjdk.jol.vm.VM;
+import org.openjdk.jol.vm.VirtualMachine;
 
 import java.util.AbstractMap;
 import java.util.List;
@@ -56,23 +61,23 @@ public final class SizeOf
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
 
-    public static final int BOOLEAN_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Boolean.class).instanceSize());
-    public static final int BYTE_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Byte.class).instanceSize());
-    public static final int SHORT_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Short.class).instanceSize());
-    public static final int CHARACTER_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Character.class).instanceSize());
-    public static final int INTEGER_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Integer.class).instanceSize());
-    public static final int LONG_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Long.class).instanceSize());
-    public static final int FLOAT_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Float.class).instanceSize());
-    public static final int DOUBLE_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Double.class).instanceSize());
+    public static final int BOOLEAN_INSTANCE_SIZE = instanceSize(Boolean.class);
+    public static final int BYTE_INSTANCE_SIZE = instanceSize(Byte.class);
+    public static final int SHORT_INSTANCE_SIZE = instanceSize(Short.class);
+    public static final int CHARACTER_INSTANCE_SIZE = instanceSize(Character.class);
+    public static final int INTEGER_INSTANCE_SIZE = instanceSize(Integer.class);
+    public static final int LONG_INSTANCE_SIZE = instanceSize(Long.class);
+    public static final int FLOAT_INSTANCE_SIZE = instanceSize(Float.class);
+    public static final int DOUBLE_INSTANCE_SIZE = instanceSize(Double.class);
 
-    public static final int OPTIONAL_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Optional.class).instanceSize());
-    public static final int OPTIONAL_INT_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OptionalInt.class).instanceSize());
-    public static final int OPTIONAL_LONG_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OptionalLong.class).instanceSize());
-    public static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(OptionalDouble.class).instanceSize());
+    public static final int OPTIONAL_INSTANCE_SIZE = instanceSize(Optional.class);
+    public static final int OPTIONAL_INT_INSTANCE_SIZE = instanceSize(OptionalInt.class);
+    public static final int OPTIONAL_LONG_INSTANCE_SIZE = instanceSize(OptionalLong.class);
+    public static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = instanceSize(OptionalDouble.class);
 
-    public static final int STRING_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(String.class).instanceSize());
+    public static final int STRING_INSTANCE_SIZE = instanceSize(String.class);
 
-    private static final int SIMPLE_ENTRY_INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(AbstractMap.SimpleEntry.class).instanceSize());
+    private static final int SIMPLE_ENTRY_INSTANCE_SIZE = instanceSize(AbstractMap.SimpleEntry.class);
 
     public static long sizeOf(boolean[] array)
     {
@@ -292,6 +297,26 @@ public final class SizeOf
     public static long sizeOfObjectArray(int length)
     {
         return ARRAY_OBJECT_BASE_OFFSET + (((long) ARRAY_OBJECT_INDEX_SCALE) * length);
+    }
+
+    /**
+     * The expected size of an instance of the specified class.
+     */
+    public static int instanceSize(Class<?> clazz)
+    {
+        try {
+            return toIntExact(ClassLayout.parseClass(clazz).instanceSize());
+        }
+        catch (RuntimeException e) {
+            VirtualMachine vm = VM.current();
+            ClassData classData = ClassData.parseClass(clazz);
+            long instanceSize = vm.objectHeaderSize();
+            for (FieldData field : classData.fields()) {
+                instanceSize += vm.sizeOfField(field.typeClass());
+            }
+            instanceSize = MathUtil.align(instanceSize, vm.objectAlignment());
+            return toIntExact(instanceSize);
+        }
     }
 
     private SizeOf()

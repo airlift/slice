@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,14 +24,14 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static java.lang.Math.min;
-import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
 
 public final class ChunkedSliceInput
         extends FixedLengthSliceInput
 {
-    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(ChunkedSliceInput.class).instanceSize());
+    private static final int INSTANCE_SIZE = instanceSize(ChunkedSliceInput.class);
 
     private final InternalLoader<?> loader;
     private final Slice buffer;
@@ -361,7 +359,7 @@ public final class ChunkedSliceInput
 
     private static class InternalLoader<T extends BufferReference>
     {
-        private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(InternalLoader.class).instanceSize());
+        private static final int INSTANCE_SIZE = instanceSize(InternalLoader.class);
 
         private final SliceLoader<T> loader;
         private final T bufferReference;

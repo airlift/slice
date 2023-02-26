@@ -13,9 +13,9 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
+import static io.airlift.slice.SizeOf.instanceSize;
 import static org.testng.Assert.assertEquals;
 
 public class TestBasicSliceInput
@@ -32,6 +32,6 @@ public class TestBasicSliceInput
     {
         Slice slice = Slices.allocate(1024);
         SliceInput input = new BasicSliceInput(slice);
-        assertEquals(input.getRetainedSize(), ClassLayout.parseClass(BasicSliceInput.class).instanceSize() + slice.getRetainedSize());
+        assertEquals(input.getRetainedSize(), instanceSize(BasicSliceInput.class) + slice.getRetainedSize());
     }
 }

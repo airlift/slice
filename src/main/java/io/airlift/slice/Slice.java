@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;
@@ -34,6 +33,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.airlift.slice.SizeOf.sizeOfBooleanArray;
 import static io.airlift.slice.SizeOf.sizeOfDoubleArray;
@@ -58,7 +58,7 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 public final class Slice
         implements Comparable<Slice>
 {
-    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(Slice.class).instanceSize());
+    private static final int INSTANCE_SIZE = instanceSize(Slice.class);
     private static final Object COMPACT = new byte[0];
     private static final Object NOT_COMPACT = null;
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);

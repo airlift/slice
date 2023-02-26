@@ -13,7 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -24,6 +23,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
 import static io.airlift.slice.Slices.MAX_ARRAY_SIZE;
 import static io.airlift.slice.Slices.SLICE_ALLOC_THRESHOLD;
@@ -61,7 +61,7 @@ public class TestSlices
     {
         ByteBuffer heapByteBuffer = ByteBuffer.allocate(50);
         Slice slice = wrappedBuffer(heapByteBuffer);
-        assertEquals(slice.getRetainedSize(), ClassLayout.parseClass(Slice.class).instanceSize() + sizeOf(heapByteBuffer.array()));
+        assertEquals(slice.getRetainedSize(), instanceSize(Slice.class) + sizeOf(heapByteBuffer.array()));
     }
 
     private static void testWrapping(ByteBuffer buffer)

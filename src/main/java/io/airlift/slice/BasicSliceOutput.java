@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassLayout;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -26,13 +24,13 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
-import static java.lang.Math.toIntExact;
+import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.requireNonNull;
 
 public class BasicSliceOutput
         extends SliceOutput
 {
-    private static final int INSTANCE_SIZE = toIntExact(ClassLayout.parseClass(BasicSliceOutput.class).instanceSize());
+    private static final int INSTANCE_SIZE = instanceSize(BasicSliceOutput.class);
 
     private final Slice slice;
     private int size;
