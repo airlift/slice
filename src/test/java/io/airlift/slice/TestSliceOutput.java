@@ -23,14 +23,13 @@ public class TestSliceOutput
 {
     @Test
     public void testAppendByte()
-            throws Exception
     {
         for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
             Slice actual = new DynamicSliceOutput(1)
                     .appendByte(i)
                     .slice();
 
-            Slice expected = Slices.wrappedBuffer(new byte[] {(byte) i});
+            Slice expected = Slices.wrappedBuffer((byte) i);
 
             assertEquals(actual, expected);
         }
@@ -38,14 +37,13 @@ public class TestSliceOutput
 
     @Test
     public void testAppendUnsignedByte()
-            throws Exception
     {
         for (int i = 0; i < 256; i++) {
             Slice actual = new DynamicSliceOutput(1)
                     .appendByte(i)
                     .slice();
 
-            Slice expected = Slices.wrappedBuffer(new byte[] {(byte) i});
+            Slice expected = Slices.wrappedBuffer((byte) i);
 
             assertEquals(actual, expected);
         }
@@ -53,14 +51,13 @@ public class TestSliceOutput
 
     @Test
     public void testAppendByteTruncation()
-            throws Exception
     {
         for (int i = 256; i < 512; i++) {
             Slice actual = new DynamicSliceOutput(1)
                     .appendByte(i)
                     .slice();
 
-            Slice expected = Slices.wrappedBuffer(new byte[] {(byte) i});
+            Slice expected = Slices.wrappedBuffer((byte) i);
 
             assertEquals(actual, expected);
         }
@@ -68,7 +65,6 @@ public class TestSliceOutput
 
     @Test
     public void testAppendMultiple()
-            throws Exception
     {
         Slice actual = new DynamicSliceOutput(1)
                 .appendByte(0)
@@ -84,7 +80,6 @@ public class TestSliceOutput
 
     @Test
     public void testRetainedSize()
-            throws Exception
     {
         int sliceOutputInstanceSize = toIntExact(ClassLayout.parseClass(DynamicSliceOutput.class).instanceSize());
         DynamicSliceOutput output = new DynamicSliceOutput(10);
@@ -100,7 +95,6 @@ public class TestSliceOutput
 
     @Test
     public void testReset()
-            throws Exception
     {
         assertReset(new DynamicSliceOutput(1));
         assertReset(Slices.allocate(50).getOutput());

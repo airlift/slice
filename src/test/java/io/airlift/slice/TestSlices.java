@@ -46,14 +46,12 @@ public class TestSlices
 {
     @Test
     public void testWrapDirectBuffer()
-            throws Exception
     {
         testWrapping(ByteBuffer.allocateDirect(50));
     }
 
     @Test
     public void testWrapHeapBuffer()
-            throws Exception
     {
         testWrapping(ByteBuffer.allocate(50));
     }
@@ -136,7 +134,7 @@ public class TestSlices
         assertEquals(wrappedLongArray(longArray).getLong(5 * SIZE_OF_LONG), longArray[5]);
         assertFalse(wrappedLongArray(longArray).hasByteArray());
 
-        float[] floatArray = {0f, 1f, 2f, 3f, 4f, 5f};
+        float[] floatArray = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
         assertEquals(wrappedFloatArray(floatArray).getFloat(0), floatArray[0]);
         assertEquals(wrappedFloatArray(floatArray, 1, 4).getFloat(0), floatArray[1]);
         assertEquals(wrappedFloatArray(floatArray, 1, 4).length(), 4 * SIZE_OF_FLOAT);

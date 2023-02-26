@@ -25,7 +25,6 @@ public class TestMurmur3Hash128
 {
     @Test(invocationCount = 100)
     public void testLessThan16Bytes()
-            throws Exception
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(16));
 
@@ -37,7 +36,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testMoreThan16Bytes()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
@@ -49,7 +47,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testOffsetAndLength()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
@@ -64,7 +61,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testNonDefaultSeed()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
@@ -78,7 +74,6 @@ public class TestMurmur3Hash128
 
     @Test
     public void testTail()
-            throws Exception
     {
         for (int i = 0; i < 16; i++) {
             byte[] data = randomBytes(50 + i);
@@ -92,7 +87,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testLessThan16Bytes64()
-            throws Exception
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(16));
 
@@ -104,7 +98,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testMoreThan16Bytes64()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
@@ -116,7 +109,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testOffsetAndLength64()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
@@ -131,7 +123,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testNonDefaultSeed64()
-            throws Exception
     {
         byte[] data = randomBytes(131);
 
@@ -145,7 +136,6 @@ public class TestMurmur3Hash128
 
     @Test
     public void testTail64()
-            throws Exception
     {
         for (int i = 0; i < 16; i++) {
             byte[] data = randomBytes(50 + i);
@@ -159,7 +149,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void test64ReturnsMsb()
-            throws Exception
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(200));
 
@@ -171,7 +160,6 @@ public class TestMurmur3Hash128
 
     @Test(invocationCount = 100)
     public void testSingleLong()
-            throws Exception
     {
         long value = ThreadLocalRandom.current().nextLong();
 

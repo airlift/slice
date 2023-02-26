@@ -164,17 +164,17 @@ public final class SizeOf
         return optional != null && optional.isPresent() ? OPTIONAL_INSTANCE_SIZE + valueSize.applyAsLong(optional.get()) : 0;
     }
 
-    public static <T> long sizeOf(OptionalInt optional)
+    public static long sizeOf(OptionalInt optional)
     {
         return optional != null && optional.isPresent() ? OPTIONAL_INT_INSTANCE_SIZE : 0;
     }
 
-    public static <T> long sizeOf(OptionalLong optional)
+    public static long sizeOf(OptionalLong optional)
     {
         return optional != null && optional.isPresent() ? OPTIONAL_LONG_INSTANCE_SIZE : 0;
     }
 
-    public static <T> long sizeOf(OptionalDouble optional)
+    public static long sizeOf(OptionalDouble optional)
     {
         return optional != null && optional.isPresent() ? OPTIONAL_DOUBLE_INSTANCE_SIZE : 0;
     }

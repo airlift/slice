@@ -47,7 +47,7 @@ public class BenchmarkMurmur3Hash32
     public int guava(BenchmarkData data, ByteCounter counter)
     {
         counter.add(data.getSlice().length());
-        return Hashing.murmur3_32().hashBytes(data.getBytes()).asInt();
+        return Hashing.murmur3_32_fixed().hashBytes(data.getBytes()).asInt();
     }
 
     @Benchmark

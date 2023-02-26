@@ -205,7 +205,7 @@ public final class SliceUtf8
 
     /**
      * Compares to UTF-8 sequences using UTF-16 big endian semantics.  This is
-     * equivalent to the {@link java.lang.String#compareTo(Object)}.
+     * equivalent to the {@link java.lang.String#compareTo(String)}.
      * {@code java.lang.String}.
      *
      * @throws InvalidUtf8Exception if the UTF-8 are invalid
@@ -343,29 +343,22 @@ public final class SliceUtf8
     private static void copyUtf8SequenceUnsafe(Slice source, int sourcePosition, Slice destination, int destinationPosition, int length)
     {
         switch (length) {
-            case 1:
-                destination.setByteUnchecked(destinationPosition, source.getByteUnchecked(sourcePosition));
-                break;
-            case 2:
-                destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
-                break;
-            case 3:
+            case 1 -> destination.setByteUnchecked(destinationPosition, source.getByteUnchecked(sourcePosition));
+            case 2 -> destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
+            case 3 -> {
                 destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
                 destination.setByteUnchecked(destinationPosition + 2, source.getByteUnchecked(sourcePosition + 2));
-                break;
-            case 4:
-                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
-                break;
-            case 5:
+            }
+            case 4 -> destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
+            case 5 -> {
                 destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
                 destination.setByteUnchecked(destinationPosition + 4, source.getByteUnchecked(sourcePosition + 4));
-                break;
-            case 6:
+            }
+            case 6 -> {
                 destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
                 destination.setShortUnchecked(destinationPosition + 4, source.getShortUnchecked(sourcePosition + 4));
-                break;
-            default:
-                throw new IllegalStateException("Invalid code point length " + length);
+            }
+            default -> throw new IllegalStateException("Invalid code point length " + length);
         }
     }
 

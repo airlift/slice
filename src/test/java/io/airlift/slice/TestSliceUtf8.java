@@ -96,7 +96,7 @@ public class TestSliceUtf8
                 .toArray();
 
         ALL_CODE_POINTS_RANDOM = Arrays.copyOf(ALL_CODE_POINTS, ALL_CODE_POINTS.length);
-        Collections.shuffle(Arrays.asList(ALL_CODE_POINTS_RANDOM));
+        Collections.shuffle(List.of(ALL_CODE_POINTS_RANDOM));
         STRING_ALL_CODE_POINTS_RANDOM = new String(ALL_CODE_POINTS_RANDOM, 0, ALL_CODE_POINTS_RANDOM.length);
 
         ImmutableList.Builder<byte[]> invalidSequences = ImmutableList.builder();

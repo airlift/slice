@@ -14,14 +14,12 @@
 package io.airlift.slice;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteStreams;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
@@ -409,14 +407,14 @@ public abstract class AbstractSliceInputTest
                 {
                     try {
                         byte[] bytes = new byte[valueSize() + 10];
-                        ByteStreams.readFully(input, bytes, 5, valueSize());
+                        int size = input.readNBytes(bytes, 5, valueSize());
+                        if (size != valueSize()) {
+                            throw new IndexOutOfBoundsException();
+                        }
                         return new String(bytes, 5, valueSize(), UTF_8);
                     }
-                    catch (EOFException e) {
-                        throw new IndexOutOfBoundsException();
-                    }
                     catch (IOException e) {
-                        throw Throwables.propagate(e);
+                        throw new UncheckedIOException(e);
                     }
                 }
             });
@@ -428,10 +426,10 @@ public abstract class AbstractSliceInputTest
                     try {
                         ByteArrayOutputStream out = new ByteArrayOutputStream();
                         input.readBytes(out, valueSize());
-                        return new String(out.toByteArray(), UTF_8);
+                        return out.toString(UTF_8);
                     }
                     catch (IOException e) {
-                        throw Throwables.propagate(e);
+                        throw new UncheckedIOException(e);
                     }
                 }
             });
@@ -475,10 +473,10 @@ public abstract class AbstractSliceInputTest
     {
         SliceInput input = createSliceInput(slice);
         try {
-            ByteStreams.skipFully(input, slice.length() - tester.valueSize() + 1);
+            input.skipNBytes(slice.length() - tester.valueSize() + 1);
         }
         catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new UncheckedIOException(e);
         }
         tester.verifyReadOffEnd(input);
     }

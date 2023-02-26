@@ -43,21 +43,18 @@ public class BenchmarkSlice
 {
     @Benchmark
     public Object compareTo(BenchmarkData data)
-            throws Throwable
     {
         return data.slice1.compareTo(0, data.slice1.length(), data.slice2, 0, data.slice2.length());
     }
 
     @Benchmark
     public Object equalsUnchecked(BenchmarkData data)
-            throws Throwable
     {
         return data.slice1.equalsUnchecked(0, data.slice2, 0, data.slice1.length());
     }
 
     @Benchmark
     public Object equalsObject(BenchmarkData data)
-            throws Throwable
     {
         return data.slice1.equals(data.slice2);
     }
