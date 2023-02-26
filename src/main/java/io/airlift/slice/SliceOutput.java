@@ -156,7 +156,6 @@ public abstract class SliceOutput
 
     @Override
     public final void write(byte[] source)
-            throws IOException
     {
         writeBytes(source);
     }
