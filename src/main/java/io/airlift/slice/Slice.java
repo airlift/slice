@@ -13,77 +13,52 @@
  */
 package io.airlift.slice;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import sun.misc.Unsafe;
-
-import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.lang.foreign.ValueLayout.OfByte;
+import java.lang.foreign.ValueLayout.OfDouble;
+import java.lang.foreign.ValueLayout.OfFloat;
+import java.lang.foreign.ValueLayout.OfInt;
+import java.lang.foreign.ValueLayout.OfLong;
+import java.lang.foreign.ValueLayout.OfShort;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Optional;
 
-import static io.airlift.slice.JvmUtils.bufferAddress;
-import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
-import static io.airlift.slice.SizeOf.sizeOf;
-import static io.airlift.slice.SizeOf.sizeOfBooleanArray;
-import static io.airlift.slice.SizeOf.sizeOfDoubleArray;
-import static io.airlift.slice.SizeOf.sizeOfFloatArray;
-import static io.airlift.slice.SizeOf.sizeOfIntArray;
-import static io.airlift.slice.SizeOf.sizeOfLongArray;
-import static io.airlift.slice.SizeOf.sizeOfShortArray;
 import static java.lang.Math.min;
-import static java.lang.Math.multiplyExact;
 import static java.lang.Math.toIntExact;
-import static java.lang.String.format;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
-import static java.util.Objects.requireNonNull;
-import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_FLOAT_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_INT_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_LONG_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 
 public final class Slice
         implements Comparable<Slice>
 {
+    private static final OfByte BYTE = ValueLayout.JAVA_BYTE.withOrder(LITTLE_ENDIAN);
+    private static final OfShort SHORT = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(LITTLE_ENDIAN);
+    private static final OfInt INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(LITTLE_ENDIAN);
+    private static final OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
+    private static final OfFloat FLOAT = ValueLayout.JAVA_FLOAT_UNALIGNED.withOrder(LITTLE_ENDIAN);
+    private static final OfDouble DOUBLE = ValueLayout.JAVA_DOUBLE_UNALIGNED.withOrder(LITTLE_ENDIAN);
+
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
-    private static final Object COMPACT = new byte[0];
-    private static final Object NOT_COMPACT = null;
-    private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
-    /**
-     * Base object for relative addresses.  If null, the address is an
-     * absolute location in memory.
-     */
-    private final Object base;
+    static final Slice EMPTY_SLICE = new Slice();
 
-    /**
-     * If base is null, address is the absolute memory location of data for
-     * this slice; otherwise, address is the offset from the base object.
-     * This base plus relative offset addressing is taken directly from
-     * the Unsafe interface.
-     * <p>
-     * Note: if base object is a byte array, this address ARRAY_BYTE_BASE_OFFSET,
-     * since the byte array data starts AFTER the byte array object header.
-     */
-    private final long address;
-
-    /**
-     * Size of the slice
-     */
-    private final int size;
+    private final MemorySegment memory;
 
     /**
      * Bytes retained by the slice
@@ -91,214 +66,83 @@ public final class Slice
     private final long retainedSize;
 
     /**
-     * Reference has two use cases:
-     * <p>
-     * 1. It can be an object this slice must hold onto to assure that the
-     * underlying memory is not freed by the garbage collector.
-     * It is typically a ByteBuffer object, but can be any object.
-     * This is not needed for arrays, since the array is referenced by {@code base}.
-     * <p>
-     * 2. If reference is not used to prevent garbage collector from freeing the
-     * underlying memory, it will be used to indicate if the slice is compact.
-     * When {@code reference == COMPACT}, the slice is considered as compact.
-     * Otherwise, it will be null.
-     * <p>
-     * A slice is considered compact if the base object is an heap array and
-     * it contains the whole array.
-     * Thus, for the first use case, the slice is always considered as not compact.
+     * Precomputed hash code for performance. 0 means the hash code has not been computed yet.
      */
-    private final Object reference;
-
     private int hash;
+
+    /**
+     * Creates a slice over the specified memory segment.
+     * If memory is zero length, a shared empty slice is returned.
+     */
+    static Slice createSlice(MemorySegment memory)
+    {
+        if (memory.byteSize() == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(memory);
+    }
 
     /**
      * Creates an empty slice.
      */
-    Slice()
+    private Slice()
     {
-        this.base = null;
-        this.address = 0;
-        this.size = 0;
-        this.retainedSize = INSTANCE_SIZE;
-        this.reference = COMPACT;
+        this(MemorySegment.NULL, INSTANCE_SIZE);
     }
 
     /**
-     * Creates a slice over the specified array.
+     * Creates a slice over the specified memory segment.
      */
-    Slice(byte[] base)
+    private Slice(MemorySegment memory)
     {
-        requireNonNull(base, "base is null");
-        this.base = base;
-        this.address = ARRAY_BYTE_BASE_OFFSET;
-        this.size = base.length;
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = COMPACT;
+        this(memory, INSTANCE_SIZE + estimatedSizeOf(memory));
     }
 
     /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
+     * Creates a slice over the specified memory segment with a predeclared retained size.
      */
-    Slice(byte[] base, int offset, int length)
+    private Slice(MemorySegment memory, long retainedSize)
     {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = ARRAY_BYTE_BASE_OFFSET + offset;
-        this.size = length;
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(boolean[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfBooleanArray(offset);
-        this.size = multiplyExact(length, ARRAY_BOOLEAN_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(short[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfShortArray(offset);
-        this.size = multiplyExact(length, ARRAY_SHORT_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(int[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfIntArray(offset);
-        this.size = multiplyExact(length, ARRAY_INT_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(long[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfLongArray(offset);
-        this.size = multiplyExact(length, ARRAY_LONG_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(float[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfFloatArray(offset);
-        this.size = multiplyExact(length, ARRAY_FLOAT_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(double[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfDoubleArray(offset);
-        this.size = multiplyExact(length, ARRAY_DOUBLE_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice for directly accessing the base object.
-     */
-    Slice(@Nullable Object base, long address, int size, long retainedSize, @Nullable Object reference)
-    {
-        if (address <= 0) {
-            throw new IllegalArgumentException(format("Invalid address: %s", address));
+        if (memory.byteSize() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("MemorySegment can not be larger than Integer.MAX_VALUE bytes");
         }
-        if (size <= 0) {
-            throw new IllegalArgumentException(format("Invalid size: %s", size));
+        this.memory = memory;
+        if (!memory.isNative() && retainedSize < memory.byteSize()) {
+            throw new IllegalArgumentException("Retained size is smaller than the size of the memory segment");
         }
-        checkArgument((address + size) >= size, "Address + size is greater than 64 bits");
-
-        this.reference = reference;
-        this.base = base;
-        this.address = address;
-        this.size = size;
-        // INSTANCE_SIZE is not included, as the caller is responsible for including it.
         this.retainedSize = retainedSize;
+    }
+
+    /**
+     * Returns the internal memory segment.
+     */
+    @SuppressFBWarnings("EI_EXPOSE_REP")
+    public MemorySegment getMemory()
+    {
+        return memory;
     }
 
     /**
      * Returns the base object of this Slice, or null.  This is appropriate for use
      * with {@link Unsafe} if you wish to avoid all the safety belts e.g. bounds checks.
+     *
+     * @deprecated Use {@link #getMemory()} instead.
      */
+    @Deprecated(forRemoval = true)
     public Object getBase()
     {
-        return base;
+        return getMemory();
     }
 
     /**
-     * Return the address offset of this Slice.  This is appropriate for use
-     * with {@link Unsafe} if you wish to avoid all the safety belts e.g. bounds checks.
+     * Always zero.
+     *
+     * @deprecated Address can be fetched from {@link #getMemory()}, but that address is relative to the raw memory and not the view.
      */
+    @Deprecated(forRemoval = true)
     public long getAddress()
     {
-        return address;
+        return 0;
     }
 
     /**
@@ -306,7 +150,7 @@ public final class Slice
      */
     public int length()
     {
-        return size;
+        return (int) memory.byteSize();
     }
 
     /**
@@ -318,12 +162,43 @@ public final class Slice
     }
 
     /**
-     * A slice is considered compact if the base object is an array and it contains the whole array.
+     * A slice is considered compact if the base object is an array, and it contains the whole array.
      * As a result, it cannot be a view of a bigger slice.
      */
     public boolean isCompact()
     {
-        return reference == COMPACT;
+        long size = length();
+        if (size == 0) {
+            return true;
+        }
+        if (memory.address() != 0) {
+            return false;
+        }
+        Optional<Object> arrayReference = memory.array();
+        if (arrayReference.isEmpty()) {
+            return false;
+        }
+        Object array = arrayReference.orElseThrow();
+        int elementCount = Array.getLength(array);
+        if (array instanceof byte[]) {
+            return elementCount == size;
+        }
+        if (array instanceof short[]) {
+            return (long) elementCount * SizeOf.SIZE_OF_SHORT == size;
+        }
+        if (array instanceof int[]) {
+            return (long) elementCount * SizeOf.SIZE_OF_INT == size;
+        }
+        if (array instanceof long[]) {
+            return (long) elementCount * SizeOf.SIZE_OF_LONG == size;
+        }
+        if (array instanceof float[]) {
+            return (long) elementCount * SizeOf.SIZE_OF_FLOAT == size;
+        }
+        if (array instanceof double[]) {
+            return (long) elementCount * SizeOf.SIZE_OF_DOUBLE == size;
+        }
+        throw new UnsupportedOperationException("Unsupported array type: " + array.getClass().getName());
     }
 
     private void checkHasByteArray()
@@ -336,7 +211,8 @@ public final class Slice
 
     public boolean hasByteArray()
     {
-        return base instanceof byte[];
+        Optional<Object> array = memory.array();
+        return array.isPresent() && array.orElseThrow() instanceof byte[];
     }
 
     /**
@@ -350,7 +226,7 @@ public final class Slice
             throws UnsupportedOperationException
     {
         checkHasByteArray();
-        return (byte[]) base;
+        return (byte[]) memory.array().orElseThrow();
     }
 
     /**
@@ -363,7 +239,7 @@ public final class Slice
             throws UnsupportedOperationException
     {
         checkHasByteArray();
-        return (int) (address - ARRAY_BYTE_BASE_OFFSET);
+        return toIntExact(memory.address());
     }
 
     /**
@@ -371,20 +247,7 @@ public final class Slice
      */
     public void fill(byte value)
     {
-        int offset = 0;
-        int length = size;
-        long longValue = fillLong(value);
-        while (length >= SIZE_OF_LONG) {
-            unsafe.putLong(base, address + offset, longValue);
-            offset += SIZE_OF_LONG;
-            length -= SIZE_OF_LONG;
-        }
-
-        while (length > 0) {
-            unsafe.putByte(base, address + offset, value);
-            offset++;
-            length--;
-        }
+        memory.fill(value);
     }
 
     /**
@@ -392,22 +255,12 @@ public final class Slice
      */
     public void clear()
     {
-        clear(0, size);
+        memory.fill((byte) 0);
     }
 
     public void clear(int offset, int length)
     {
-        while (length >= SIZE_OF_LONG) {
-            unsafe.putLong(base, address + offset, 0);
-            offset += SIZE_OF_LONG;
-            length -= SIZE_OF_LONG;
-        }
-
-        while (length > 0) {
-            unsafe.putByte(base, address + offset, (byte) 0);
-            offset++;
-            length--;
-        }
+        memory.asSlice(offset, length).fill((byte) 0);
     }
 
     /**
@@ -418,13 +271,7 @@ public final class Slice
      */
     public byte getByte(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_BYTE, length());
-        return getByteUnchecked(index);
-    }
-
-    byte getByteUnchecked(int index)
-    {
-        return unsafe.getByte(base, address + index);
+        return memory.get(BYTE, index);
     }
 
     /**
@@ -448,13 +295,7 @@ public final class Slice
      */
     public short getShort(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_SHORT, length());
-        return getShortUnchecked(index);
-    }
-
-    short getShortUnchecked(int index)
-    {
-        return unsafe.getShort(base, address + index);
+        return memory.get(SHORT, index);
     }
 
     /**
@@ -478,13 +319,7 @@ public final class Slice
      */
     public int getInt(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_INT, length());
-        return getIntUnchecked(index);
-    }
-
-    int getIntUnchecked(int index)
-    {
-        return unsafe.getInt(base, address + index);
+        return memory.get(INT, index);
     }
 
     /**
@@ -508,13 +343,7 @@ public final class Slice
      */
     public long getLong(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_LONG, length());
-        return getLongUnchecked(index);
-    }
-
-    long getLongUnchecked(int index)
-    {
-        return unsafe.getLong(base, address + index);
+        return memory.get(LONG, index);
     }
 
     /**
@@ -526,8 +355,7 @@ public final class Slice
      */
     public float getFloat(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_FLOAT, length());
-        return unsafe.getFloat(base, address + index);
+        return memory.get(FLOAT, index);
     }
 
     /**
@@ -539,8 +367,7 @@ public final class Slice
      */
     public double getDouble(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
-        return unsafe.getDouble(base, address + index);
+        return memory.get(DOUBLE, index);
     }
 
     /**
@@ -600,10 +427,7 @@ public final class Slice
      */
     public void getBytes(int index, byte[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        copyMemory(base, address + index, destination, (long) ARRAY_BYTE_BASE_OFFSET + destinationIndex, length);
+        MemorySegment.copy(memory, index, MemorySegment.ofArray(destination), destinationIndex, length);
     }
 
     /**
@@ -668,13 +492,7 @@ public final class Slice
      */
     public void setByte(int index, int value)
     {
-        checkFromIndexSize(index, SIZE_OF_BYTE, length());
-        setByteUnchecked(index, value);
-    }
-
-    void setByteUnchecked(int index, int value)
-    {
-        unsafe.putByte(base, address + index, (byte) (value & 0xFF));
+        memory.set(BYTE, index, (byte) value);
     }
 
     /**
@@ -687,13 +505,7 @@ public final class Slice
      */
     public void setShort(int index, int value)
     {
-        checkFromIndexSize(index, SIZE_OF_SHORT, length());
-        setShortUnchecked(index, value);
-    }
-
-    void setShortUnchecked(int index, int value)
-    {
-        unsafe.putShort(base, address + index, (short) (value & 0xFFFF));
+        memory.set(SHORT, index, (short) value);
     }
 
     /**
@@ -705,13 +517,7 @@ public final class Slice
      */
     public void setInt(int index, int value)
     {
-        checkFromIndexSize(index, SIZE_OF_INT, length());
-        setIntUnchecked(index, value);
-    }
-
-    void setIntUnchecked(int index, int value)
-    {
-        unsafe.putInt(base, address + index, value);
+        memory.set(INT, index, value);
     }
 
     /**
@@ -723,13 +529,7 @@ public final class Slice
      */
     public void setLong(int index, long value)
     {
-        checkFromIndexSize(index, SIZE_OF_LONG, length());
-        setLongUnchecked(index, value);
-    }
-
-    void setLongUnchecked(int index, long value)
-    {
-        unsafe.putLong(base, address + index, value);
+        memory.set(LONG, index, value);
     }
 
     /**
@@ -741,8 +541,7 @@ public final class Slice
      */
     public void setFloat(int index, float value)
     {
-        checkFromIndexSize(index, SIZE_OF_FLOAT, length());
-        unsafe.putFloat(base, address + index, value);
+        memory.set(FLOAT, index, value);
     }
 
     /**
@@ -754,8 +553,7 @@ public final class Slice
      */
     public void setDouble(int index, double value)
     {
-        checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
-        unsafe.putDouble(base, address + index, value);
+        memory.set(DOUBLE, index, value);
     }
 
     /**
@@ -785,10 +583,7 @@ public final class Slice
      */
     public void setBytes(int index, Slice source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length());
-
-        copyMemory(source.base, source.address + sourceIndex, base, address + index, length);
+        MemorySegment.copy(source.memory, sourceIndex, memory, index, length);
     }
 
     /**
@@ -815,9 +610,7 @@ public final class Slice
      */
     public void setBytes(int index, byte[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        copyMemory(source, (long) ARRAY_BYTE_BASE_OFFSET + sourceIndex, base, address + index, length);
+        MemorySegment.copy(source, sourceIndex, memory, BYTE, index, length);
     }
 
     /**
@@ -831,18 +624,17 @@ public final class Slice
             throws IOException
     {
         checkFromIndexSize(index, length, length());
-        if (hasByteArray()) {
-            byte[] bytes = byteArray();
-            int offset = byteArrayOffset() + index;
-            while (length > 0) {
-                int bytesRead = in.read(bytes, offset, length);
-                if (bytesRead < 0) {
+
+        Optional<Object> arrayRef = memory.array();
+        if (arrayRef.isPresent()) {
+            Object array = arrayRef.orElseThrow();
+            if (array instanceof byte[]) {
+                int bytesRead = in.readNBytes((byte[]) array, (int) (memory.address() + index), length);
+                if (bytesRead != length) {
                     throw new IndexOutOfBoundsException("End of stream");
                 }
-                length -= bytesRead;
-                offset += bytesRead;
+                return;
             }
-            return;
         }
 
         byte[] bytes = new byte[4096];
@@ -852,7 +644,7 @@ public final class Slice
             if (bytesRead < 0) {
                 throw new IndexOutOfBoundsException("End of stream");
             }
-            copyMemory(bytes, ARRAY_BYTE_BASE_OFFSET, base, address + index, bytesRead);
+            setBytes(index, bytes, 0, bytesRead);
             length -= bytesRead;
             index += bytesRead;
         }
@@ -872,10 +664,7 @@ public final class Slice
             return Slices.EMPTY_SLICE;
         }
 
-        if (reference == COMPACT) {
-            return new Slice(base, address + index, length, retainedSize, NOT_COMPACT);
-        }
-        return new Slice(base, address + index, length, retainedSize, reference);
+        return new Slice(memory.asSlice(index, length), retainedSize);
     }
 
     public int indexOfByte(int b)
@@ -886,8 +675,9 @@ public final class Slice
 
     public int indexOfByte(byte b)
     {
+        int size = length();
         for (int i = 0; i < size; i++) {
-            if (getByteUnchecked(i) == b) {
+            if (getByte(i) == b) {
                 return i;
             }
         }
@@ -911,33 +701,35 @@ public final class Slice
      */
     public int indexOf(Slice pattern, int offset)
     {
-        if (size == 0 || offset >= size) {
+        int size = length();
+        if (offset >= size || offset < 0) {
             return -1;
         }
 
-        if (pattern.length() == 0) {
+        int patternLength = pattern.length();
+        if (patternLength == 0) {
             return offset;
         }
 
         // Do we have enough characters
-        if (pattern.length() < SIZE_OF_INT || size < SIZE_OF_LONG) {
+        if (patternLength < SIZE_OF_INT || size < SIZE_OF_LONG) {
             return indexOfBruteForce(pattern, offset);
         }
 
         // Using first four bytes for faster search. We are not using eight bytes for long
         // because we want more strings to get use of fast search.
-        int head = pattern.getIntUnchecked(0);
+        int head = pattern.getInt(0);
 
         // Take the first byte of head for faster skipping
         int firstByteMask = head & 0xff;
         firstByteMask |= firstByteMask << 8;
         firstByteMask |= firstByteMask << 16;
 
-        int lastValidIndex = size - pattern.length();
+        int lastValidIndex = size - patternLength;
         int index = offset;
         while (index <= lastValidIndex) {
             // Read four bytes in sequence
-            int value = getIntUnchecked(index);
+            int value = getInt(index);
 
             // Compare all bytes of value with first byte of search data
             // see https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
@@ -951,7 +743,7 @@ public final class Slice
             }
 
             // Try fast match of head and the rest
-            if (value == head && equalsUnchecked(index, pattern, 0, pattern.length())) {
+            if (value == head && mismatch(index, patternLength, pattern, 0, patternLength) == -1) {
                 return index;
             }
 
@@ -963,27 +755,29 @@ public final class Slice
 
     int indexOfBruteForce(Slice pattern, int offset)
     {
-        if (size == 0 || offset >= size) {
+        int size = length();
+        if (offset >= size || offset < 0) {
             return -1;
         }
 
-        if (pattern.length() == 0) {
+        int patternLength = pattern.length();
+        if (patternLength == 0) {
             return offset;
         }
 
-        byte firstByte = pattern.getByteUnchecked(0);
-        int lastValidIndex = size - pattern.length();
+        byte firstByte = pattern.getByte(0);
+        int lastValidIndex = size - patternLength;
         int index = offset;
         while (true) {
             // seek to first byte match
-            while (index < lastValidIndex && getByteUnchecked(index) != firstByte) {
+            while (index < lastValidIndex && getByte(index) != firstByte) {
                 index++;
             }
             if (index > lastValidIndex) {
                 break;
             }
 
-            if (equalsUnchecked(index, pattern, 0, pattern.length())) {
+            if (mismatch(index, patternLength, pattern, 0, patternLength) == -1) {
                 return index;
             }
 
@@ -1005,7 +799,7 @@ public final class Slice
         if (this == that) {
             return 0;
         }
-        return compareTo(0, size, that, 0, that.size);
+        return compareTo(0, length(), that, 0, that.length());
     }
 
     /**
@@ -1022,33 +816,39 @@ public final class Slice
         checkFromIndexSize(offset, length, length());
         checkFromIndexSize(otherOffset, otherLength, that.length());
 
-        long thisAddress = address + offset;
-        long thatAddress = that.address + otherOffset;
-
         int compareLength = min(length, otherLength);
+        // for large comparisons, mismatch is faster
+        if (compareLength >= 128) {
+            // find where the string differ and then check the byte at the difference
+            int mismatch = mismatch(offset, compareLength, that, otherOffset, compareLength);
+            if (mismatch == -1) {
+                return Integer.compare(length, otherLength);
+            }
+            return compareUnsignedBytes(getByte(offset + mismatch), that.getByte(otherOffset + mismatch));
+        }
+
+        int position = 0;
         while (compareLength >= SIZE_OF_LONG) {
-            long thisLong = unsafe.getLong(base, thisAddress);
-            long thatLong = unsafe.getLong(that.base, thatAddress);
+            long thisLong = memory.get(LONG, position);
+            long thatLong = that.memory.get(LONG, position);
 
             if (thisLong != thatLong) {
                 return longBytesToLong(thisLong) < longBytesToLong(thatLong) ? -1 : 1;
             }
 
-            thisAddress += SIZE_OF_LONG;
-            thatAddress += SIZE_OF_LONG;
+            position += SIZE_OF_LONG;
             compareLength -= SIZE_OF_LONG;
         }
 
         while (compareLength > 0) {
-            byte thisByte = unsafe.getByte(base, thisAddress);
-            byte thatByte = unsafe.getByte(that.base, thatAddress);
+            byte thisByte = memory.get(BYTE, position);
+            byte thatByte = that.memory.get(BYTE, position);
 
             int v = compareUnsignedBytes(thisByte, thatByte);
             if (v != 0) {
                 return v;
             }
-            thisAddress++;
-            thatAddress++;
+            position++;
             compareLength--;
         }
 
@@ -1065,23 +865,21 @@ public final class Slice
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Slice)) {
+        if (!(o instanceof Slice that)) {
             return false;
         }
 
-        Slice that = (Slice) o;
-        if (length() != that.length()) {
+        int length = length();
+        if (length != that.length()) {
             return false;
         }
-
-        return equalsUnchecked(0, that, 0, length());
+        return mismatch(0, length, that, 0, length) == -1;
     }
 
     /**
      * Returns the hash code of this slice.  The hash code is cached once calculated
-     * and any future changes to the slice will not effect the hash code.
+     * and any future changes to the slice will not affect the hash code.
      */
-    @SuppressWarnings("NonFinalFieldReferencedInHashCode")
     @Override
     public int hashCode()
     {
@@ -1089,7 +887,7 @@ public final class Slice
             return hash;
         }
 
-        hash = hashCode(0, size);
+        hash = hashCode(0, length());
         return hash;
     }
 
@@ -1105,53 +903,17 @@ public final class Slice
      * Compares a portion of this slice with a portion of the specified slice.  Equality is
      * solely based on the contents of the slice.
      */
-    @SuppressWarnings("ObjectEquality")
     public boolean equals(int offset, int length, Slice that, int otherOffset, int otherLength)
     {
         if (length != otherLength) {
             return false;
         }
-
-        if ((this == that) && (offset == otherOffset)) {
-            return true;
-        }
-
-        checkFromIndexSize(offset, length, length());
-        checkFromIndexSize(otherOffset, otherLength, that.length());
-
-        return equalsUnchecked(offset, that, otherOffset, length);
+        return mismatch(offset, length, that, otherOffset, otherLength) == -1;
     }
 
-    boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
+    public int mismatch(int offset, int length, Slice that, int otherOffset, int otherLength)
     {
-        long thisAddress = address + offset;
-        long thatAddress = that.address + otherOffset;
-
-        while (length >= SIZE_OF_LONG) {
-            long thisLong = unsafe.getLong(base, thisAddress);
-            long thatLong = unsafe.getLong(that.base, thatAddress);
-
-            if (thisLong != thatLong) {
-                return false;
-            }
-
-            thisAddress += SIZE_OF_LONG;
-            thatAddress += SIZE_OF_LONG;
-            length -= SIZE_OF_LONG;
-        }
-
-        while (length > 0) {
-            byte thisByte = unsafe.getByte(base, thisAddress);
-            byte thatByte = unsafe.getByte(that.base, thatAddress);
-            if (thisByte != thatByte) {
-                return false;
-            }
-            thisAddress++;
-            thatAddress++;
-            length--;
-        }
-
-        return true;
+        return (int) MemorySegment.mismatch(memory, offset, offset + length, that.memory, otherOffset, otherOffset + otherLength);
     }
 
     /**
@@ -1197,30 +959,16 @@ public final class Slice
      */
     public String toStringAscii()
     {
-        return toStringAscii(0, size);
+        return toString(US_ASCII);
     }
 
     public String toStringAscii(int index, int length)
     {
-        checkFromIndexSize(index, length, length());
-        if (length == 0) {
-            return "";
-        }
-
-        if (hasByteArray()) {
-            //noinspection deprecation
-            return new String(byteArray(), 0, byteArrayOffset() + index, length);
-        }
-
-        char[] chars = new char[length];
-        for (int pos = index; pos < length; pos++) {
-            chars[pos] = (char) (getByteUnchecked(pos) & 0x7F);
-        }
-        return new String(chars);
+        return toString(0, length, US_ASCII);
     }
 
     /**
-     * Decodes the a portion of this slice into a string with the specified
+     * Decodes the portion of this slice into a string with the specified
      * character set name.
      */
     public String toString(int index, int length, Charset charset)
@@ -1236,72 +984,18 @@ public final class Slice
 
     public ByteBuffer toByteBuffer()
     {
-        return toByteBuffer(0, size);
+        return memory.asByteBuffer();
     }
 
     public ByteBuffer toByteBuffer(int index, int length)
     {
-        checkFromIndexSize(index, length, length());
-
-        if (length() == 0) {
-            return EMPTY_BYTE_BUFFER;
-        }
-
-        if (hasByteArray()) {
-            return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
-        }
-
-        if ((reference instanceof ByteBuffer buffer) && buffer.isDirect()) {
-            int position = toIntExact(address - bufferAddress(buffer)) + index;
-            buffer = buffer.duplicate();
-            buffer.position(position);
-            buffer.limit(position + length);
-            return buffer.slice();
-        }
-
-        throw new UnsupportedOperationException("Conversion to ByteBuffer not supported for this Slice");
+        return memory.asSlice(index, length).asByteBuffer();
     }
 
-    /**
-     * Decodes the a portion of this slice into a string with the specified
-     * character set name.
-     */
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("Slice{");
-        if (base != null) {
-            builder.append("base=").append(identityToString(base)).append(", ");
-        }
-        builder.append("address=").append(address);
-        builder.append(", length=").append(length());
-        builder.append('}');
-        return builder.toString();
-    }
-
-    private static String identityToString(Object o)
-    {
-        if (o == null) {
-            return null;
-        }
-        return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
-    }
-
-    private static void copyMemory(Object src, long srcAddress, Object dest, long destAddress, int length)
-    {
-        // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
-        // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
-        int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(src, srcAddress, dest, destAddress, bytesToCopy);
-        unsafe.copyMemory(src, srcAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
-    }
-
-    private static long fillLong(byte value)
-    {
-        long longValue = ((value & 0xFF) << 8) | (value & 0xFF);
-        longValue = (longValue << 16) | longValue;
-        longValue = (longValue << 32) | longValue;
-        return longValue;
+        return "Slice{memory=" + memory + '}';
     }
 
     //

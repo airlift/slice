@@ -375,13 +375,13 @@ public class TestSliceUtf8
     public void testCompareUtf16BEIllegalSequences()
     {
         for (byte[] invalidSequence : INVALID_SEQUENCES) {
-            Slice leftSlice = new Slice(concat(new byte[] {'F', 'O', 'O'}, invalidSequence));
-            Slice rightSlice = new Slice(new byte[] {'F', 'O', 'O', 'B', 'a', 'r'});
+            Slice leftSlice = Slices.wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence));
+            Slice rightSlice = Slices.wrappedBuffer(new byte[] {'F', 'O', 'O', 'B', 'a', 'r'});
             try {
                 compareUtf16BE(leftSlice, rightSlice);
                 fail("Expected exception for invalid UTF-8");
             }
-            catch (InvalidUtf8Exception e) {
+            catch (InvalidUtf8Exception ignored) {
             }
             try {
                 compareUtf16BE(rightSlice, leftSlice);

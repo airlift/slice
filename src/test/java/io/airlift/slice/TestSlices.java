@@ -15,6 +15,7 @@ package io.airlift.slice;
 
 import org.testng.annotations.Test;
 
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
@@ -23,14 +24,13 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
-import static io.airlift.slice.SizeOf.sizeOf;
 import static io.airlift.slice.Slices.MAX_ARRAY_SIZE;
 import static io.airlift.slice.Slices.SLICE_ALLOC_THRESHOLD;
 import static io.airlift.slice.Slices.SLICE_ALLOW_SKEW;
 import static io.airlift.slice.Slices.allocate;
 import static io.airlift.slice.Slices.ensureSize;
-import static io.airlift.slice.Slices.wrappedBooleanArray;
 import static io.airlift.slice.Slices.wrappedBuffer;
 import static io.airlift.slice.Slices.wrappedDoubleArray;
 import static io.airlift.slice.Slices.wrappedFloatArray;
@@ -42,6 +42,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
+@SuppressWarnings("removal")
 public class TestSlices
 {
     @Test
@@ -61,7 +62,7 @@ public class TestSlices
     {
         ByteBuffer heapByteBuffer = ByteBuffer.allocate(50);
         Slice slice = wrappedBuffer(heapByteBuffer);
-        assertEquals(slice.getRetainedSize(), instanceSize(Slice.class) + sizeOf(heapByteBuffer.array()));
+        assertEquals(slice.getRetainedSize(), instanceSize(Slice.class) + estimatedSizeOf(MemorySegment.ofBuffer(heapByteBuffer)));
     }
 
     private static void testWrapping(ByteBuffer buffer)
@@ -99,13 +100,6 @@ public class TestSlices
     @Test
     public void testWrapAllTypes()
     {
-        boolean[] booleanArray = {true, false, false, true, false, true};
-        assertEquals(wrappedBooleanArray(booleanArray).getByte(0) == 1, booleanArray[0]);
-        assertEquals(wrappedBooleanArray(booleanArray, 1, 4).getByte(0) == 1, booleanArray[1]);
-        assertEquals(wrappedBooleanArray(booleanArray, 1, 4).length(), 4 * SIZE_OF_BYTE);
-        assertEquals(wrappedBooleanArray(booleanArray).getByte(5 * SIZE_OF_BYTE) == 1, booleanArray[5]);
-        assertFalse(wrappedBooleanArray(booleanArray).hasByteArray());
-
         byte[] byteArray = {(byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5};
         assertEquals(wrappedBuffer(byteArray).getByte(0), byteArray[0]);
         assertEquals(wrappedBuffer(byteArray, 1, 4).getByte(0), byteArray[1]);

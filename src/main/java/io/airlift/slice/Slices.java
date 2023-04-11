@@ -17,13 +17,19 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SegmentScope;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.JvmUtils.bufferAddress;
+import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
+import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
+import static io.airlift.slice.SizeOf.SIZE_OF_INT;
+import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
+import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.Slice.createSlice;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
@@ -34,7 +40,7 @@ public final class Slices
     /**
      * A slice with size {@code 0}.
      */
-    public static final Slice EMPTY_SLICE = new Slice();
+    public static final Slice EMPTY_SLICE = Slice.EMPTY_SLICE;
 
     // see java.util.ArrayList for an explanation
     static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
@@ -78,6 +84,9 @@ public final class Slices
         return newSlice;
     }
 
+    /**
+     * Allocates a new byte array backed heap slice with the specified capacity.
+     */
     public static Slice allocate(int capacity)
     {
         if (capacity == 0) {
@@ -86,15 +95,21 @@ public final class Slices
         if (capacity > MAX_ARRAY_SIZE) {
             throw new SliceTooLargeException(format("Cannot allocate slice larger than %s bytes", MAX_ARRAY_SIZE));
         }
-        return new Slice(new byte[capacity]);
+        return createSlice(MemorySegment.ofArray(new byte[capacity]));
     }
 
+    /**
+     * Allocates a new native slice with the specified capacity.
+     *
+     * @deprecated Allocate the MemorySegment directly and use {@link #wrap(MemorySegment)}
+     */
+    @Deprecated(forRemoval = true)
     public static Slice allocateDirect(int capacity)
     {
         if (capacity == 0) {
             return EMPTY_SLICE;
         }
-        return wrappedBuffer(ByteBuffer.allocateDirect(capacity));
+        return createSlice(MemorySegment.allocateNative(capacity, SegmentScope.auto()));
     }
 
     public static Slice copyOf(Slice slice)
@@ -112,21 +127,17 @@ public final class Slices
         return copy;
     }
 
+    public static Slice wrap(MemorySegment memory)
+    {
+        return createSlice(memory);
+    }
+
     /**
      * Wrap the visible portion of a {@link java.nio.ByteBuffer}.
      */
     public static Slice wrappedBuffer(ByteBuffer buffer)
     {
-        if (buffer.isDirect()) {
-            long address = bufferAddress(buffer);
-            return new Slice(null, address + buffer.position(), buffer.remaining(), buffer.capacity(), buffer);
-        }
-
-        if (buffer.hasArray()) {
-            return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
-        }
-
-        throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
+        return createSlice(MemorySegment.ofBuffer(buffer));
     }
 
     /**
@@ -134,10 +145,7 @@ public final class Slices
      */
     public static Slice wrappedBuffer(byte... array)
     {
-        if (array.length == 0) {
-            return EMPTY_SLICE;
-        }
-        return new Slice(array);
+        return createSlice(MemorySegment.ofArray(array));
     }
 
     /**
@@ -148,32 +156,7 @@ public final class Slices
      */
     public static Slice wrappedBuffer(byte[] array, int offset, int length)
     {
-        if (length == 0) {
-            return EMPTY_SLICE;
-        }
-        return new Slice(array, offset, length);
-    }
-
-    /**
-     * Creates a slice over the specified array.
-     */
-    public static Slice wrappedBooleanArray(boolean... array)
-    {
-        return wrappedBooleanArray(array, 0, array.length);
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    public static Slice wrappedBooleanArray(boolean[] array, int offset, int length)
-    {
-        if (length == 0) {
-            return EMPTY_SLICE;
-        }
-        return new Slice(array, offset, length);
+        return createSlice(MemorySegment.ofArray(array).asSlice(offset, length));
     }
 
     /**
@@ -181,7 +164,7 @@ public final class Slices
      */
     public static Slice wrappedShortArray(short... array)
     {
-        return wrappedShortArray(array, 0, array.length);
+        return createSlice(MemorySegment.ofArray(array));
     }
 
     /**
@@ -195,7 +178,7 @@ public final class Slices
         if (length == 0) {
             return EMPTY_SLICE;
         }
-        return new Slice(array, offset, length);
+        return createSlice(MemorySegment.ofArray(array).asSlice((long) offset * SIZE_OF_SHORT, (long) length * SIZE_OF_SHORT));
     }
 
     /**
@@ -203,7 +186,7 @@ public final class Slices
      */
     public static Slice wrappedIntArray(int... array)
     {
-        return wrappedIntArray(array, 0, array.length);
+        return createSlice(MemorySegment.ofArray(array));
     }
 
     /**
@@ -217,7 +200,7 @@ public final class Slices
         if (length == 0) {
             return EMPTY_SLICE;
         }
-        return new Slice(array, offset, length);
+        return createSlice(MemorySegment.ofArray(array).asSlice((long) offset * SIZE_OF_INT, (long) length * SIZE_OF_INT));
     }
 
     /**
@@ -225,7 +208,7 @@ public final class Slices
      */
     public static Slice wrappedLongArray(long... array)
     {
-        return wrappedLongArray(array, 0, array.length);
+        return createSlice(MemorySegment.ofArray(array));
     }
 
     /**
@@ -239,7 +222,7 @@ public final class Slices
         if (length == 0) {
             return EMPTY_SLICE;
         }
-        return new Slice(array, offset, length);
+        return createSlice(MemorySegment.ofArray(array).asSlice((long) offset * SIZE_OF_LONG, (long) length * SIZE_OF_LONG));
     }
 
     /**
@@ -247,7 +230,7 @@ public final class Slices
      */
     public static Slice wrappedFloatArray(float... array)
     {
-        return wrappedFloatArray(array, 0, array.length);
+        return createSlice(MemorySegment.ofArray(array));
     }
 
     /**
@@ -261,7 +244,7 @@ public final class Slices
         if (length == 0) {
             return EMPTY_SLICE;
         }
-        return new Slice(array, offset, length);
+        return createSlice(MemorySegment.ofArray(array).asSlice((long) offset * SIZE_OF_FLOAT, (long) length * SIZE_OF_FLOAT));
     }
 
     /**
@@ -269,7 +252,7 @@ public final class Slices
      */
     public static Slice wrappedDoubleArray(double... array)
     {
-        return wrappedDoubleArray(array, 0, array.length);
+        return createSlice(MemorySegment.ofArray(array));
     }
 
     /**
@@ -283,14 +266,11 @@ public final class Slices
         if (length == 0) {
             return EMPTY_SLICE;
         }
-        return new Slice(array, offset, length);
+        return createSlice(MemorySegment.ofArray(array).asSlice((long) offset * SIZE_OF_DOUBLE, (long) length * SIZE_OF_DOUBLE));
     }
 
     public static Slice copiedBuffer(String string, Charset charset)
     {
-        requireNonNull(string, "string is null");
-        requireNonNull(charset, "charset is null");
-
         return wrappedBuffer(string.getBytes(charset));
     }
 
@@ -310,8 +290,8 @@ public final class Slices
 
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
                 FileChannel channel = randomAccessFile.getChannel()) {
-            MappedByteBuffer byteBuffer = channel.map(MapMode.READ_ONLY, 0, file.length());
-            return wrappedBuffer(byteBuffer);
+            MemorySegment memorySegment = channel.map(MapMode.READ_ONLY, 0, file.length(), SegmentScope.auto());
+            return wrap(memorySegment);
         }
     }
 }

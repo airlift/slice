@@ -20,6 +20,8 @@ import org.openjdk.jol.util.MathUtil;
 import org.openjdk.jol.vm.VM;
 import org.openjdk.jol.vm.VirtualMachine;
 
+import java.lang.foreign.MemorySegment;
+import java.lang.reflect.Array;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +79,13 @@ public final class SizeOf
 
     public static final int STRING_INSTANCE_SIZE = instanceSize(String.class);
 
+    private static final int MEMORY_SEGMENT_ESTIMATED_SIZE = estimatedInstanceSize(
+            long.class, // length
+            boolean.class, // read-only
+            Object.class, // scope (assumed to be shared and thus not "retained")
+            long.class, // array offset or native address
+            Object.class); // array base (not present for native segments, but counted anyway for simplicity)
+
     private static final int SIMPLE_ENTRY_INSTANCE_SIZE = instanceSize(AbstractMap.SimpleEntry.class);
 
     public static long sizeOf(boolean[] array)
@@ -122,6 +131,39 @@ public final class SizeOf
     public static long sizeOf(Object[] array)
     {
         return (array == null) ? 0 : sizeOfObjectArray(array.length);
+    }
+
+    public static long sizeOfArray(Object array)
+    {
+        if (array == null) {
+            return 0;
+        }
+        int length = Array.getLength(array);
+        if (array instanceof boolean[]) {
+            return sizeOfBooleanArray(length);
+        }
+        if (array instanceof byte[]) {
+            return sizeOfByteArray(length);
+        }
+        if (array instanceof short[]) {
+            return sizeOfShortArray(length);
+        }
+        if (array instanceof char[]) {
+            return sizeOfCharArray(length);
+        }
+        if (array instanceof int[]) {
+            return sizeOfIntArray(length);
+        }
+        if (array instanceof long[]) {
+            return sizeOfLongArray(length);
+        }
+        if (array instanceof float[]) {
+            return sizeOfFloatArray(length);
+        }
+        if (array instanceof double[]) {
+            return sizeOfDoubleArray(length);
+        }
+        return sizeOfObjectArray(length);
     }
 
     public static long sizeOf(Boolean value)
@@ -182,6 +224,11 @@ public final class SizeOf
     public static long sizeOf(OptionalDouble optional)
     {
         return optional != null && optional.isPresent() ? OPTIONAL_DOUBLE_INSTANCE_SIZE : 0;
+    }
+
+    public static long estimatedSizeOf(MemorySegment memorySegment)
+    {
+        return memorySegment == null ? 0 : MEMORY_SEGMENT_ESTIMATED_SIZE + memorySegment.array().map(SizeOf::sizeOfArray).orElse(0L);
     }
 
     public static long estimatedSizeOf(String string)
@@ -319,7 +366,16 @@ public final class SizeOf
         }
     }
 
-    private SizeOf()
+    private static int estimatedInstanceSize(Class<?>... fieldTypes)
     {
+        VirtualMachine vm = VM.current();
+        long instanceSize = vm.objectHeaderSize();
+        for (Class<?> fieldType : fieldTypes) {
+            instanceSize += vm.sizeOfField(fieldType.getCanonicalName());
+        }
+        instanceSize = MathUtil.align(instanceSize, vm.objectAlignment());
+        return toIntExact(instanceSize);
     }
+
+    private SizeOf() {}
 }

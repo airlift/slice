@@ -16,6 +16,7 @@ package io.airlift.slice;
 public class TestDirectSlice
         extends TestSlice
 {
+    @SuppressWarnings("removal")
     @Override
     protected Slice allocate(int size)
     {
