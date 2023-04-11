@@ -16,14 +16,14 @@ package io.airlift.slice;
 import java.util.OptionalInt;
 
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.Preconditions.checkPositionIndex;
-import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static io.airlift.slice.Preconditions.verify;
 import static java.lang.Character.MAX_CODE_POINT;
 import static java.lang.Character.MAX_SURROGATE;
 import static java.lang.Character.MIN_SUPPLEMENTARY_CODE_POINT;
 import static java.lang.Character.MIN_SURROGATE;
 import static java.lang.Integer.toHexString;
+import static java.util.Objects.checkFromIndexSize;
+import static java.util.Objects.checkIndex;
 
 /**
  * Utility methods for UTF-8 encoded slices.
@@ -113,7 +113,7 @@ public final class SliceUtf8
      */
     public static int countCodePoints(Slice utf8, int offset, int length)
     {
-        checkPositionIndexes(offset, offset + length, utf8.length());
+        checkFromIndexSize(offset, length, utf8.length());
 
         // Quick exit if empty string
         if (length == 0) {
@@ -793,8 +793,8 @@ public final class SliceUtf8
      */
     public static int offsetOfCodePoint(Slice utf8, int position, int codePointCount)
     {
-        checkPositionIndex(position, utf8.length());
-        checkArgument(codePointCount >= 0, "codePointPosition is negative");
+        // allow position to be at the end of the slice
+        checkIndex(position, utf8.length() + 1);
 
         // Quick exit if we are sure that the position is after the end
         if (utf8.length() - position <= codePointCount) {

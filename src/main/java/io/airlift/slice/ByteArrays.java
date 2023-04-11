@@ -14,12 +14,12 @@
 package io.airlift.slice;
 
 import static io.airlift.slice.JvmUtils.unsafe;
-import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static java.util.Objects.checkFromIndexSize;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class ByteArrays
@@ -28,66 +28,61 @@ public final class ByteArrays
 
     public static short getShort(byte[] bytes, int index)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_SHORT);
+        checkFromIndexSize(index, SIZE_OF_SHORT, bytes.length);
         return unsafe.getShort(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index);
     }
 
     public static int getInt(byte[] bytes, int index)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_INT);
+        checkFromIndexSize(index, SIZE_OF_INT, bytes.length);
         return unsafe.getInt(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index);
     }
 
     public static long getLong(byte[] bytes, int index)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_LONG);
+        checkFromIndexSize(index, SIZE_OF_LONG, bytes.length);
         return unsafe.getLong(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index);
     }
 
     public static float getFloat(byte[] bytes, int index)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_FLOAT);
+        checkFromIndexSize(index, SIZE_OF_FLOAT, bytes.length);
         return unsafe.getFloat(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index);
     }
 
     public static double getDouble(byte[] bytes, int index)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_DOUBLE);
+        checkFromIndexSize(index, SIZE_OF_DOUBLE, bytes.length);
         return unsafe.getDouble(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index);
     }
 
     public static void setShort(byte[] bytes, int index, short value)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_SHORT);
+        checkFromIndexSize(index, SIZE_OF_SHORT, bytes.length);
         unsafe.putShort(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
     }
 
     public static void setInt(byte[] bytes, int index, int value)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_INT);
+        checkFromIndexSize(index, SIZE_OF_INT, bytes.length);
         unsafe.putInt(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
     }
 
     public static void setLong(byte[] bytes, int index, long value)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_LONG);
+        checkFromIndexSize(index, SIZE_OF_LONG, bytes.length);
         unsafe.putLong(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
     }
 
     public static void setFloat(byte[] bytes, int index, float value)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_FLOAT);
+        checkFromIndexSize(index, SIZE_OF_FLOAT, bytes.length);
         unsafe.putFloat(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
     }
 
     public static void setDouble(byte[] bytes, int index, double value)
     {
-        checkIndexLength(bytes.length, index, SIZE_OF_DOUBLE);
+        checkFromIndexSize(index, SIZE_OF_DOUBLE, bytes.length);
         unsafe.putDouble(bytes, ((long) ARRAY_BYTE_BASE_OFFSET) + index, value);
-    }
-
-    private static void checkIndexLength(int arrayLength, int index, int typeLength)
-    {
-        checkPositionIndexes(index, index + typeLength, arrayLength);
     }
 }

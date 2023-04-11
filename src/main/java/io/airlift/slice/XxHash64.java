@@ -17,9 +17,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import static io.airlift.slice.JvmUtils.unsafe;
-import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.Long.rotateLeft;
 import static java.lang.Math.min;
+import static java.util.Objects.checkFromIndexSize;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 public final class XxHash64
@@ -66,7 +66,7 @@ public final class XxHash64
 
     public XxHash64 update(byte[] data, int offset, int length)
     {
-        checkPositionIndexes(offset, offset + length, data.length);
+        checkFromIndexSize(offset, length, data.length);
         updateHash(data, ARRAY_BYTE_BASE_OFFSET + offset, length);
         return this;
     }
@@ -78,7 +78,7 @@ public final class XxHash64
 
     public XxHash64 update(Slice data, int offset, int length)
     {
-        checkPositionIndexes(0, offset + length, data.length());
+        checkFromIndexSize(offset, length, data.length());
         updateHash(data.getBase(), data.getAddress() + offset, length);
         return this;
     }
@@ -209,7 +209,7 @@ public final class XxHash64
 
     public static long hash(long seed, Slice data, int offset, int length)
     {
-        checkPositionIndexes(0, offset + length, data.length());
+        checkFromIndexSize(offset, length, data.length());
 
         Object base = data.getBase();
         final long address = data.getAddress() + offset;
