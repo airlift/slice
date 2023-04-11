@@ -72,13 +72,13 @@ public final class SliceUtf8
         // Length rounded to 8 bytes
         int length8 = length & 0x7FFF_FFF8;
         for (; offset < length8; offset += 8) {
-            if ((utf8.getLongUnchecked(offset) & TOP_MASK64) != 0) {
+            if ((utf8.getLong(offset) & TOP_MASK64) != 0) {
                 return false;
             }
         }
         // Enough bytes left for 32 bits?
         if (offset + 4 < length) {
-            if ((utf8.getIntUnchecked(offset) & TOP_MASK32) != 0) {
+            if ((utf8.getInt(offset) & TOP_MASK32) != 0) {
                 return false;
             }
 
@@ -86,7 +86,7 @@ public final class SliceUtf8
         }
         // Do the rest one by one
         for (; offset < length; offset++) {
-            if ((utf8.getByteUnchecked(offset) & 0x80) != 0) {
+            if ((utf8.getByte(offset) & 0x80) != 0) {
                 return false;
             }
         }
@@ -125,19 +125,19 @@ public final class SliceUtf8
         int length8 = length & 0x7FFF_FFF8;
         for (; offset < length8; offset += 8) {
             // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes(utf8.getLongUnchecked(offset));
+            continuationBytesCount += countContinuationBytes(utf8.getLong(offset));
         }
         // Enough bytes left for 32 bits?
         if (offset + 4 < length) {
             // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes(utf8.getIntUnchecked(offset));
+            continuationBytesCount += countContinuationBytes(utf8.getInt(offset));
 
             offset += 4;
         }
         // Do the rest one by one
         for (; offset < length; offset++) {
             // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes(utf8.getByteUnchecked(offset));
+            continuationBytesCount += countContinuationBytes(utf8.getByte(offset));
         }
 
         verify(continuationBytesCount <= length);
@@ -343,20 +343,23 @@ public final class SliceUtf8
     private static void copyUtf8SequenceUnsafe(Slice source, int sourcePosition, Slice destination, int destinationPosition, int length)
     {
         switch (length) {
-            case 1 -> destination.setByteUnchecked(destinationPosition, source.getByteUnchecked(sourcePosition));
-            case 2 -> destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
+            case 1 -> destination.setByte(destinationPosition, source.getByte(sourcePosition));
+            case 2 -> destination.setShort(destinationPosition, source.getShort(sourcePosition));
             case 3 -> {
-                destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
-                destination.setByteUnchecked(destinationPosition + 2, source.getByteUnchecked(sourcePosition + 2));
+                destination.setShort(destinationPosition, source.getShort(sourcePosition));
+                int value = source.getByte(sourcePosition + 2);
+                destination.setByte(destinationPosition + 2, value);
             }
-            case 4 -> destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
+            case 4 -> destination.setInt(destinationPosition, source.getInt(sourcePosition));
             case 5 -> {
-                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
-                destination.setByteUnchecked(destinationPosition + 4, source.getByteUnchecked(sourcePosition + 4));
+                destination.setInt(destinationPosition, source.getInt(sourcePosition));
+                int value = source.getByte(sourcePosition + 4);
+                destination.setByte(destinationPosition + 4, value);
             }
             case 6 -> {
-                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
-                destination.setShortUnchecked(destinationPosition + 4, source.getShortUnchecked(sourcePosition + 4));
+                destination.setInt(destinationPosition, source.getInt(sourcePosition));
+                int value = source.getShort(sourcePosition + 4);
+                destination.setShort(destinationPosition + 4, value);
             }
             default -> throw new IllegalStateException("Invalid code point length " + length);
         }
@@ -635,7 +638,7 @@ public final class SliceUtf8
             return -1;
         }
 
-        byte secondByte = utf8.getByteUnchecked(position + 1);
+        byte secondByte = utf8.getByte(position + 1);
         if (!isContinuationByte(secondByte)) {
             return -1;
         }
@@ -654,7 +657,7 @@ public final class SliceUtf8
             return -2;
         }
 
-        byte thirdByte = utf8.getByteUnchecked(position + 2);
+        byte thirdByte = utf8.getByte(position + 2);
         if (!isContinuationByte(thirdByte)) {
             return -2;
         }
@@ -679,7 +682,7 @@ public final class SliceUtf8
             return -3;
         }
 
-        byte forthByte = utf8.getByteUnchecked(position + 3);
+        byte forthByte = utf8.getByte(position + 3);
         if (!isContinuationByte(forthByte)) {
             return -3;
         }
@@ -703,7 +706,7 @@ public final class SliceUtf8
             return -4;
         }
 
-        byte fifthByte = utf8.getByteUnchecked(position + 4);
+        byte fifthByte = utf8.getByte(position + 4);
         if (!isContinuationByte(fifthByte)) {
             return -4;
         }
@@ -719,7 +722,7 @@ public final class SliceUtf8
             return -5;
         }
 
-        byte sixthByte = utf8.getByteUnchecked(position + 5);
+        byte sixthByte = utf8.getByte(position + 5);
         if (!isContinuationByte(sixthByte)) {
             return -5;
         }
@@ -810,7 +813,7 @@ public final class SliceUtf8
         // While we have enough bytes left and we need at least 8 characters process 8 bytes at once
         while (position < length8 && correctIndex >= position + 8) {
             // Count bytes which are NOT the start of a code point
-            correctIndex += countContinuationBytes(utf8.getLongUnchecked(position));
+            correctIndex += countContinuationBytes(utf8.getLong(position));
 
             position += 8;
         }
@@ -819,14 +822,14 @@ public final class SliceUtf8
         // While we have enough bytes left and we need at least 4 characters process 4 bytes at once
         while (position < length4 && correctIndex >= position + 4) {
             // Count bytes which are NOT the start of a code point
-            correctIndex += countContinuationBytes(utf8.getIntUnchecked(position));
+            correctIndex += countContinuationBytes(utf8.getInt(position));
 
             position += 4;
         }
         // Do the rest one by one, always check the last byte to find the end of the code point
         while (position < utf8.length()) {
             // Count bytes which are NOT the start of a code point
-            correctIndex += countContinuationBytes(utf8.getByteUnchecked(position));
+            correctIndex += countContinuationBytes(utf8.getByte(position));
             if (position == correctIndex) {
                 break;
             }
@@ -864,23 +867,23 @@ public final class SliceUtf8
             return -length;
         }
 
-        if (length == 1 || position + 1 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 1))) {
+        if (length == 1 || position + 1 >= utf8.length() || !isContinuationByte(utf8.getByte(position + 1))) {
             return 1;
         }
 
-        if (length == 2 || position + 2 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 2))) {
+        if (length == 2 || position + 2 >= utf8.length() || !isContinuationByte(utf8.getByte(position + 2))) {
             return 2;
         }
 
-        if (length == 3 || position + 3 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 3))) {
+        if (length == 3 || position + 3 >= utf8.length() || !isContinuationByte(utf8.getByte(position + 3))) {
             return 3;
         }
 
-        if (length == 4 || position + 4 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 4))) {
+        if (length == 4 || position + 4 >= utf8.length() || !isContinuationByte(utf8.getByte(position + 4))) {
             return 4;
         }
 
-        if (length == 5 || position + 5 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 5))) {
+        if (length == 5 || position + 5 >= utf8.length() || !isContinuationByte(utf8.getByte(position + 5))) {
             return 5;
         }
 
@@ -987,8 +990,8 @@ public final class SliceUtf8
                 throw new InvalidUtf8Exception("UTF-8 sequence truncated");
             }
             return ((unsignedStartByte & 0b0000_1111) << 12) |
-                    ((utf8.getByteUnchecked(position + 1) & 0b0011_1111) << 6) |
-                    (utf8.getByteUnchecked(position + 2) & 0b0011_1111);
+                    ((utf8.getByte(position + 1) & 0b0011_1111) << 6) |
+                    (utf8.getByte(position + 2) & 0b0011_1111);
         }
         if (unsignedStartByte < 0xf8) {
             // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
@@ -996,9 +999,9 @@ public final class SliceUtf8
                 throw new InvalidUtf8Exception("UTF-8 sequence truncated");
             }
             return ((unsignedStartByte & 0b0000_0111) << 18) |
-                    ((utf8.getByteUnchecked(position + 1) & 0b0011_1111) << 12) |
-                    ((utf8.getByteUnchecked(position + 2) & 0b0011_1111) << 6) |
-                    (utf8.getByteUnchecked(position + 3) & 0b0011_1111);
+                    ((utf8.getByte(position + 1) & 0b0011_1111) << 12) |
+                    ((utf8.getByte(position + 2) & 0b0011_1111) << 6) |
+                    (utf8.getByte(position + 3) & 0b0011_1111);
         }
         // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
         throw new InvalidUtf8Exception("Illegal start 0x" + toHexString(unsignedStartByte).toUpperCase() + " of code point");

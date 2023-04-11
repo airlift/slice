@@ -18,6 +18,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +34,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
@@ -41,6 +43,7 @@ import static java.lang.Double.doubleToLongBits;
 import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.floatToIntBits;
 import static java.lang.Float.intBitsToFloat;
+import static java.lang.Math.toIntExact;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -50,6 +53,7 @@ import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
+@SuppressWarnings("removal")
 public class TestSlice
 {
     @Test
@@ -732,7 +736,7 @@ public class TestSlice
     public void testRetainedSize()
             throws Exception
     {
-        int sliceInstanceSize = instanceSize(Slice.class);
+        int sliceInstanceSize = instanceSize(Slice.class) + toIntExact(estimatedSizeOf(MemorySegment.NULL));
         Slice slice = Slices.allocate(10);
         assertEquals(slice.getRetainedSize(), sizeOfByteArray(10) + sliceInstanceSize);
         assertEquals(slice.length(), 10);
