@@ -166,7 +166,7 @@ public final class SizeOf
 
     public static <T> long sizeOf(Optional<T> optional, ToLongFunction<T> valueSize)
     {
-        return optional != null && optional.isPresent() ? OPTIONAL_INSTANCE_SIZE + valueSize.applyAsLong(optional.get()) : 0;
+        return optional != null && optional.isPresent() ? OPTIONAL_INSTANCE_SIZE + valueSize.applyAsLong(optional.orElseThrow()) : 0;
     }
 
     public static long sizeOf(OptionalInt optional)
