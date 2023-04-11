@@ -23,16 +23,23 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SingleLong
 {
     private long value;
+    private Slice slice;
 
     @Setup
     public void setup()
-            throws Exception
     {
         value = ThreadLocalRandom.current().nextLong();
+        slice = Slices.allocate(8);
+        slice.setLong(0, value);
     }
 
     public long getValue()
     {
         return value;
+    }
+
+    public Slice getSlice()
+    {
+        return slice;
     }
 }

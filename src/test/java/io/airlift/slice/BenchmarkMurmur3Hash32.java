@@ -58,7 +58,7 @@ public class BenchmarkMurmur3Hash32
     }
 
     @Benchmark
-    public int hashInt(BenchmarkData data, ByteCounter counter)
+    public int hashInt(SingleLong data, ByteCounter counter)
     {
         counter.add(SizeOf.SIZE_OF_INT);
         return Murmur3Hash32.hash(data.getSlice(), 0, 4);
@@ -72,7 +72,7 @@ public class BenchmarkMurmur3Hash32
     }
 
     @Benchmark
-    public int hashLong(BenchmarkData data, ByteCounter counter)
+    public int hashLong(SingleLong data, ByteCounter counter)
     {
         counter.add(SizeOf.SIZE_OF_LONG);
         return Murmur3Hash32.hash(data.getSlice(), 0, 8);

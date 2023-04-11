@@ -65,7 +65,7 @@ public class BenchmarkMurmur3Hash128
     }
 
     @Benchmark
-    public long hashLong(BenchmarkData data, ByteCounter counter)
+    public long hashLong(SingleLong data, ByteCounter counter)
     {
         counter.add(SizeOf.SIZE_OF_LONG);
         return Murmur3Hash128.hash64(data.getSlice(), 0, 8);
