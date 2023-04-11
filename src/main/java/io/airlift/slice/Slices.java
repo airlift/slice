@@ -24,9 +24,9 @@ import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
 
 import static io.airlift.slice.JvmUtils.bufferAddress;
-import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
 
 public final class Slices
@@ -104,7 +104,7 @@ public final class Slices
 
     public static Slice copyOf(Slice slice, int offset, int length)
     {
-        checkPositionIndexes(offset, offset + length, slice.length());
+        checkFromIndexSize(offset, length, slice.length());
 
         Slice copy = Slices.allocate(length);
         copy.setBytes(0, slice, offset, length);

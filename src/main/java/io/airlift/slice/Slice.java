@@ -26,7 +26,6 @@ import java.nio.charset.Charset;
 import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.Preconditions.checkPositionIndexes;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
@@ -46,6 +45,7 @@ import static java.lang.Math.multiplyExact;
 import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
@@ -145,7 +145,7 @@ public final class Slice
     Slice(byte[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = ARRAY_BYTE_BASE_OFFSET + offset;
@@ -163,7 +163,7 @@ public final class Slice
     Slice(boolean[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = sizeOfBooleanArray(offset);
@@ -181,7 +181,7 @@ public final class Slice
     Slice(short[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = sizeOfShortArray(offset);
@@ -199,7 +199,7 @@ public final class Slice
     Slice(int[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = sizeOfIntArray(offset);
@@ -217,7 +217,7 @@ public final class Slice
     Slice(long[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = sizeOfLongArray(offset);
@@ -235,7 +235,7 @@ public final class Slice
     Slice(float[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = sizeOfFloatArray(offset);
@@ -253,7 +253,7 @@ public final class Slice
     Slice(double[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
-        checkPositionIndexes(offset, offset + length, base.length);
+        checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
         this.address = sizeOfDoubleArray(offset);
@@ -418,7 +418,7 @@ public final class Slice
      */
     public byte getByte(int index)
     {
-        checkIndexLength(index, SIZE_OF_BYTE);
+        checkFromIndexSize(index, SIZE_OF_BYTE, length());
         return getByteUnchecked(index);
     }
 
@@ -448,7 +448,7 @@ public final class Slice
      */
     public short getShort(int index)
     {
-        checkIndexLength(index, SIZE_OF_SHORT);
+        checkFromIndexSize(index, SIZE_OF_SHORT, length());
         return getShortUnchecked(index);
     }
 
@@ -478,7 +478,7 @@ public final class Slice
      */
     public int getInt(int index)
     {
-        checkIndexLength(index, SIZE_OF_INT);
+        checkFromIndexSize(index, SIZE_OF_INT, length());
         return getIntUnchecked(index);
     }
 
@@ -508,7 +508,7 @@ public final class Slice
      */
     public long getLong(int index)
     {
-        checkIndexLength(index, SIZE_OF_LONG);
+        checkFromIndexSize(index, SIZE_OF_LONG, length());
         return getLongUnchecked(index);
     }
 
@@ -526,7 +526,7 @@ public final class Slice
      */
     public float getFloat(int index)
     {
-        checkIndexLength(index, SIZE_OF_FLOAT);
+        checkFromIndexSize(index, SIZE_OF_FLOAT, length());
         return unsafe.getFloat(base, address + index);
     }
 
@@ -539,7 +539,7 @@ public final class Slice
      */
     public double getDouble(int index)
     {
-        checkIndexLength(index, SIZE_OF_DOUBLE);
+        checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
         return unsafe.getDouble(base, address + index);
     }
 
@@ -600,8 +600,8 @@ public final class Slice
      */
     public void getBytes(int index, byte[] destination, int destinationIndex, int length)
     {
-        checkIndexLength(index, length);
-        checkPositionIndexes(destinationIndex, destinationIndex + length, destination.length);
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(destinationIndex, length, destination.length);
 
         copyMemory(base, address + index, destination, (long) ARRAY_BYTE_BASE_OFFSET + destinationIndex, length);
     }
@@ -642,7 +642,7 @@ public final class Slice
     public void getBytes(int index, OutputStream out, int length)
             throws IOException
     {
-        checkIndexLength(index, length);
+        checkFromIndexSize(index, length, length());
 
         if (hasByteArray()) {
             out.write(byteArray(), byteArrayOffset() + index, length);
@@ -668,7 +668,7 @@ public final class Slice
      */
     public void setByte(int index, int value)
     {
-        checkIndexLength(index, SIZE_OF_BYTE);
+        checkFromIndexSize(index, SIZE_OF_BYTE, length());
         setByteUnchecked(index, value);
     }
 
@@ -687,7 +687,7 @@ public final class Slice
      */
     public void setShort(int index, int value)
     {
-        checkIndexLength(index, SIZE_OF_SHORT);
+        checkFromIndexSize(index, SIZE_OF_SHORT, length());
         setShortUnchecked(index, value);
     }
 
@@ -705,7 +705,7 @@ public final class Slice
      */
     public void setInt(int index, int value)
     {
-        checkIndexLength(index, SIZE_OF_INT);
+        checkFromIndexSize(index, SIZE_OF_INT, length());
         setIntUnchecked(index, value);
     }
 
@@ -723,7 +723,7 @@ public final class Slice
      */
     public void setLong(int index, long value)
     {
-        checkIndexLength(index, SIZE_OF_LONG);
+        checkFromIndexSize(index, SIZE_OF_LONG, length());
         setLongUnchecked(index, value);
     }
 
@@ -741,7 +741,7 @@ public final class Slice
      */
     public void setFloat(int index, float value)
     {
-        checkIndexLength(index, SIZE_OF_FLOAT);
+        checkFromIndexSize(index, SIZE_OF_FLOAT, length());
         unsafe.putFloat(base, address + index, value);
     }
 
@@ -754,7 +754,7 @@ public final class Slice
      */
     public void setDouble(int index, double value)
     {
-        checkIndexLength(index, SIZE_OF_DOUBLE);
+        checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
         unsafe.putDouble(base, address + index, value);
     }
 
@@ -785,8 +785,8 @@ public final class Slice
      */
     public void setBytes(int index, Slice source, int sourceIndex, int length)
     {
-        checkIndexLength(index, length);
-        checkPositionIndexes(sourceIndex, sourceIndex + length, source.length());
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length());
 
         copyMemory(source.base, source.address + sourceIndex, base, address + index, length);
     }
@@ -815,8 +815,8 @@ public final class Slice
      */
     public void setBytes(int index, byte[] source, int sourceIndex, int length)
     {
-        checkIndexLength(index, length);
-        checkPositionIndexes(sourceIndex, sourceIndex + length, source.length);
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length);
         copyMemory(source, (long) ARRAY_BYTE_BASE_OFFSET + sourceIndex, base, address + index, length);
     }
 
@@ -830,7 +830,7 @@ public final class Slice
     public void setBytes(int index, InputStream in, int length)
             throws IOException
     {
-        checkIndexLength(index, length);
+        checkFromIndexSize(index, length, length());
         if (hasByteArray()) {
             byte[] bytes = byteArray();
             int offset = byteArrayOffset() + index;
@@ -867,7 +867,7 @@ public final class Slice
         if ((index == 0) && (length == length())) {
             return this;
         }
-        checkIndexLength(index, length);
+        checkFromIndexSize(index, length, length());
         if (length == 0) {
             return Slices.EMPTY_SLICE;
         }
@@ -1019,8 +1019,8 @@ public final class Slice
             return 0;
         }
 
-        checkIndexLength(offset, length);
-        that.checkIndexLength(otherOffset, otherLength);
+        checkFromIndexSize(offset, length, length());
+        checkFromIndexSize(otherOffset, otherLength, that.length());
 
         long thisAddress = address + offset;
         long thatAddress = that.address + otherOffset;
@@ -1116,8 +1116,8 @@ public final class Slice
             return true;
         }
 
-        checkIndexLength(offset, length);
-        that.checkIndexLength(otherOffset, otherLength);
+        checkFromIndexSize(offset, length, length());
+        checkFromIndexSize(otherOffset, otherLength, that.length());
 
         return equalsUnchecked(offset, that, otherOffset, length);
     }
@@ -1202,7 +1202,7 @@ public final class Slice
 
     public String toStringAscii(int index, int length)
     {
-        checkIndexLength(index, length);
+        checkFromIndexSize(index, length, length());
         if (length == 0) {
             return "";
         }
@@ -1241,7 +1241,7 @@ public final class Slice
 
     public ByteBuffer toByteBuffer(int index, int length)
     {
-        checkIndexLength(index, length);
+        checkFromIndexSize(index, length, length());
 
         if (length() == 0) {
             return EMPTY_BYTE_BUFFER;
@@ -1294,11 +1294,6 @@ public final class Slice
         int bytesToCopy = length - (length % 8);
         unsafe.copyMemory(src, srcAddress, dest, destAddress, bytesToCopy);
         unsafe.copyMemory(src, srcAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
-    }
-
-    private void checkIndexLength(int index, int length)
-    {
-        checkPositionIndexes(index, index + length, length());
     }
 
     private static long fillLong(byte value)

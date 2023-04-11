@@ -17,13 +17,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.Preconditions.checkPositionIndex;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
 import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
 import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
+import static java.util.Objects.checkIndex;
 import static java.util.Objects.requireNonNull;
 
 public final class BasicSliceInput
@@ -54,7 +54,8 @@ public final class BasicSliceInput
     @Override
     public void setPosition(long position)
     {
-        checkPositionIndex(position, slice.length());
+        // allow position to be set to the end of the slice
+        checkIndex(position, slice.length() + 1);
         this.position = (int) position;
     }
 
