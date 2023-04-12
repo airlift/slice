@@ -13,41 +13,21 @@
  */
 package io.airlift.slice;
 
-import java.lang.reflect.ReflectPermission;
-import java.security.Permission;
-
 /**
  * A slice factory for creating unsafe slices
  */
 public class UnsafeSliceFactory
 {
-    /**
-     * The Permission object that is used to check whether a client has
-     * sufficient privilege to defeat Java language access control checks.
-     * This is the same permission used by {@link java.lang.reflect.AccessibleObject}.
-     */
-    private static final Permission ACCESS_PERMISSION = new ReflectPermission("suppressAccessChecks");
-
-    /**
-     * Accessible only to the privileged code.
-     */
     private static final UnsafeSliceFactory INSTANCE = new UnsafeSliceFactory();
 
     /**
      * Get a factory for creating "unsafe" slices that can reference
-     * arbitrary memory addresses. If there is a security manager, its
-     * {@code checkPermission} method is called with a
-     * {@code ReflectPermission("suppressAccessChecks")} permission.
+     * arbitrary memory addresses.
      *
      * @return an unsafe slice factory
      */
     public static UnsafeSliceFactory getInstance()
     {
-        // see setAccessible() in AccessibleObject
-        SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            sm.checkPermission(ACCESS_PERMISSION);
-        }
         return INSTANCE;
     }
 
