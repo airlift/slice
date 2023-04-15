@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,6 +58,7 @@ public class OutputStreamSliceOutput
         this(inputStream, DEFAULT_BUFFER_SIZE);
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public OutputStreamSliceOutput(OutputStream outputStream, int bufferSize)
     {
         checkArgument(bufferSize >= MINIMUM_CHUNK_SIZE, "minimum buffer size of " + MINIMUM_CHUNK_SIZE + " required");

@@ -13,6 +13,8 @@
  */
 package io.airlift.slice;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -238,6 +240,7 @@ public class DynamicSliceOutput
         return copy;
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     @Override
     public Slice getUnderlyingSlice()
     {
