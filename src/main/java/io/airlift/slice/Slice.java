@@ -160,6 +160,7 @@ public final class Slice
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     Slice(boolean[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");

@@ -157,6 +157,7 @@ public final class Slices
     /**
      * Creates a slice over the specified array.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedBooleanArray(boolean... array)
     {
         return wrappedBooleanArray(array, 0, array.length);
@@ -168,6 +169,7 @@ public final class Slices
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedBooleanArray(boolean[] array, int offset, int length)
     {
         if (length == 0) {
