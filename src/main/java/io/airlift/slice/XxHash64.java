@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
 import static java.lang.Long.rotateLeft;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
@@ -182,7 +183,7 @@ public final class XxHash64
 
     public static long hash(long seed, long value)
     {
-        long hash = seed + PRIME64_5 + SizeOf.SIZE_OF_LONG;
+        long hash = seed + PRIME64_5 + SIZE_OF_LONG;
         hash = updateTail(hash, value);
         hash = finalShuffle(hash);
 

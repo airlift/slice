@@ -29,6 +29,9 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.concurrent.TimeUnit;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+
 @State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @Fork(5)
@@ -53,28 +56,28 @@ public class BenchmarkMurmur3Hash32
     @Benchmark
     public int specializedHashInt(SingleLong data, ByteCounter counter)
     {
-        counter.add(SizeOf.SIZE_OF_INT);
+        counter.add(SIZE_OF_INT);
         return Murmur3Hash32.hash((int) data.getValue());
     }
 
     @Benchmark
     public int hashInt(SingleLong data, ByteCounter counter)
     {
-        counter.add(SizeOf.SIZE_OF_INT);
+        counter.add(SIZE_OF_INT);
         return Murmur3Hash32.hash(data.getSlice(), 0, 4);
     }
 
     @Benchmark
     public int specializedHashLong(SingleLong data, ByteCounter counter)
     {
-        counter.add(SizeOf.SIZE_OF_LONG);
+        counter.add(SIZE_OF_LONG);
         return Murmur3Hash32.hash(data.getValue());
     }
 
     @Benchmark
     public int hashLong(SingleLong data, ByteCounter counter)
     {
-        counter.add(SizeOf.SIZE_OF_LONG);
+        counter.add(SIZE_OF_LONG);
         return Murmur3Hash32.hash(data.getSlice(), 0, 8);
     }
 

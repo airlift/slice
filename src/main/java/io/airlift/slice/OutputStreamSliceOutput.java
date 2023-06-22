@@ -23,11 +23,11 @@ import java.io.UncheckedIOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_BYTE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.lang.Math.toIntExact;
 
@@ -319,14 +319,12 @@ public class OutputStreamSliceOutput
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("OutputStreamSliceOutputAdapter{");
-        builder.append("outputStream=").append(outputStream);
-        builder.append("bufferSize=").append(slice.length());
-        builder.append('}');
-        return builder.toString();
+        return "OutputStreamSliceOutputAdapter{" + "outputStream=" + outputStream +
+                "bufferSize=" + slice.length() +
+                '}';
     }
 
-    private void ensureWritableBytes(int minWritableBytes)
+    private void ensureWritableBytes(long minWritableBytes)
     {
         if (bufferPosition + minWritableBytes > slice.length()) {
             flushBufferToOutputStream();

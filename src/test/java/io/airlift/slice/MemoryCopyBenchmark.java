@@ -32,6 +32,8 @@ import sun.misc.Unsafe;
 import java.lang.reflect.Field;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+
 @SuppressWarnings("restriction")
 @BenchmarkMode(Mode.Throughput)
 @Fork(1)
@@ -237,12 +239,12 @@ public class MemoryCopyBenchmark
                 long src = buffers.startOffset;
                 long dest = buffers.destOffset;
                 long offset = BYTE_ARRAY_BASE_OFFSET;
-                while (length >= SizeOf.SIZE_OF_LONG) {
+                while (length >= SIZE_OF_LONG) {
                     long srcLong = unsafe.getLong(base, src + offset);
                     unsafe.putLong(base, dest + offset, srcLong);
 
-                    offset += SizeOf.SIZE_OF_LONG;
-                    length -= SizeOf.SIZE_OF_LONG;
+                    offset += SIZE_OF_LONG;
+                    length -= SIZE_OF_LONG;
                 }
 
                 while (length > 0) {

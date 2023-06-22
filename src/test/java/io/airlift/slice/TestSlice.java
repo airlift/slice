@@ -28,12 +28,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_BYTE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
@@ -44,6 +44,7 @@ import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.floatToIntBits;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.toIntExact;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -206,7 +207,20 @@ public class TestSlice
     @Test
     public void testToString()
     {
+        assertEquals(Slices.copiedBuffer("apple", UTF_8).toString(2, 2, UTF_8), "pl");
         assertEquals(Slices.copiedBuffer("apple", UTF_8).toString(UTF_8), "apple");
+
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < size; index++) {
+                assertToStrings(allocate(size), index);
+            }
+        }
+    }
+
+    @Test
+    public void testToStringAscii()
+    {
+        assertEquals(Slices.copiedBuffer("apple", US_ASCII).toString(1, 3, US_ASCII), "ppl");
 
         for (int size = 0; size < 100; size++) {
             for (int index = 0; index < size; index++) {
@@ -683,7 +697,7 @@ public class TestSlice
 
         byte[] value = new byte[slice.length()];
         Arrays.fill(value, (byte) 0xFF);
-        assertEquals(slice.getBytes(), value);
+        assertTrue(Arrays.equals(slice.getBytes(), value));
 
         // set and get the value
         value = new byte[(slice.length() - index) / 2];
@@ -691,20 +705,20 @@ public class TestSlice
             value[i] = (byte) i;
         }
         slice.setBytes(index, new ByteArrayInputStream(value), value.length);
-        assertEquals(slice.getBytes(index, value.length), value);
+        assertTrue(Arrays.equals(slice.getBytes(index, value.length), value));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         slice.getBytes(index, out, value.length);
-        assertEquals(slice.getBytes(index, value.length), out.toByteArray());
+        assertTrue(Arrays.equals(slice.getBytes(index, value.length), out.toByteArray()));
 
         for (int length = 0; length < value.length; length++) {
             slice.fill((byte) 0xFF);
             slice.setBytes(index, new ByteArrayInputStream(value), length);
-            assertEquals(slice.getBytes(index, length), Arrays.copyOf(value, length));
+            assertTrue(Arrays.equals(slice.getBytes(index, length), Arrays.copyOf(value, length)));
 
             out = new ByteArrayOutputStream();
             slice.getBytes(index, out, length);
-            assertEquals(slice.getBytes(index, length), out.toByteArray());
+            assertTrue(Arrays.equals(slice.getBytes(index, length), out.toByteArray()));
         }
     }
 
@@ -818,9 +832,9 @@ public class TestSlice
 
     public static void assertIndexOf(Slice data, Slice pattern)
     {
-        int index;
+        long index;
 
-        List<Integer> bruteForce = new ArrayList<>();
+        List<Long> bruteForce = new ArrayList<>();
         index = 0;
         while (index >= 0 && index < data.length()) {
             index = data.indexOfBruteForce(pattern, index);
@@ -830,7 +844,7 @@ public class TestSlice
             }
         }
 
-        List<Integer> indexOf = new ArrayList<>();
+        List<Long> indexOf = new ArrayList<>();
         index = 0;
         while (index >= 0 && index < data.length()) {
             index = data.indexOf(pattern, index);

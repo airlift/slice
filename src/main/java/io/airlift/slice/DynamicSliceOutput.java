@@ -19,13 +19,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_BYTE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 
 public class DynamicSliceOutput
@@ -250,11 +250,9 @@ public class DynamicSliceOutput
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("BasicSliceOutput{");
-        builder.append("size=").append(size);
-        builder.append(", capacity=").append(slice.length());
-        builder.append('}');
-        return builder.toString();
+        return "BasicSliceOutput{" + "size=" + size +
+                ", capacity=" + slice.length() +
+                '}';
     }
 
     @Override

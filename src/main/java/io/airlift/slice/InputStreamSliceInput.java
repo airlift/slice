@@ -18,12 +18,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_BYTE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.Preconditions.verify;
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
 
@@ -296,7 +296,7 @@ public final class InputStreamSliceInput
         return bufferFill - bufferPosition;
     }
 
-    private void ensureAvailable(int size)
+    private void ensureAvailable(long size)
     {
         if (bufferPosition + size < bufferFill) {
             return;

@@ -17,19 +17,21 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SegmentScope;
+import java.lang.foreign.SegmentAllocator;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.Slice.createSlice;
+import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
@@ -37,6 +39,8 @@ import static java.util.Objects.requireNonNull;
 
 public final class Slices
 {
+    private static final SegmentAllocator ALLOCATOR = Arena.global();
+
     /**
      * A slice with size {@code 0}.
      */
@@ -50,7 +54,7 @@ public final class Slices
 
     private Slices() {}
 
-    public static Slice ensureSize(Slice existingSlice, int minWritableBytes)
+    public static Slice ensureSize(Slice existingSlice, long minWritableBytes)
     {
         if (existingSlice == null) {
             return allocate(minWritableBytes);
@@ -87,7 +91,7 @@ public final class Slices
     /**
      * Allocates a new byte array backed heap slice with the specified capacity.
      */
-    public static Slice allocate(int capacity)
+    public static Slice allocate(long capacity)
     {
         if (capacity == 0) {
             return EMPTY_SLICE;
@@ -95,13 +99,13 @@ public final class Slices
         if (capacity > MAX_ARRAY_SIZE) {
             throw new SliceTooLargeException(format("Cannot allocate slice larger than %s bytes", MAX_ARRAY_SIZE));
         }
-        return createSlice(MemorySegment.ofArray(new byte[capacity]));
+        return createSlice(MemorySegment.ofArray(new byte[toIntExact(capacity)]));
     }
 
     /**
      * Allocates a new native slice with the specified capacity.
      *
-     * @deprecated Allocate the MemorySegment directly and use {@link #wrap(MemorySegment)}
+     * @deprecated Allocate the MemorySegment directly using global SegmentAllocator and use {@link #wrap(MemorySegment)}
      */
     @Deprecated(forRemoval = true)
     public static Slice allocateDirect(int capacity)
@@ -109,7 +113,7 @@ public final class Slices
         if (capacity == 0) {
             return EMPTY_SLICE;
         }
-        return createSlice(MemorySegment.allocateNative(capacity, SegmentScope.auto()));
+        return createSlice(ALLOCATOR.allocate(capacity));
     }
 
     public static Slice copyOf(Slice slice)
@@ -290,8 +294,7 @@ public final class Slices
 
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
                 FileChannel channel = randomAccessFile.getChannel()) {
-            MemorySegment memorySegment = channel.map(MapMode.READ_ONLY, 0, file.length(), SegmentScope.auto());
-            return wrap(memorySegment);
+            return wrappedBuffer(channel.map(MapMode.READ_ONLY, 0, file.length()));
         }
     }
 }

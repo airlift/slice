@@ -18,12 +18,12 @@ import org.testng.annotations.Test;
 import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_BYTE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.Slices.MAX_ARRAY_SIZE;

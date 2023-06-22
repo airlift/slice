@@ -15,6 +15,9 @@ package io.airlift.slice;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+
 public final class Murmur3Hash32
 {
     private static final int C1 = 0xcc9e2d51;
@@ -37,14 +40,14 @@ public final class Murmur3Hash32
     @SuppressFBWarnings({"SF_SWITCH_NO_DEFAULT", "SF_SWITCH_FALLTHROUGH"})
     public static int hash(int seed, Slice data, int offset, int length)
     {
-        final int fastLimit = offset + length - SizeOf.SIZE_OF_INT + 1;
+        final long fastLimit = offset + length - SIZE_OF_INT + 1;
 
         int h1 = seed;
 
         int current = offset;
         while (current < fastLimit) {
             int k1 = mixK1(data.getInt(current));
-            current += SizeOf.SIZE_OF_INT;
+            current += SIZE_OF_INT;
             h1 = mixH1(h1, k1);
         }
 
@@ -56,7 +59,7 @@ public final class Murmur3Hash32
             case 2:
                 k1 ^= ((int) data.getUnsignedByte(current + 1)) << 8;
             case 1:
-                k1 ^= ((int) data.getUnsignedByte(current + 0)) << 0;
+                k1 ^= data.getUnsignedByte(current);
         }
 
         h1 ^= mixK1(k1);
@@ -72,7 +75,7 @@ public final class Murmur3Hash32
         int k1 = mixK1(input);
         int h1 = mixH1(DEFAULT_SEED, k1);
 
-        return fmix(h1, SizeOf.SIZE_OF_INT);
+        return fmix(h1, SIZE_OF_INT);
     }
 
     /**
@@ -89,7 +92,7 @@ public final class Murmur3Hash32
         k1 = mixK1(high);
         h1 = mixH1(h1, k1);
 
-        return fmix(h1, SizeOf.SIZE_OF_LONG);
+        return fmix(h1, SIZE_OF_LONG);
     }
 
     private static int mixK1(int k1)
@@ -108,7 +111,7 @@ public final class Murmur3Hash32
         return h1;
     }
 
-    private static int fmix(int h1, int length)
+    private static int fmix(int h1, long length)
     {
         h1 ^= length;
         h1 ^= h1 >>> 16;

@@ -17,13 +17,13 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_BYTE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
@@ -88,7 +88,7 @@ public final class ChunkedSliceInput
         return bufferLength - bufferPosition;
     }
 
-    public void ensureAvailable(int size)
+    public void ensureAvailable(long size)
     {
         if (available() >= size) {
             return;
@@ -323,13 +323,11 @@ public final class ChunkedSliceInput
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("SliceStreamInput{");
-        builder.append("globalLength=").append(globalLength);
-        builder.append(", globalPosition=").append(globalPosition);
-        builder.append(", bufferLength=").append(bufferLength);
-        builder.append(", bufferPosition=").append(bufferPosition);
-        builder.append('}');
-        return builder.toString();
+        return "SliceStreamInput{" + "globalLength=" + globalLength +
+                ", globalPosition=" + globalPosition +
+                ", bufferLength=" + bufferLength +
+                ", bufferPosition=" + bufferPosition +
+                '}';
     }
 
     private static void checkBound(long index, long size, String message)

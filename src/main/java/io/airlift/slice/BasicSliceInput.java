@@ -17,11 +17,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
-import static io.airlift.slice.SizeOf.SIZE_OF_FLOAT;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
-import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.util.Objects.checkIndex;
 import static java.util.Objects.requireNonNull;
@@ -251,10 +251,6 @@ public final class BasicSliceInput
     @Override
     public String toString()
     {
-        StringBuilder builder = new StringBuilder("BasicSliceInput{");
-        builder.append("position=").append(position);
-        builder.append(", capacity=").append(slice.length());
-        builder.append('}');
-        return builder.toString();
+        return "BasicSliceInput{" + "position=" + position + ", capacity=" + slice.length() + '}';
     }
 }

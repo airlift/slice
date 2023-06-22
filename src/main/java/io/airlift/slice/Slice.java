@@ -20,26 +20,27 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.ValueLayout;
-import java.lang.foreign.ValueLayout.OfByte;
-import java.lang.foreign.ValueLayout.OfDouble;
-import java.lang.foreign.ValueLayout.OfFloat;
-import java.lang.foreign.ValueLayout.OfInt;
-import java.lang.foreign.ValueLayout.OfLong;
-import java.lang.foreign.ValueLayout.OfShort;
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Optional;
 
+import static io.airlift.slice.MemoryLayout.BYTE;
+import static io.airlift.slice.MemoryLayout.DOUBLE;
+import static io.airlift.slice.MemoryLayout.FLOAT;
+import static io.airlift.slice.MemoryLayout.INT;
+import static io.airlift.slice.MemoryLayout.LONG;
+import static io.airlift.slice.MemoryLayout.SHORT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_DOUBLE;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_FLOAT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_INT;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_SHORT;
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.estimatedSizeOf;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
@@ -47,15 +48,7 @@ import static java.util.Objects.checkFromIndexSize;
 public final class Slice
         implements Comparable<Slice>
 {
-    private static final OfByte BYTE = ValueLayout.JAVA_BYTE.withOrder(LITTLE_ENDIAN);
-    private static final OfShort SHORT = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(LITTLE_ENDIAN);
-    private static final OfInt INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(LITTLE_ENDIAN);
-    private static final OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
-    private static final OfFloat FLOAT = ValueLayout.JAVA_FLOAT_UNALIGNED.withOrder(LITTLE_ENDIAN);
-    private static final OfDouble DOUBLE = ValueLayout.JAVA_DOUBLE_UNALIGNED.withOrder(LITTLE_ENDIAN);
-
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
-
     static final Slice EMPTY_SLICE = new Slice();
 
     private final MemorySegment memory;
@@ -103,13 +96,9 @@ public final class Slice
      */
     private Slice(MemorySegment memory, long retainedSize)
     {
-        if (memory.byteSize() > Integer.MAX_VALUE) {
-            throw new IllegalArgumentException("MemorySegment can not be larger than Integer.MAX_VALUE bytes");
-        }
+        checkArgument(memory.byteSize() <= Integer.MAX_VALUE, "MemorySegment can not be larger than Integer.MAX_VALUE bytes");
+        checkArgument(memory.isNative() || retainedSize >= memory.byteSize(), "Retained size is smaller than the size of the memory segment");
         this.memory = memory;
-        if (!memory.isNative() && retainedSize < memory.byteSize()) {
-            throw new IllegalArgumentException("Retained size is smaller than the size of the memory segment");
-        }
         this.retainedSize = retainedSize;
     }
 
@@ -150,7 +139,7 @@ public final class Slice
      */
     public int length()
     {
-        return (int) memory.byteSize();
+        return toIntExact(memory.byteSize());
     }
 
     /**
@@ -174,7 +163,7 @@ public final class Slice
         if (memory.address() != 0) {
             return false;
         }
-        Optional<Object> arrayReference = memory.array();
+        Optional<Object> arrayReference = memory.heapBase();
         if (arrayReference.isEmpty()) {
             return false;
         }
@@ -184,25 +173,24 @@ public final class Slice
             return elementCount == size;
         }
         if (array instanceof short[]) {
-            return (long) elementCount * SizeOf.SIZE_OF_SHORT == size;
+            return (long) elementCount * SIZE_OF_SHORT == size;
         }
         if (array instanceof int[]) {
-            return (long) elementCount * SizeOf.SIZE_OF_INT == size;
+            return (long) elementCount * SIZE_OF_INT == size;
         }
         if (array instanceof long[]) {
-            return (long) elementCount * SizeOf.SIZE_OF_LONG == size;
+            return (long) elementCount * SIZE_OF_LONG == size;
         }
         if (array instanceof float[]) {
-            return (long) elementCount * SizeOf.SIZE_OF_FLOAT == size;
+            return (long) elementCount * SIZE_OF_FLOAT == size;
         }
         if (array instanceof double[]) {
-            return (long) elementCount * SizeOf.SIZE_OF_DOUBLE == size;
+            return (long) elementCount * SIZE_OF_DOUBLE == size;
         }
         throw new UnsupportedOperationException("Unsupported array type: " + array.getClass().getName());
     }
 
     private void checkHasByteArray()
-            throws UnsupportedOperationException
     {
         if (!hasByteArray()) {
             throw new UnsupportedOperationException("Slice is not backed by a byte array");
@@ -211,8 +199,9 @@ public final class Slice
 
     public boolean hasByteArray()
     {
-        Optional<Object> array = memory.array();
-        return array.isPresent() && array.orElseThrow() instanceof byte[];
+        return memory.heapBase()
+                .map(byte[].class::isInstance)
+                .orElse(false);
     }
 
     /**
@@ -223,10 +212,11 @@ public final class Slice
      * @throws UnsupportedOperationException if this Slice has no underlying byte array
      */
     public byte[] byteArray()
-            throws UnsupportedOperationException
     {
         checkHasByteArray();
-        return (byte[]) memory.array().orElseThrow();
+        return memory.heapBase()
+                .map(byte[].class::cast)
+                .orElseThrow();
     }
 
     /**
@@ -235,11 +225,10 @@ public final class Slice
      *
      * @throws UnsupportedOperationException if this Slice has no underlying byte array
      */
-    public int byteArrayOffset()
-            throws UnsupportedOperationException
+    public long byteArrayOffset()
     {
         checkHasByteArray();
-        return toIntExact(memory.address());
+        return memory.address();
     }
 
     /**
@@ -269,7 +258,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 1} is greater than {@code this.length()}
      */
-    public byte getByte(int index)
+    public byte getByte(long index)
     {
         return memory.get(BYTE, index);
     }
@@ -281,7 +270,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 1} is greater than {@code this.length()}
      */
-    public short getUnsignedByte(int index)
+    public short getUnsignedByte(long index)
     {
         return (short) (getByte(index) & 0xFF);
     }
@@ -293,7 +282,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 2} is greater than {@code this.length()}
      */
-    public short getShort(int index)
+    public short getShort(long index)
     {
         return memory.get(SHORT, index);
     }
@@ -305,7 +294,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 2} is greater than {@code this.length()}
      */
-    public int getUnsignedShort(int index)
+    public int getUnsignedShort(long index)
     {
         return getShort(index) & 0xFFFF;
     }
@@ -317,7 +306,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 4} is greater than {@code this.length()}
      */
-    public int getInt(int index)
+    public int getInt(long index)
     {
         return memory.get(INT, index);
     }
@@ -329,7 +318,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 4} is greater than {@code this.length()}
      */
-    public long getUnsignedInt(int index)
+    public long getUnsignedInt(long index)
     {
         return getInt(index) & 0xFFFFFFFFL;
     }
@@ -341,7 +330,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 8} is greater than {@code this.length()}
      */
-    public long getLong(int index)
+    public long getLong(long index)
     {
         return memory.get(LONG, index);
     }
@@ -353,7 +342,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 4} is greater than {@code this.length()}
      */
-    public float getFloat(int index)
+    public float getFloat(long index)
     {
         return memory.get(FLOAT, index);
     }
@@ -365,7 +354,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 8} is greater than {@code this.length()}
      */
-    public double getDouble(int index)
+    public double getDouble(long index)
     {
         return memory.get(DOUBLE, index);
     }
@@ -377,7 +366,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
      * if {@code index + destination.length()} is greater than {@code this.length()}
      */
-    public void getBytes(int index, Slice destination)
+    public void getBytes(long index, Slice destination)
     {
         getBytes(index, destination, 0, destination.length());
     }
@@ -395,7 +384,7 @@ public final class Slice
      * if {@code destinationIndex + length} is greater than
      * {@code destination.length()}
      */
-    public void getBytes(int index, Slice destination, int destinationIndex, int length)
+    public void getBytes(long index, Slice destination, long destinationIndex, int length)
     {
         destination.setBytes(destinationIndex, this, index, length);
     }
@@ -407,7 +396,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
      * if {@code index + destination.length} is greater than {@code this.length()}
      */
-    public void getBytes(int index, byte[] destination)
+    public void getBytes(long index, byte[] destination)
     {
         getBytes(index, destination, 0, destination.length);
     }
@@ -425,7 +414,7 @@ public final class Slice
      * if {@code destinationIndex + length} is greater than
      * {@code destination.length}
      */
-    public void getBytes(int index, byte[] destination, int destinationIndex, int length)
+    public void getBytes(long index, byte[] destination, int destinationIndex, int length)
     {
         MemorySegment.copy(memory, index, MemorySegment.ofArray(destination), destinationIndex, length);
     }
@@ -446,7 +435,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less then {@code 0},
      * or if the specified {@code index + length} is greater than {@code this.length()}
      */
-    public byte[] getBytes(int index, int length)
+    public byte[] getBytes(long index, int length)
     {
         byte[] bytes = new byte[length];
         getBytes(index, bytes, 0, length);
@@ -463,13 +452,13 @@ public final class Slice
      * {@code this.length()}
      * @throws java.io.IOException if the specified stream threw an exception during I/O
      */
-    public void getBytes(int index, OutputStream out, int length)
+    public void getBytes(long index, OutputStream out, int length)
             throws IOException
     {
         checkFromIndexSize(index, length, length());
 
         if (hasByteArray()) {
-            out.write(byteArray(), byteArrayOffset() + index, length);
+            out.write(byteArray(), toIntExact(byteArrayOffset() + index), length);
             return;
         }
 
@@ -490,7 +479,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 1} is greater than {@code this.length()}
      */
-    public void setByte(int index, int value)
+    public void setByte(long index, int value)
     {
         memory.set(BYTE, index, (byte) value);
     }
@@ -503,7 +492,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 2} is greater than {@code this.length()}
      */
-    public void setShort(int index, int value)
+    public void setShort(long index, int value)
     {
         memory.set(SHORT, index, (short) value);
     }
@@ -515,7 +504,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 4} is greater than {@code this.length()}
      */
-    public void setInt(int index, int value)
+    public void setInt(long index, int value)
     {
         memory.set(INT, index, value);
     }
@@ -527,7 +516,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 8} is greater than {@code this.length()}
      */
-    public void setLong(int index, long value)
+    public void setLong(long index, long value)
     {
         memory.set(LONG, index, value);
     }
@@ -539,7 +528,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 4} is greater than {@code this.length()}
      */
-    public void setFloat(int index, float value)
+    public void setFloat(long index, float value)
     {
         memory.set(FLOAT, index, value);
     }
@@ -551,7 +540,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0} or
      * {@code index + 8} is greater than {@code this.length()}
      */
-    public void setDouble(int index, double value)
+    public void setDouble(long index, double value)
     {
         memory.set(DOUBLE, index, value);
     }
@@ -563,7 +552,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
      * if {@code index + source.length()} is greater than {@code this.length()}
      */
-    public void setBytes(int index, Slice source)
+    public void setBytes(long index, Slice source)
     {
         setBytes(index, source, 0, source.length());
     }
@@ -581,7 +570,7 @@ public final class Slice
      * if {@code sourceIndex + length} is greater than
      * {@code source.length()}
      */
-    public void setBytes(int index, Slice source, int sourceIndex, int length)
+    public void setBytes(long index, Slice source, long sourceIndex, long length)
     {
         MemorySegment.copy(source.memory, sourceIndex, memory, index, length);
     }
@@ -593,7 +582,7 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
      * if {@code index + source.length} is greater than {@code this.length()}
      */
-    public void setBytes(int index, byte[] source)
+    public void setBytes(long index, byte[] source)
     {
         setBytes(index, source, 0, source.length);
     }
@@ -608,7 +597,7 @@ public final class Slice
      * {@code this.length()}, or
      * if {@code sourceIndex + length} is greater than {@code source.length}
      */
-    public void setBytes(int index, byte[] source, int sourceIndex, int length)
+    public void setBytes(long index, byte[] source, int sourceIndex, int length)
     {
         MemorySegment.copy(source, sourceIndex, memory, BYTE, index, length);
     }
@@ -620,12 +609,12 @@ public final class Slice
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
      * if {@code index + source.length} is greater than {@code this.length()}
      */
-    public void setBytes(int index, InputStream in, int length)
+    public void setBytes(long index, InputStream in, int length)
             throws IOException
     {
         checkFromIndexSize(index, length, length());
 
-        Optional<Object> arrayRef = memory.array();
+        Optional<Object> arrayRef = memory.heapBase();
         if (arrayRef.isPresent()) {
             Object array = arrayRef.orElseThrow();
             if (array instanceof byte[]) {
@@ -654,7 +643,7 @@ public final class Slice
      * Returns a slice of this buffer's sub-region. Modifying the content of
      * the returned buffer or this buffer affects each other's content.
      */
-    public Slice slice(int index, int length)
+    public Slice slice(long index, int length)
     {
         if ((index == 0) && (length == length())) {
             return this;
@@ -667,13 +656,13 @@ public final class Slice
         return new Slice(memory.asSlice(index, length), retainedSize);
     }
 
-    public int indexOfByte(int b)
+    public long indexOfByte(int b)
     {
         checkArgument((b >> Byte.SIZE) == 0, "byte value out of range");
         return indexOfByte((byte) b);
     }
 
-    public int indexOfByte(byte b)
+    public long indexOfByte(byte b)
     {
         int size = length();
         for (int i = 0; i < size; i++) {
@@ -689,7 +678,7 @@ public final class Slice
      * If the pattern is not found -1 is returned. If patten is empty, zero is
      * returned.
      */
-    public int indexOf(Slice slice)
+    public long indexOf(Slice slice)
     {
         return indexOf(slice, 0);
     }
@@ -699,7 +688,7 @@ public final class Slice
      * If the pattern is not found -1 is returned. If patten is empty, the offset
      * is returned.
      */
-    public int indexOf(Slice pattern, int offset)
+    public long indexOf(Slice pattern, long offset)
     {
         int size = length();
         if (offset >= size || offset < 0) {
@@ -712,7 +701,7 @@ public final class Slice
         }
 
         // Do we have enough characters
-        if (patternLength < SIZE_OF_INT || size < SIZE_OF_LONG) {
+        if (patternLength < INT.byteSize() || size < LONG.byteSize()) {
             return indexOfBruteForce(pattern, offset);
         }
 
@@ -726,7 +715,7 @@ public final class Slice
         firstByteMask |= firstByteMask << 16;
 
         int lastValidIndex = size - patternLength;
-        int index = offset;
+        long index = offset;
         while (index <= lastValidIndex) {
             // Read four bytes in sequence
             int value = getInt(index);
@@ -738,7 +727,7 @@ public final class Slice
 
             // If valueXor doesn't have any zero byte then there is no match and we can advance
             if (hasZeroBytes == 0) {
-                index += SIZE_OF_INT;
+                index += INT.byteSize();
                 continue;
             }
 
@@ -753,7 +742,7 @@ public final class Slice
         return -1;
     }
 
-    int indexOfBruteForce(Slice pattern, int offset)
+    long indexOfBruteForce(Slice pattern, long offset)
     {
         int size = length();
         if (offset >= size || offset < 0) {
@@ -767,7 +756,7 @@ public final class Slice
 
         byte firstByte = pattern.getByte(0);
         int lastValidIndex = size - patternLength;
-        int index = offset;
+        long index = offset;
         while (true) {
             // seek to first byte match
             while (index < lastValidIndex && getByte(index) != firstByte) {
@@ -820,7 +809,7 @@ public final class Slice
         // for large comparisons, mismatch is faster
         if (compareLength >= 128) {
             // find where the string differ and then check the byte at the difference
-            int mismatch = mismatch(offset, compareLength, that, otherOffset, compareLength);
+            long mismatch = mismatch(offset, compareLength, that, otherOffset, compareLength);
             if (mismatch == -1) {
                 return Integer.compare(length, otherLength);
             }
@@ -911,9 +900,9 @@ public final class Slice
         return mismatch(offset, length, that, otherOffset, otherLength) == -1;
     }
 
-    public int mismatch(int offset, int length, Slice that, int otherOffset, int otherLength)
+    public long mismatch(long offset, long length, Slice that, long otherOffset, long otherLength)
     {
-        return (int) MemorySegment.mismatch(memory, offset, offset + length, that.memory, otherOffset, otherOffset + otherLength);
+        return MemorySegment.mismatch(memory, offset, offset + length, that.memory, otherOffset, otherOffset + otherLength);
     }
 
     /**
@@ -954,7 +943,7 @@ public final class Slice
 
     /**
      * Decodes the contents of this slice into a string using the US_ASCII
-     * character set.  The low order 7 bits if each byte are converted directly
+     * character set. The low order 7 bits if each byte are converted directly
      * into a code point for the string.
      */
     public String toStringAscii()
@@ -962,22 +951,22 @@ public final class Slice
         return toString(US_ASCII);
     }
 
-    public String toStringAscii(int index, int length)
+    public String toStringAscii(long index, int length)
     {
-        return toString(0, length, US_ASCII);
+        return toString(index, length, US_ASCII);
     }
 
     /**
      * Decodes the portion of this slice into a string with the specified
      * character set name.
      */
-    public String toString(int index, int length, Charset charset)
+    public String toString(long index, int length, Charset charset)
     {
         if (length == 0) {
             return "";
         }
         if (hasByteArray()) {
-            return new String(byteArray(), byteArrayOffset() + index, length, charset);
+            return new String(byteArray(), toIntExact(byteArrayOffset() + index), length, charset);
         }
         return new String(getBytes(index, length), charset);
     }
@@ -987,7 +976,7 @@ public final class Slice
         return memory.asByteBuffer();
     }
 
-    public ByteBuffer toByteBuffer(int index, int length)
+    public ByteBuffer toByteBuffer(long index, int length)
     {
         return memory.asSlice(index, length).asByteBuffer();
     }
@@ -995,7 +984,7 @@ public final class Slice
     @Override
     public String toString()
     {
-        return "Slice{memory=" + memory + '}';
+        return "Slice{memory=%s, retainedSize=%d}".formatted(memory, retainedSize);
     }
 
     //

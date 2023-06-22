@@ -23,7 +23,6 @@ import static java.lang.Character.MIN_SUPPLEMENTARY_CODE_POINT;
 import static java.lang.Character.MIN_SURROGATE;
 import static java.lang.Integer.toHexString;
 import static java.util.Objects.checkFromIndexSize;
-import static java.util.Objects.checkIndex;
 
 /**
  * Utility methods for UTF-8 encoded slices.
@@ -275,7 +274,7 @@ public final class SliceUtf8
 
     /**
      * Converts slice to upper case code point by code point.  This method does
-     * not perform perform locale-sensitive, context-sensitive, or one-to-many
+     * not perform locale-sensitive, context-sensitive, or one-to-many
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
      * <p>
@@ -358,7 +357,7 @@ public final class SliceUtf8
             }
             case 6 -> {
                 destination.setInt(destinationPosition, source.getInt(sourcePosition));
-                int value = source.getShort(sourcePosition + 4);
+                short value = source.getShort(sourcePosition + 4);
                 destination.setShort(destinationPosition + 4, value);
             }
             default -> throw new IllegalStateException("Invalid code point length " + length);
@@ -796,9 +795,6 @@ public final class SliceUtf8
      */
     public static int offsetOfCodePoint(Slice utf8, int position, int codePointCount)
     {
-        // allow position to be at the end of the slice
-        checkIndex(position, utf8.length() + 1);
-
         // Quick exit if we are sure that the position is after the end
         if (utf8.length() - position <= codePointCount) {
             return -1;

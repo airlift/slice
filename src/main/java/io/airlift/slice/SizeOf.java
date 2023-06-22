@@ -56,13 +56,6 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 
 public final class SizeOf
 {
-    public static final byte SIZE_OF_BYTE = 1;
-    public static final byte SIZE_OF_SHORT = 2;
-    public static final byte SIZE_OF_INT = 4;
-    public static final byte SIZE_OF_LONG = 8;
-    public static final byte SIZE_OF_FLOAT = 4;
-    public static final byte SIZE_OF_DOUBLE = 8;
-
     public static final int BOOLEAN_INSTANCE_SIZE = instanceSize(Boolean.class);
     public static final int BYTE_INSTANCE_SIZE = instanceSize(Byte.class);
     public static final int SHORT_INSTANCE_SIZE = instanceSize(Short.class);
@@ -228,12 +221,12 @@ public final class SizeOf
 
     public static long estimatedSizeOf(MemorySegment memorySegment)
     {
-        return memorySegment == null ? 0 : MEMORY_SEGMENT_ESTIMATED_SIZE + memorySegment.array().map(SizeOf::sizeOfArray).orElse(0L);
+        return memorySegment == null ? 0 : MEMORY_SEGMENT_ESTIMATED_SIZE + memorySegment.heapBase().map(SizeOf::sizeOfArray).orElse(0L);
     }
 
     public static long estimatedSizeOf(String string)
     {
-        return (string == null) ? 0 : (STRING_INSTANCE_SIZE + string.length() * Character.BYTES);
+        return (string == null) ? 0 : (STRING_INSTANCE_SIZE + (long) string.length() * Character.BYTES);
     }
 
     public static <T> long estimatedSizeOf(List<T> list, ToLongFunction<T> valueSize)

@@ -13,8 +13,9 @@
  */
 package io.airlift.slice;
 
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
 import static java.lang.Long.rotateLeft;
+import static java.lang.Math.toIntExact;
 
 /**
  * Reference implementation: http://burtleburtle.net/bob/hash/spooky.html
@@ -231,7 +232,6 @@ public class SpookyHashV2
         h0 += h3;
         h1 ^= h0;
         h0 = rotateLeft(h0, 63);
-        h1 += h0;
 
         return h0;
     }
@@ -341,7 +341,7 @@ public class SpookyHashV2
         }
 
         int remaining = limit - current;
-        int sequences = remaining / SIZE_OF_LONG;
+        int sequences = toIntExact(remaining / SIZE_OF_LONG);
 
         // handle remaining whole 8-byte sequences
         switch (sequences) {
@@ -399,44 +399,43 @@ public class SpookyHashV2
         }
 
         switch (sequences) {
-            case 11:
+            case 11 -> {
                 h11 += last;
-                break;
-            case 10:
+            }
+            case 10 -> {
                 h10 += last;
-                break;
-            case 9:
+            }
+            case 9 -> {
                 h9 += last;
-                break;
-            case 8:
+            }
+            case 8 -> {
                 h8 += last;
-                break;
-            case 7:
+            }
+            case 7 -> {
                 h7 += last;
-                break;
-            case 6:
+            }
+            case 6 -> {
                 h6 += last;
-                break;
-            case 5:
+            }
+            case 5 -> {
                 h5 += last;
-                break;
-            case 4:
+            }
+            case 4 -> {
                 h4 += last;
-                break;
-            case 3:
+            }
+            case 3 -> {
                 h3 += last;
-                break;
-            case 2:
+            }
+            case 2 -> {
                 h2 += last;
-                break;
-            case 1:
+            }
+            case 1 -> {
                 h1 += last;
-                break;
-            case 0:
+            }
+            case 0 -> {
                 h0 += last;
-                break;
-            default:
-                throw new AssertionError("Unexpected value for sequences: " + sequences);
+            }
+            default -> throw new AssertionError("Unexpected value for sequences: " + sequences);
         }
 
         // Place "remaining" as the value of the last byte of the block
@@ -551,9 +550,7 @@ public class SpookyHashV2
         h10 = rotateLeft(h10, 53);
         h9 += h11;
         h0 ^= h9;
-        h11 = rotateLeft(h11, 42);
         h10 += h0;
-        h1 ^= h10;
         h0 = rotateLeft(h0, 54);
 
         return h0;

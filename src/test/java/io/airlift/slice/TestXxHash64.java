@@ -20,6 +20,7 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.XxHash64.hash;
 import static java.lang.Math.min;
@@ -141,9 +142,9 @@ public class TestXxHash64
     public void testHashLong()
     {
         // Different seed
-        assertNotEquals(hash(42, buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
+        assertNotEquals(hash(42, buffer.getLong(0)), hash(buffer, 0, SIZE_OF_LONG));
         // Matching seed
-        assertEquals(hash(buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
-        assertEquals(hash(42, buffer.getLong(0)), hash(42, buffer, 0, SizeOf.SIZE_OF_LONG));
+        assertEquals(hash(buffer.getLong(0)), hash(buffer, 0, SIZE_OF_LONG));
+        assertEquals(hash(42, buffer.getLong(0)), hash(42, buffer, 0, SIZE_OF_LONG));
     }
 }

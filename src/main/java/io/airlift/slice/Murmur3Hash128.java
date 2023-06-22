@@ -15,6 +15,8 @@ package io.airlift.slice;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import static io.airlift.slice.MemoryLayout.SIZE_OF_LONG;
+
 public final class Murmur3Hash128
 {
     private static final long C1 = 0x87c37b91114253d5L;
@@ -37,7 +39,7 @@ public final class Murmur3Hash128
     @SuppressFBWarnings("SF_SWITCH_NO_DEFAULT")
     public static Slice hash(long seed, Slice data, int offset, int length)
     {
-        final int fastLimit = offset + length - (2 * SizeOf.SIZE_OF_LONG) + 1;
+        final long fastLimit = offset + length - (2L * SIZE_OF_LONG) + 1;
 
         long h1 = seed;
         long h2 = seed;
@@ -45,10 +47,10 @@ public final class Murmur3Hash128
         int current = offset;
         while (current < fastLimit) {
             long k1 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
+            current += SIZE_OF_LONG;
 
             long k2 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
+            current += SIZE_OF_LONG;
 
             k1 *= C1;
             k1 = Long.rotateLeft(k1, 31);
@@ -108,7 +110,7 @@ public final class Murmur3Hash128
             case 2:
                 k1 ^= ((long) data.getUnsignedByte(current + 1)) << 8;
             case 1:
-                k1 ^= ((long) data.getUnsignedByte(current + 0)) << 0;
+                k1 ^= data.getUnsignedByte(current);
 
                 k1 *= C1;
                 k1 = Long.rotateLeft(k1, 31);
@@ -151,7 +153,7 @@ public final class Murmur3Hash128
     @SuppressFBWarnings({"SF_SWITCH_NO_DEFAULT", "SF_SWITCH_FALLTHROUGH"})
     public static long hash64(long seed, Slice data, int offset, int length)
     {
-        final int fastLimit = offset + length - (2 * SizeOf.SIZE_OF_LONG) + 1;
+        final long fastLimit = offset + length - (2L * SIZE_OF_LONG) + 1;
 
         long h1 = seed;
         long h2 = seed;
@@ -159,10 +161,10 @@ public final class Murmur3Hash128
         int current = offset;
         while (current < fastLimit) {
             long k1 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
+            current += SIZE_OF_LONG;
 
             long k2 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
+            current += SIZE_OF_LONG;
 
             k1 *= C1;
             k1 = Long.rotateLeft(k1, 31);
@@ -222,7 +224,7 @@ public final class Murmur3Hash128
             case 2:
                 k1 ^= ((long) data.getUnsignedByte(current + 1)) << 8;
             case 1:
-                k1 ^= ((long) data.getUnsignedByte(current + 0)) << 0;
+                k1 ^= data.getUnsignedByte(current);
 
                 k1 *= C1;
                 k1 = Long.rotateLeft(k1, 31);
@@ -247,7 +249,7 @@ public final class Murmur3Hash128
      */
     public static long hash64(long value)
     {
-        long h2 = DEFAULT_SEED ^ SizeOf.SIZE_OF_LONG;
+        long h2 = DEFAULT_SEED ^ SIZE_OF_LONG;
         long h1 = h2 + (h2 ^ (Long.rotateLeft(value * C1, 31) * C2));
 
         return mix64(h1) + mix64(h1 + h2);
