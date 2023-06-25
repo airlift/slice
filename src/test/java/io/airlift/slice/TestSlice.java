@@ -558,7 +558,7 @@ public class TestSlice
 
         byte[] value = new byte[slice.length()];
         Arrays.fill(value, (byte) 0xFF);
-        assertEquals(slice.getBytes(), value);
+        assertTrue(Arrays.equals(slice.getBytes(), value));
 
         // set and get the value
         value = new byte[(slice.length() - index) / 2];
@@ -566,7 +566,7 @@ public class TestSlice
             value[i] = (byte) i;
         }
         slice.setBytes(index, value);
-        assertEquals(slice.getBytes(index, value.length), value);
+        assertTrue(Arrays.equals(slice.getBytes(index, value.length), value));
 
         for (int length = 0; length < value.length; length++) {
             slice.fill((byte) 0xFF);
@@ -695,16 +695,16 @@ public class TestSlice
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         slice.getBytes(index, out, value.length);
-        assertEquals(slice.getBytes(index, value.length), out.toByteArray());
+        assertTrue(Arrays.equals(slice.getBytes(index, value.length), out.toByteArray()));
 
         for (int length = 0; length < value.length; length++) {
             slice.fill((byte) 0xFF);
             slice.setBytes(index, new ByteArrayInputStream(value), length);
-            assertEquals(slice.getBytes(index, length), Arrays.copyOf(value, length));
+            assertTrue(Arrays.equals(slice.getBytes(index, length), Arrays.copyOf(value, length)));
 
             out = new ByteArrayOutputStream();
             slice.getBytes(index, out, length);
-            assertEquals(slice.getBytes(index, length), out.toByteArray());
+            assertTrue(Arrays.equals(slice.getBytes(index, length), out.toByteArray()));
         }
     }
 
