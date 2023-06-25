@@ -174,7 +174,7 @@ public final class Slice
         if (memory.address() != 0) {
             return false;
         }
-        Optional<Object> arrayReference = memory.array();
+        Optional<Object> arrayReference = memory.heapBase();
         if (arrayReference.isEmpty()) {
             return false;
         }
@@ -211,7 +211,7 @@ public final class Slice
 
     public boolean hasByteArray()
     {
-        Optional<Object> array = memory.array();
+        Optional<Object> array = memory.heapBase();
         return array.isPresent() && array.orElseThrow() instanceof byte[];
     }
 
@@ -226,7 +226,7 @@ public final class Slice
             throws UnsupportedOperationException
     {
         checkHasByteArray();
-        return (byte[]) memory.array().orElseThrow();
+        return (byte[]) memory.heapBase().orElseThrow();
     }
 
     /**
@@ -625,7 +625,7 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
 
-        Optional<Object> arrayRef = memory.array();
+        Optional<Object> arrayRef = memory.heapBase();
         if (arrayRef.isPresent()) {
             Object array = arrayRef.orElseThrow();
             if (array instanceof byte[]) {

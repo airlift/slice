@@ -17,9 +17,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
-import java.lang.foreign.SegmentScope;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.Charset;
@@ -37,6 +38,8 @@ import static java.util.Objects.requireNonNull;
 
 public final class Slices
 {
+    private static final Arena GLOBAL_ARENA = Arena.ofAuto();
+
     /**
      * A slice with size {@code 0}.
      */
@@ -109,7 +112,7 @@ public final class Slices
         if (capacity == 0) {
             return EMPTY_SLICE;
         }
-        return createSlice(MemorySegment.allocateNative(capacity, SegmentScope.auto()));
+        return createSlice(GLOBAL_ARENA.allocate(capacity));
     }
 
     public static Slice copyOf(Slice slice)
@@ -290,8 +293,8 @@ public final class Slices
 
         try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
                 FileChannel channel = randomAccessFile.getChannel()) {
-            MemorySegment memorySegment = channel.map(MapMode.READ_ONLY, 0, file.length(), SegmentScope.auto());
-            return wrap(memorySegment);
+            MappedByteBuffer memorySegment = channel.map(MapMode.READ_ONLY, 0, file.length());
+            return wrappedBuffer(memorySegment);
         }
     }
 }

@@ -228,7 +228,7 @@ public final class SizeOf
 
     public static long estimatedSizeOf(MemorySegment memorySegment)
     {
-        return memorySegment == null ? 0 : MEMORY_SEGMENT_ESTIMATED_SIZE + memorySegment.array().map(SizeOf::sizeOfArray).orElse(0L);
+        return memorySegment == null ? 0 : MEMORY_SEGMENT_ESTIMATED_SIZE + memorySegment.heapBase().map(SizeOf::sizeOfArray).orElse(0L);
     }
 
     public static long estimatedSizeOf(String string)
