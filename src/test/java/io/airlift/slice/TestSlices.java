@@ -25,6 +25,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.MAX_ARRAY_SIZE;
 import static io.airlift.slice.Slices.SLICE_ALLOC_THRESHOLD;
 import static io.airlift.slice.Slices.SLICE_ALLOW_SKEW;
@@ -45,6 +46,15 @@ import static org.testng.Assert.assertTrue;
 
 public class TestSlices
 {
+    @Test
+    public void testEmptySlice()
+    {
+        assertEquals(EMPTY_SLICE.length(), 0);
+        assertTrue(EMPTY_SLICE.hasByteArray());
+        assertEquals(EMPTY_SLICE.byteArray().length, 0);
+        assertEquals(EMPTY_SLICE.byteArrayOffset(), 0);
+    }
+
     @Test
     public void testWrapDirectBuffer()
     {
