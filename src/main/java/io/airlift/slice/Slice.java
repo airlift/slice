@@ -64,7 +64,7 @@ public final class Slice
         implements Comparable<Slice>
 {
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
-    private static final Object COMPACT = new byte[0];
+    private static final byte[] COMPACT = new byte[0];
     private static final Object NOT_COMPACT = null;
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
@@ -121,8 +121,8 @@ public final class Slice
      */
     Slice()
     {
-        this.base = null;
-        this.address = 0;
+        this.base = COMPACT;
+        this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = 0;
         this.retainedSize = INSTANCE_SIZE;
         this.reference = COMPACT;
