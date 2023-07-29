@@ -189,6 +189,106 @@ public abstract class SliceOutput
     public abstract void writeBytes(byte[] source, int sourceIndex, int length);
 
     /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred shorts.
+     */
+    public void writeShorts(short[] source)
+    {
+        writeShorts(source, 0, source.length);
+    }
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred shorts.
+     *
+     * @param sourceIndex the first index of the source
+     * @param length the number of shorts to transfer
+     */
+    public abstract void writeShorts(short[] source, int sourceIndex, int length);
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred ints.
+     */
+    public void writeInts(int[] source)
+    {
+        writeInts(source, 0, source.length);
+    }
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred ints.
+     *
+     * @param sourceIndex the first index of the source
+     * @param length the number of ints to transfer
+     */
+    public abstract void writeInts(int[] source, int sourceIndex, int length);
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred longs.
+     */
+    public void writeLongs(long[] source)
+    {
+        writeLongs(source, 0, source.length);
+    }
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred longs.
+     *
+     * @param sourceIndex the first index of the source
+     * @param length the number of longs to transfer
+     */
+    public abstract void writeLongs(long[] source, int sourceIndex, int length);
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred floats.
+     */
+    public void writeFloats(float[] source)
+    {
+        writeFloats(source, 0, source.length);
+    }
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred floats.
+     *
+     * @param sourceIndex the first index of the source
+     * @param length the number of floats to transfer
+     */
+    public abstract void writeFloats(float[] source, int sourceIndex, int length);
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred doubles.
+     */
+    public void writeDoubles(double[] source)
+    {
+        writeDoubles(source, 0, source.length);
+    }
+
+    /**
+     * Transfers the specified source array's data to this buffer starting at
+     * the current {@code writerIndex} and increases the {@code writerIndex}
+     * by the number of the transferred doubles.
+     *
+     * @param sourceIndex the first index of the source
+     * @param length the number of doubles to transfer
+     */
+    public abstract void writeDoubles(double[] source, int sourceIndex, int length);
+
+    /**
      * Transfers the content of the specified stream to this buffer
      * starting at the current {@code writerIndex} and increases the
      * {@code writerIndex} by the number of the transferred bytes.
@@ -276,6 +376,66 @@ public abstract class SliceOutput
     public abstract SliceOutput appendBytes(byte[] source, int sourceIndex, int length);
 
     public abstract SliceOutput appendBytes(byte[] source);
+
+    public SliceOutput appendShorts(short[] source)
+    {
+        writeShorts(source);
+        return this;
+    }
+
+    public SliceOutput appendShorts(short[] source, int sourceIndex, int length)
+    {
+        writeShorts(source, sourceIndex, length);
+        return this;
+    }
+
+    public SliceOutput appendInts(int[] source)
+    {
+        writeInts(source);
+        return this;
+    }
+
+    public SliceOutput appendInts(int[] source, int sourceIndex, int length)
+    {
+        writeInts(source, sourceIndex, length);
+        return this;
+    }
+
+    public SliceOutput appendLongs(long[] source)
+    {
+        writeLongs(source);
+        return this;
+    }
+
+    public SliceOutput appendLongs(long[] source, int sourceIndex, int length)
+    {
+        writeLongs(source, sourceIndex, length);
+        return this;
+    }
+
+    public SliceOutput appendFloats(float[] source)
+    {
+        writeFloats(source);
+        return this;
+    }
+
+    public SliceOutput appendFloats(float[] source, int sourceIndex, int length)
+    {
+        writeFloats(source, sourceIndex, length);
+        return this;
+    }
+
+    public SliceOutput appendDoubles(double[] source)
+    {
+        writeDoubles(source);
+        return this;
+    }
+
+    public SliceOutput appendDoubles(double[] source, int sourceIndex, int length)
+    {
+        writeDoubles(source, sourceIndex, length);
+        return this;
+    }
 
     public abstract SliceOutput appendBytes(Slice slice);
 

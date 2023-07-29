@@ -245,6 +245,141 @@ public abstract class AbstractSliceInputTest
     }
 
     @Test
+    public void testReadShorts()
+    {
+        testSliceInput(new SliceInputTester(SIZE_OF_SHORT * 17)
+        {
+            @Override
+            public void loadValue(SliceOutput output, int valueIndex)
+            {
+                short[] shorts = new short[23];
+                for (int i = 0; i < shorts.length; i++) {
+                    shorts[i] = (short) (i * 37 + valueIndex);
+                }
+                output.writeShorts(shorts, 3, 17);
+            }
+
+            @Override
+            public void verifyValue(SliceInput input, int valueIndex)
+            {
+                short[] shorts = new short[27];
+                input.readShorts(shorts, 5, 17);
+                for (int i = 0; i < 17; i++) {
+                    assertEquals(shorts[i + 5], (short) ((i + 3) * 37 + valueIndex));
+                }
+            }
+        });
+    }
+
+    @Test
+    public void testReadInts()
+    {
+        testSliceInput(new SliceInputTester(SIZE_OF_INT * 17)
+        {
+            @Override
+            public void loadValue(SliceOutput output, int valueIndex)
+            {
+                int[] ints = new int[23];
+                for (int i = 0; i < ints.length; i++) {
+                    ints[i] = (int) (i * 37 + valueIndex);
+                }
+                output.writeInts(ints, 3, 17);
+            }
+
+            @Override
+            public void verifyValue(SliceInput input, int valueIndex)
+            {
+                int[] ints = new int[27];
+                input.readInts(ints, 5, 17);
+                for (int i = 0; i < 17; i++) {
+                    assertEquals(ints[i + 5], (int) ((i + 3) * 37 + valueIndex));
+                }
+            }
+        });
+    }
+
+    @Test
+    public void testReadLongs()
+    {
+        testSliceInput(new SliceInputTester(SIZE_OF_LONG * 17)
+        {
+            @Override
+            public void loadValue(SliceOutput output, int valueIndex)
+            {
+                long[] longs = new long[23];
+                for (int i = 0; i < longs.length; i++) {
+                    longs[i] = (long) (i * 37 + valueIndex);
+                }
+                output.writeLongs(longs, 3, 17);
+            }
+
+            @Override
+            public void verifyValue(SliceInput input, int valueIndex)
+            {
+                long[] longs = new long[27];
+                input.readLongs(longs, 5, 17);
+                for (int i = 0; i < 17; i++) {
+                    assertEquals(longs[i + 5], (long) ((i + 3) * 37 + valueIndex));
+                }
+            }
+        });
+    }
+
+    @Test
+    public void testReadFloats()
+    {
+        testSliceInput(new SliceInputTester(SIZE_OF_FLOAT * 17)
+        {
+            @Override
+            public void loadValue(SliceOutput output, int valueIndex)
+            {
+                float[] floats = new float[23];
+                for (int i = 0; i < floats.length; i++) {
+                    floats[i] = (float) (i * 37 + valueIndex);
+                }
+                output.writeFloats(floats, 3, 17);
+            }
+
+            @Override
+            public void verifyValue(SliceInput input, int valueIndex)
+            {
+                float[] floats = new float[27];
+                input.readFloats(floats, 5, 17);
+                for (int i = 0; i < 17; i++) {
+                    assertEquals(floats[i + 5], (float) ((i + 3) * 37 + valueIndex));
+                }
+            }
+        });
+    }
+
+    @Test
+    public void testReadDoubles()
+    {
+        testSliceInput(new SliceInputTester(SIZE_OF_DOUBLE * 17)
+        {
+            @Override
+            public void loadValue(SliceOutput output, int valueIndex)
+            {
+                double[] doubles = new double[23];
+                for (int i = 0; i < doubles.length; i++) {
+                    doubles[i] = (double) (i * 37 + valueIndex);
+                }
+                output.writeDoubles(doubles, 3, 17);
+            }
+
+            @Override
+            public void verifyValue(SliceInput input, int valueIndex)
+            {
+                double[] doubles = new double[27];
+                input.readDoubles(doubles, 5, 17);
+                for (int i = 0; i < 17; i++) {
+                    assertEquals(doubles[i + 5], (double) ((i + 3) * 37 + valueIndex));
+                }
+            }
+        });
+    }
+
+    @Test
     public void testSkip()
     {
         for (int readSize : VARIABLE_READ_SIZES) {

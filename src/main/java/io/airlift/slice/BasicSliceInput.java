@@ -202,6 +202,41 @@ public final class BasicSliceInput
     }
 
     @Override
+    public void readShorts(short[] destination, int destinationIndex, int length)
+    {
+        slice.getShorts(position, destination, destinationIndex, length);
+        position += length * Short.BYTES;
+    }
+
+    @Override
+    public void readInts(int[] destination, int destinationIndex, int length)
+    {
+        slice.getInts(position, destination, destinationIndex, length);
+        position += length * Integer.BYTES;
+    }
+
+    @Override
+    public void readLongs(long[] destination, int destinationIndex, int length)
+    {
+        slice.getLongs(position, destination, destinationIndex, length);
+        position += length * Long.BYTES;
+    }
+
+    @Override
+    public void readFloats(float[] destination, int destinationIndex, int length)
+    {
+        slice.getFloats(position, destination, destinationIndex, length);
+        position += length * Float.BYTES;
+    }
+
+    @Override
+    public void readDoubles(double[] destination, int destinationIndex, int length)
+    {
+        slice.getDoubles(position, destination, destinationIndex, length);
+        position += length * Double.BYTES;
+    }
+
+    @Override
     public long skip(long length)
     {
         length = Math.min(length, available());

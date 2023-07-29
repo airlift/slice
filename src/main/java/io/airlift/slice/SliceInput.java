@@ -206,6 +206,131 @@ public abstract class SliceInput
 
     /**
      * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred shorts (= {@code dst.length}).
+     *
+     * @throws IndexOutOfBoundsException if {@code dst.length} is greater than {@code this.available()}
+     */
+    public final void readShorts(short[] destination)
+    {
+        readShorts(destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred shorts (= {@code length}).
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of shorts to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code length} is greater than {@code this.available()}, or
+     * if {@code destinationIndex + length} is greater than {@code destination.length}
+     */
+    public abstract void readShorts(short[] destination, int destinationIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred ints (= {@code dst.length}).
+     *
+     * @throws IndexOutOfBoundsException if {@code dst.length} is greater than {@code this.available()}
+     */
+    public final void readInts(int[] destination)
+    {
+        readInts(destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred ints (= {@code length}).
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of ints to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code length} is greater than {@code this.available()}, or
+     * if {@code destinationIndex + length} is greater than {@code destination.length}
+     */
+    public abstract void readInts(int[] destination, int destinationIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred longs (= {@code dst.length}).
+     *
+     * @throws IndexOutOfBoundsException if {@code dst.length} is greater than {@code this.available()}
+     */
+    public final void readLongs(long[] destination)
+    {
+        readLongs(destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred longs (= {@code length}).
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of longs to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code length} is greater than {@code this.available()}, or
+     * if {@code destinationIndex + length} is greater than {@code destination.length}
+     */
+    public abstract void readLongs(long[] destination, int destinationIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred floats (= {@code dst.length}).
+     *
+     * @throws IndexOutOfBoundsException if {@code dst.length} is greater than {@code this.available()}
+     */
+    public final void readFloats(float[] destination)
+    {
+        readFloats(destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred floats (= {@code length}).
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of floats to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code length} is greater than {@code this.available()}, or
+     * if {@code destinationIndex + length} is greater than {@code destination.length}
+     */
+    public abstract void readFloats(float[] destination, int destinationIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred doubles (= {@code dst.length}).
+     *
+     * @throws IndexOutOfBoundsException if {@code dst.length} is greater than {@code this.available()}
+     */
+    public final void readDoubles(double[] destination)
+    {
+        readDoubles(destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
+     * the current {@code position} and increases the {@code position}
+     * by the number of the transferred doubles (= {@code length}).
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of doubles to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code length} is greater than {@code this.available()}, or
+     * if {@code destinationIndex + length} is greater than {@code destination.length}
+     */
+    public abstract void readDoubles(double[] destination, int destinationIndex, int length);
+
+    /**
+     * Transfers this buffer's data to the specified destination starting at
      * the current {@code position} until the destination becomes
      * non-writable, and increases the {@code position} by the number of the
      * transferred bytes.  This method is basically same with
