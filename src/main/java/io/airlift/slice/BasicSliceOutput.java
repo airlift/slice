@@ -136,6 +136,41 @@ public class BasicSliceOutput
     }
 
     @Override
+    public void writeShorts(short[] source, int sourceIndex, int length)
+    {
+        slice.setShorts(size, source, sourceIndex, length);
+        size += length * Short.BYTES;
+    }
+
+    @Override
+    public void writeInts(int[] source, int sourceIndex, int length)
+    {
+        slice.setInts(size, source, sourceIndex, length);
+        size += length * Integer.BYTES;
+    }
+
+    @Override
+    public void writeLongs(long[] source, int sourceIndex, int length)
+    {
+        slice.setLongs(size, source, sourceIndex, length);
+        size += length * Long.BYTES;
+    }
+
+    @Override
+    public void writeFloats(float[] source, int sourceIndex, int length)
+    {
+        slice.setFloats(size, source, sourceIndex, length);
+        size += length * Float.BYTES;
+    }
+
+    @Override
+    public void writeDoubles(double[] source, int sourceIndex, int length)
+    {
+        slice.setDoubles(size, source, sourceIndex, length);
+        size += length * Double.BYTES;
+    }
+
+    @Override
     public void writeBytes(Slice source)
     {
         writeBytes(source, 0, source.length());

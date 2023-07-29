@@ -233,6 +233,81 @@ public final class InputStreamSliceInput
     }
 
     @Override
+    public void readShorts(short[] destination, int destinationIndex, int length)
+    {
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length * Short.BYTES) / Short.BYTES;
+            slice.getShorts(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch * Short.BYTES;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length * Short.BYTES, MINIMUM_CHUNK_SIZE));
+        }
+    }
+
+    @Override
+    public void readInts(int[] destination, int destinationIndex, int length)
+    {
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length * Integer.BYTES) / Integer.BYTES;
+            slice.getInts(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch * Integer.BYTES;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length * Integer.BYTES, MINIMUM_CHUNK_SIZE));
+        }
+    }
+
+    @Override
+    public void readLongs(long[] destination, int destinationIndex, int length)
+    {
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length * Long.BYTES) / Long.BYTES;
+            slice.getLongs(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch * Long.BYTES;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length * Long.BYTES, MINIMUM_CHUNK_SIZE));
+        }
+    }
+
+    @Override
+    public void readFloats(float[] destination, int destinationIndex, int length)
+    {
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length * Float.BYTES) / Float.BYTES;
+            slice.getFloats(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch * Float.BYTES;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length * Float.BYTES, MINIMUM_CHUNK_SIZE));
+        }
+    }
+
+    @Override
+    public void readDoubles(double[] destination, int destinationIndex, int length)
+    {
+        while (length > 0) {
+            int batch = Math.min(availableBytes(), length * Double.BYTES) / Double.BYTES;
+            slice.getDoubles(bufferPosition, destination, destinationIndex, batch);
+
+            bufferPosition += batch * Double.BYTES;
+            destinationIndex += batch;
+            length -= batch;
+
+            ensureAvailable(Math.min(length * Double.BYTES, MINIMUM_CHUNK_SIZE));
+        }
+    }
+
+    @Override
     public Slice readSlice(int length)
     {
         if (length == 0) {

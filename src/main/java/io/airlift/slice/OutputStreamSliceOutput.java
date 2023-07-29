@@ -218,6 +218,66 @@ public class OutputStreamSliceOutput
     }
 
     @Override
+    public void writeShorts(short[] source, int sourceIndex, int length)
+    {
+        while (length > 0) {
+            int batch = ensureBatchSize(length * Short.BYTES) / Short.BYTES;
+            slice.setShorts(bufferPosition, source, sourceIndex, batch);
+            bufferPosition += batch * Short.BYTES;
+            sourceIndex += batch;
+            length -= batch;
+        }
+    }
+
+    @Override
+    public void writeInts(int[] source, int sourceIndex, int length)
+    {
+        while (length > 0) {
+            int batch = ensureBatchSize(length * Integer.BYTES) / Integer.BYTES;
+            slice.setInts(bufferPosition, source, sourceIndex, batch);
+            bufferPosition += batch * Integer.BYTES;
+            sourceIndex += batch;
+            length -= batch;
+        }
+    }
+
+    @Override
+    public void writeLongs(long[] source, int sourceIndex, int length)
+    {
+        while (length > 0) {
+            int batch = ensureBatchSize(length * Long.BYTES) / Long.BYTES;
+            slice.setLongs(bufferPosition, source, sourceIndex, batch);
+            bufferPosition += batch * Long.BYTES;
+            sourceIndex += batch;
+            length -= batch;
+        }
+    }
+
+    @Override
+    public void writeFloats(float[] source, int sourceIndex, int length)
+    {
+        while (length > 0) {
+            int batch = ensureBatchSize(length * Float.BYTES) / Float.BYTES;
+            slice.setFloats(bufferPosition, source, sourceIndex, batch);
+            bufferPosition += batch * Float.BYTES;
+            sourceIndex += batch;
+            length -= batch;
+        }
+    }
+
+    @Override
+    public void writeDoubles(double[] source, int sourceIndex, int length)
+    {
+        while (length > 0) {
+            int batch = ensureBatchSize(length * Double.BYTES) / Double.BYTES;
+            slice.setDoubles(bufferPosition, source, sourceIndex, batch);
+            bufferPosition += batch * Double.BYTES;
+            sourceIndex += batch;
+            length -= batch;
+        }
+    }
+
+    @Override
     public void writeBytes(InputStream in, int length)
             throws IOException
     {

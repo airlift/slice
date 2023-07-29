@@ -277,6 +277,91 @@ public final class ChunkedSliceInput
     }
 
     @Override
+    public void readShorts(short[] destination, int destinationIndex, int length)
+    {
+        checkBound(position() + ((long) length * Short.BYTES), globalLength, "End of stream");
+
+        while (length > 0) {
+            int shortsToRead = min(available() / Short.BYTES, length);
+            buffer.getShorts(bufferPosition, destination, destinationIndex, shortsToRead);
+
+            bufferPosition += shortsToRead * Short.BYTES;
+            length -= shortsToRead;
+            destinationIndex += shortsToRead;
+
+            ensureAvailable(min(length * Short.BYTES, buffer.length()));
+        }
+    }
+
+    @Override
+    public void readInts(int[] destination, int destinationIndex, int length)
+    {
+        checkBound(position() + ((long) length * Integer.BYTES), globalLength, "End of stream");
+
+        while (length > 0) {
+            int intsToRead = min(available() / Integer.BYTES, length);
+            buffer.getInts(bufferPosition, destination, destinationIndex, intsToRead);
+
+            bufferPosition += intsToRead * Integer.BYTES;
+            length -= intsToRead;
+            destinationIndex += intsToRead;
+
+            ensureAvailable(min(length * Integer.BYTES, buffer.length()));
+        }
+    }
+
+    @Override
+    public void readLongs(long[] destination, int destinationIndex, int length)
+    {
+        checkBound(position() + ((long) length * Long.BYTES), globalLength, "End of stream");
+
+        while (length > 0) {
+            int longsToRead = min(available() / Long.BYTES, length);
+            buffer.getLongs(bufferPosition, destination, destinationIndex, longsToRead);
+
+            bufferPosition += longsToRead * Long.BYTES;
+            length -= longsToRead;
+            destinationIndex += longsToRead;
+
+            ensureAvailable(min(length * Long.BYTES, buffer.length()));
+        }
+    }
+
+    @Override
+    public void readFloats(float[] destination, int destinationIndex, int length)
+    {
+        checkBound(position() + ((long) length * Float.BYTES), globalLength, "End of stream");
+
+        while (length > 0) {
+            int floatsToRead = min(available() / Float.BYTES, length);
+            buffer.getFloats(bufferPosition, destination, destinationIndex, floatsToRead);
+
+            bufferPosition += floatsToRead * Float.BYTES;
+            length -= floatsToRead;
+            destinationIndex += floatsToRead;
+
+            ensureAvailable(min(length * Float.BYTES, buffer.length()));
+        }
+    }
+
+    @Override
+    public void readDoubles(double[] destination, int destinationIndex, int length)
+    {
+        checkBound(position() + ((long) length * Double.BYTES), globalLength, "End of stream");
+
+        while (length > 0) {
+            int doublesToRead = min(available() / Double.BYTES, length);
+            buffer.getDoubles(bufferPosition, destination, destinationIndex, doublesToRead);
+
+            bufferPosition += doublesToRead * Double.BYTES;
+            length -= doublesToRead;
+            destinationIndex += doublesToRead;
+
+            ensureAvailable(min(length * Double.BYTES, buffer.length()));
+        }
+    }
+
+    @Override
     public long skip(long length)
     {
         // is skip within the current buffer?
