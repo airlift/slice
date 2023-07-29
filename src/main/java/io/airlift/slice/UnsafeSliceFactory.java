@@ -16,6 +16,7 @@ package io.airlift.slice;
 /**
  * A slice factory for creating unsafe slices
  */
+@Deprecated(forRemoval = true)
 public class UnsafeSliceFactory
 {
     private static final UnsafeSliceFactory INSTANCE = new UnsafeSliceFactory();

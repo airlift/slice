@@ -89,6 +89,7 @@ public final class Slices
         return new Slice(new byte[capacity]);
     }
 
+    @Deprecated(forRemoval = true)
     public static Slice allocateDirect(int capacity)
     {
         if (capacity == 0) {
@@ -115,6 +116,7 @@ public final class Slices
     /**
      * Wrap the visible portion of a {@link java.nio.ByteBuffer}.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedBuffer(ByteBuffer buffer)
     {
         if (buffer.isDirect()) {
@@ -186,6 +188,7 @@ public final class Slices
     /**
      * Creates a slice over the specified array.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedShortArray(short... array)
     {
         return wrappedShortArray(array, 0, array.length);
@@ -197,6 +200,7 @@ public final class Slices
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedShortArray(short[] array, int offset, int length)
     {
         if (length == 0) {
@@ -208,6 +212,7 @@ public final class Slices
     /**
      * Creates a slice over the specified array.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedIntArray(int... array)
     {
         return wrappedIntArray(array, 0, array.length);
@@ -219,6 +224,7 @@ public final class Slices
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedIntArray(int[] array, int offset, int length)
     {
         if (length == 0) {
@@ -230,6 +236,7 @@ public final class Slices
     /**
      * Creates a slice over the specified array.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedLongArray(long... array)
     {
         return wrappedLongArray(array, 0, array.length);
@@ -241,6 +248,7 @@ public final class Slices
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedLongArray(long[] array, int offset, int length)
     {
         if (length == 0) {
@@ -252,6 +260,7 @@ public final class Slices
     /**
      * Creates a slice over the specified array.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedFloatArray(float... array)
     {
         return wrappedFloatArray(array, 0, array.length);
@@ -263,6 +272,7 @@ public final class Slices
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedFloatArray(float[] array, int offset, int length)
     {
         if (length == 0) {
@@ -274,6 +284,7 @@ public final class Slices
     /**
      * Creates a slice over the specified array.
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedDoubleArray(double... array)
     {
         return wrappedDoubleArray(array, 0, array.length);
@@ -285,6 +296,7 @@ public final class Slices
      * @param offset the array position at which the slice begins
      * @param length the number of array positions to include in the slice
      */
+    @Deprecated(forRemoval = true)
     public static Slice wrappedDoubleArray(double[] array, int offset, int length)
     {
         if (length == 0) {
@@ -306,6 +318,7 @@ public final class Slices
         return copiedBuffer(string, UTF_8);
     }
 
+    @Deprecated(forRemoval = true)
     public static Slice mapFileReadOnly(File file)
             throws IOException
     {
