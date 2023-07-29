@@ -49,10 +49,15 @@ import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
+import static sun.misc.Unsafe.ARRAY_DOUBLE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_FLOAT_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_FLOAT_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_INT_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_INT_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_LONG_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_LONG_INDEX_SCALE;
+import static sun.misc.Unsafe.ARRAY_SHORT_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 
 public final class Slice
@@ -661,6 +666,246 @@ public final class Slice
     }
 
     /**
+     * Returns a copy of this buffer as a short array.
+     *
+     * @param index the absolute index to start at
+     * @param length the number of shorts to return
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less then {@code 0},
+     * or if the specified {@code index + length} is greater than {@code this.length()}
+     */
+    public short[] getShorts(int index, int length)
+    {
+        short[] shorts = new short[length];
+        getShorts(index, shorts, 0, length);
+        return shorts;
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + destination.length} is greater than {@code this.length()}
+     */
+    public void getShorts(int index, short[] destination)
+    {
+        getShorts(index, destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of shorts to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code destinationIndex + length} is greater than
+     * {@code destination.length}
+     */
+    public void getShorts(int index, short[] destination, int destinationIndex, int length)
+    {
+        checkFromIndexSize(index, length * Short.BYTES, length());
+        checkFromIndexSize(destinationIndex, length, destination.length);
+
+        copyMemory(base, address + index, destination, ARRAY_SHORT_BASE_OFFSET + ((long) destinationIndex * Short.BYTES), length * Short.BYTES);
+    }
+
+    /**
+     * Returns a copy of this buffer as a int array.
+     *
+     * @param index the absolute index to start at
+     * @param length the number of ints to return
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less then {@code 0},
+     * or if the specified {@code index + length} is greater than {@code this.length()}
+     */
+    public int[] getInts(int index, int length)
+    {
+        int[] ints = new int[length];
+        getInts(index, ints, 0, length);
+        return ints;
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + destination.length} is greater than {@code this.length()}
+     */
+    public void getInts(int index, int[] destination)
+    {
+        getInts(index, destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of ints to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code destinationIndex + length} is greater than
+     * {@code destination.length}
+     */
+    public void getInts(int index, int[] destination, int destinationIndex, int length)
+    {
+        checkFromIndexSize(index, length * Integer.BYTES, length());
+        checkFromIndexSize(destinationIndex, length, destination.length);
+
+        copyMemory(base, address + index, destination, ARRAY_INT_BASE_OFFSET + ((long) destinationIndex * Integer.BYTES), length * Integer.BYTES);
+    }
+
+    /**
+     * Returns a copy of this buffer as a long array.
+     *
+     * @param index the absolute index to start at
+     * @param length the number of longs to return
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less then {@code 0},
+     * or if the specified {@code index + length} is greater than {@code this.length()}
+     */
+    public long[] getLongs(int index, int length)
+    {
+        long[] longs = new long[length];
+        getLongs(index, longs, 0, length);
+        return longs;
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + destination.length} is greater than {@code this.length()}
+     */
+    public void getLongs(int index, long[] destination)
+    {
+        getLongs(index, destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of longs to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code destinationIndex + length} is greater than
+     * {@code destination.length}
+     */
+    public void getLongs(int index, long[] destination, int destinationIndex, int length)
+    {
+        checkFromIndexSize(index, length * Long.BYTES, length());
+        checkFromIndexSize(destinationIndex, length, destination.length);
+
+        copyMemory(base, address + index, destination, ARRAY_LONG_BASE_OFFSET + ((long) destinationIndex * Long.BYTES), length * Long.BYTES);
+    }
+
+    /**
+     * Returns a copy of this buffer as a float array.
+     *
+     * @param index the absolute index to start at
+     * @param length the number of floats to return
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less then {@code 0},
+     * or if the specified {@code index + length} is greater than {@code this.length()}
+     */
+    public float[] getFloats(int index, int length)
+    {
+        float[] floats = new float[length];
+        getFloats(index, floats, 0, length);
+        return floats;
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + destination.length} is greater than {@code this.length()}
+     */
+    public void getFloats(int index, float[] destination)
+    {
+        getFloats(index, destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of floats to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code destinationIndex + length} is greater than
+     * {@code destination.length}
+     */
+    public void getFloats(int index, float[] destination, int destinationIndex, int length)
+    {
+        checkFromIndexSize(index, length * Float.BYTES, length());
+        checkFromIndexSize(destinationIndex, length, destination.length);
+
+        copyMemory(base, address + index, destination, ARRAY_FLOAT_BASE_OFFSET + ((long) destinationIndex * Float.BYTES), length * Float.BYTES);
+    }
+
+    /**
+     * Returns a copy of this buffer as a double array.
+     *
+     * @param index the absolute index to start at
+     * @param length the number of doubles to return
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less then {@code 0},
+     * or if the specified {@code index + length} is greater than {@code this.length()}
+     */
+    public double[] getDoubles(int index, int length)
+    {
+        double[] doubles = new double[length];
+        getDoubles(index, doubles, 0, length);
+        return doubles;
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + destination.length} is greater than {@code this.length()}
+     */
+    public void getDoubles(int index, double[] destination)
+    {
+        getDoubles(index, destination, 0, destination.length);
+    }
+
+    /**
+     * Transfers portion of data from this slice into the specified destination starting at
+     * the specified absolute {@code index}.
+     *
+     * @param destinationIndex the first index of the destination
+     * @param length the number of doubles to transfer
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code destinationIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code destinationIndex + length} is greater than
+     * {@code destination.length}
+     */
+    public void getDoubles(int index, double[] destination, int destinationIndex, int length)
+    {
+        checkFromIndexSize(index, length * Double.BYTES, length());
+        checkFromIndexSize(destinationIndex, length, destination.length);
+
+        copyMemory(base, address + index, destination, ARRAY_DOUBLE_BASE_OFFSET + ((long) destinationIndex * Double.BYTES), length * Double.BYTES);
+    }
+
+    /**
      * Sets the specified byte at the specified absolute {@code index} in this
      * buffer.  The 24 high-order bits of the specified value are ignored.
      *
@@ -857,6 +1102,151 @@ public final class Slice
             length -= bytesRead;
             index += bytesRead;
         }
+    }
+
+    /**
+     * Transfers data from the specified slice into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + source.length} is greater than {@code this.length()}
+     */
+    public void setShorts(int index, short[] source)
+    {
+        setShorts(index, source, 0, source.length);
+    }
+
+    /**
+     * Transfers data from the specified array into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code sourceIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code sourceIndex + length} is greater than {@code source.length}
+     */
+    public void setShorts(int index, short[] source, int sourceIndex, int length)
+    {
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length);
+        copyMemory(source, ARRAY_SHORT_BASE_OFFSET + ((long) sourceIndex * Short.BYTES), base, address + index, length * Short.BYTES);
+    }
+
+    /**
+     * Transfers data from the specified slice into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + source.length} is greater than {@code this.length()}
+     */
+    public void setInts(int index, int[] source)
+    {
+        setInts(index, source, 0, source.length);
+    }
+
+    /**
+     * Transfers data from the specified array into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code sourceIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code sourceIndex + length} is greater than {@code source.length}
+     */
+    public void setInts(int index, int[] source, int sourceIndex, int length)
+    {
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length);
+        copyMemory(source, ARRAY_INT_BASE_OFFSET + ((long) sourceIndex * Integer.BYTES), base, address + index, length * Integer.BYTES);
+    }
+
+    /**
+     * Transfers data from the specified slice into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + source.length} is greater than {@code this.length()}
+     */
+    public void setLongs(int index, long[] source)
+    {
+        setLongs(index, source, 0, source.length);
+    }
+
+    /**
+     * Transfers data from the specified array into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code sourceIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code sourceIndex + length} is greater than {@code source.length}
+     */
+    public void setLongs(int index, long[] source, int sourceIndex, int length)
+    {
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length);
+        copyMemory(source, ARRAY_LONG_BASE_OFFSET + ((long) sourceIndex * Long.BYTES), base, address + index, length * Long.BYTES);
+    }
+
+    /**
+     * Transfers data from the specified slice into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + source.length} is greater than {@code this.length()}
+     */
+    public void setFloats(int index, float[] source)
+    {
+        setFloats(index, source, 0, source.length);
+    }
+
+    /**
+     * Transfers data from the specified array into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code sourceIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code sourceIndex + length} is greater than {@code source.length}
+     */
+    public void setFloats(int index, float[] source, int sourceIndex, int length)
+    {
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length);
+        copyMemory(source, ARRAY_FLOAT_BASE_OFFSET + ((long) sourceIndex * Float.BYTES), base, address + index, length * Float.BYTES);
+    }
+
+    /**
+     * Transfers data from the specified slice into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
+     * if {@code index + source.length} is greater than {@code this.length()}
+     */
+    public void setDoubles(int index, double[] source)
+    {
+        setDoubles(index, source, 0, source.length);
+    }
+
+    /**
+     * Transfers data from the specified array into this buffer starting at
+     * the specified absolute {@code index}.
+     *
+     * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0},
+     * if the specified {@code sourceIndex} is less than {@code 0},
+     * if {@code index + length} is greater than
+     * {@code this.length()}, or
+     * if {@code sourceIndex + length} is greater than {@code source.length}
+     */
+    public void setDoubles(int index, double[] source, int sourceIndex, int length)
+    {
+        checkFromIndexSize(index, length, length());
+        checkFromIndexSize(sourceIndex, length, source.length);
+        copyMemory(source, ARRAY_DOUBLE_BASE_OFFSET + ((long) sourceIndex * Double.BYTES), base, address + index, length * Double.BYTES);
     }
 
     /**
