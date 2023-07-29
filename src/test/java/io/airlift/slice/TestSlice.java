@@ -586,6 +586,266 @@ public class TestSlice
     }
 
     @Test
+    public void testShortsArray()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < size; index++) {
+                assertShortsArray(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertShortsArray(Slice slice, int index)
+    {
+        // fill slice with FF
+        slice.fill((byte) 0xFF);
+
+        short[] value = new short[(slice.length() - index) / 2];
+        slice.getShorts(index, value);
+        for (short v : value) {
+            assertEquals(v, -1);
+        }
+        Arrays.fill(value, (short) -1);
+        assertEquals(slice.getShorts(index, value.length), value);
+
+        // set and get the value
+        value = new short[value.length / 2];
+        for (int i = 0; i < value.length; i++) {
+            value[i] = (short) i;
+        }
+        slice.setShorts(index, value);
+        assertEquals(slice.getShorts(index, value.length), value);
+
+        for (int length = 0; length < value.length; length++) {
+            slice.fill((byte) 0xFF);
+            slice.setShorts(index, value, 0, length);
+            assertEquals(slice.getShorts(index, length), Arrays.copyOf(value, length));
+        }
+
+        try {
+            slice.setShorts(slice.length() - 1, new short[10]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        try {
+            slice.setShorts(slice.length() - 1, new short[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+    }
+
+    @Test
+    public void testIntsArray()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < size; index++) {
+                assertIntsArray(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertIntsArray(Slice slice, int index)
+    {
+        // fill slice with FF
+        slice.fill((byte) 0xFF);
+
+        int[] value = new int[(slice.length() - index) / 4];
+        slice.getInts(index, value);
+        for (int v : value) {
+            assertEquals(v, -1);
+        }
+        Arrays.fill(value, -1);
+        assertEquals(slice.getInts(index, value.length), value);
+
+        // set and get the value
+        value = new int[value.length / 2];
+        for (int i = 0; i < value.length; i++) {
+            value[i] = i;
+        }
+        slice.setInts(index, value);
+        assertEquals(slice.getInts(index, value.length), value);
+
+        for (int length = 0; length < value.length; length++) {
+            slice.fill((byte) 0xFF);
+            slice.setInts(index, value, 0, length);
+            assertEquals(slice.getInts(index, length), Arrays.copyOf(value, length));
+        }
+
+        try {
+            slice.setInts(slice.length() - 1, new int[10]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        try {
+            slice.setInts(slice.length() - 1, new int[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+    }
+
+    @Test
+    public void testLongsArray()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < size; index++) {
+                assertLongsArray(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertLongsArray(Slice slice, int index)
+    {
+        // fill slice with FF
+        slice.fill((byte) 0xFF);
+
+        long[] value = new long[(slice.length() - index) / 8];
+        slice.getLongs(index, value);
+        for (long v : value) {
+            assertEquals(v, -1);
+        }
+        Arrays.fill(value, -1L);
+        assertEquals(slice.getLongs(index, value.length), value);
+
+        // set and get the value
+        value = new long[value.length / 2];
+        for (int i = 0; i < value.length; i++) {
+            value[i] = i;
+        }
+        slice.setLongs(index, value);
+        assertEquals(slice.getLongs(index, value.length), value);
+
+        for (int length = 0; length < value.length; length++) {
+            slice.fill((byte) 0xFF);
+            slice.setLongs(index, value, 0, length);
+            assertEquals(slice.getLongs(index, length), Arrays.copyOf(value, length));
+        }
+
+        try {
+            slice.setLongs(slice.length() - 1, new long[10]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        try {
+            slice.setLongs(slice.length() - 1, new long[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+    }
+
+    @Test
+    public void testFloatsArray()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < size; index++) {
+                assertFloatsArray(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertFloatsArray(Slice slice, int index)
+    {
+        // fill slice with FF
+        slice.fill((byte) 0xFF);
+
+        float[] value = new float[(slice.length() - index) / 4];
+        slice.getFloats(index, value);
+        for (float v : value) {
+            assertEquals(v, intBitsToFloat(-1));
+        }
+        Arrays.fill(value, intBitsToFloat(-1));
+        assertEquals(slice.getFloats(index, value.length), value);
+
+        // set and get the value
+        value = new float[value.length / 2];
+        for (int i = 0; i < value.length; i++) {
+            value[i] = i;
+        }
+        slice.setFloats(index, value);
+        assertEquals(slice.getFloats(index, value.length), value);
+
+        for (int length = 0; length < value.length; length++) {
+            slice.fill((byte) 0xFF);
+            slice.setFloats(index, value, 0, length);
+            assertEquals(slice.getFloats(index, length), Arrays.copyOf(value, length));
+        }
+
+        try {
+            slice.setFloats(slice.length() - 1, new float[10]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        try {
+            slice.setFloats(slice.length() - 1, new float[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+    }
+
+    @Test
+    public void testDoublesArray()
+    {
+        for (int size = 0; size < 100; size++) {
+            for (int index = 0; index < size; index++) {
+                assertDoublesArray(allocate(size), index);
+            }
+        }
+    }
+
+    private static void assertDoublesArray(Slice slice, int index)
+    {
+        // fill slice with FF
+        slice.fill((byte) 0xFF);
+
+        double[] value = new double[(slice.length() - index) / 8];
+        slice.getDoubles(index, value);
+        for (double v : value) {
+            assertEquals(v, longBitsToDouble(-1));
+        }
+        Arrays.fill(value, longBitsToDouble(-1));
+        assertEquals(slice.getDoubles(index, value.length), value);
+
+        // set and get the value
+        value = new double[value.length / 2];
+        for (int i = 0; i < value.length; i++) {
+            value[i] = i;
+        }
+        slice.setDoubles(index, value);
+        assertEquals(slice.getDoubles(index, value.length), value);
+
+        for (int length = 0; length < value.length; length++) {
+            slice.fill((byte) 0xFF);
+            slice.setDoubles(index, value, 0, length);
+            assertEquals(slice.getDoubles(index, length), Arrays.copyOf(value, length));
+        }
+
+        try {
+            slice.setDoubles(slice.length() - 1, new double[10]);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+
+        try {
+            slice.setDoubles(slice.length() - 1, new double[20], 1, 10);
+            fail("expected IndexOutOfBoundsException");
+        }
+        catch (IndexOutOfBoundsException ignored) {
+        }
+    }
+
+    @Test
     public void testBytesSlice()
     {
         for (int size = 0; size < 100; size++) {
