@@ -130,17 +130,17 @@ public class TestSliceCompactFlag
 
         // test full buffer
         buffer.rewind();
-        Slice slice = Slices.wrappedBuffer(buffer);
+        Slice slice = Slices.wrappedHeapBuffer(buffer);
         assertCompact(slice);
 
         // test limited buffer
         buffer.position(10).limit(30);
-        slice = Slices.wrappedBuffer(buffer);
+        slice = Slices.wrappedHeapBuffer(buffer);
         assertNotCompact(slice);
 
         // test limited buffer after slicing
         buffer = buffer.slice();
-        slice = Slices.wrappedBuffer(buffer);
+        slice = Slices.wrappedHeapBuffer(buffer);
         assertNotCompact(slice);
     }
 

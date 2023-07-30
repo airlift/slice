@@ -34,6 +34,7 @@ import static io.airlift.slice.Slices.wrappedBooleanArray;
 import static io.airlift.slice.Slices.wrappedBuffer;
 import static io.airlift.slice.Slices.wrappedDoubleArray;
 import static io.airlift.slice.Slices.wrappedFloatArray;
+import static io.airlift.slice.Slices.wrappedHeapBuffer;
 import static io.airlift.slice.Slices.wrappedIntArray;
 import static io.airlift.slice.Slices.wrappedLongArray;
 import static io.airlift.slice.Slices.wrappedShortArray;
@@ -60,7 +61,7 @@ public class TestSlices
     public void testWrapHeapBufferRetainedSize()
     {
         ByteBuffer heapByteBuffer = ByteBuffer.allocate(50);
-        Slice slice = wrappedBuffer(heapByteBuffer);
+        Slice slice = wrappedHeapBuffer(heapByteBuffer);
         assertEquals(slice.getRetainedSize(), instanceSize(Slice.class) + sizeOf(heapByteBuffer.array()));
     }
 
