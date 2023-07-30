@@ -13,9 +13,8 @@
  */
 package io.airlift.slice;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import sun.misc.Unsafe;
-
-import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
@@ -35,54 +33,31 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
-import static io.airlift.slice.SizeOf.sizeOfBooleanArray;
-import static io.airlift.slice.SizeOf.sizeOfDoubleArray;
-import static io.airlift.slice.SizeOf.sizeOfFloatArray;
-import static io.airlift.slice.SizeOf.sizeOfIntArray;
-import static io.airlift.slice.SizeOf.sizeOfLongArray;
-import static io.airlift.slice.SizeOf.sizeOfShortArray;
 import static java.lang.Math.min;
-import static java.lang.Math.multiplyExact;
-import static java.lang.Math.toIntExact;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
-import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_DOUBLE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_FLOAT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_FLOAT_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_INT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_INT_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_LONG_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_LONG_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_SHORT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 
 public final class Slice
         implements Comparable<Slice>
 {
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
-    private static final byte[] COMPACT = new byte[0];
-    private static final Object NOT_COMPACT = null;
+    private static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
-    /**
-     * Base object for relative addresses.  If null, the address is an
-     * absolute location in memory.
-     */
-    private final Object base;
+    private final byte[] base;
 
     /**
-     * If base is null, address is the absolute memory location of data for
-     * this slice; otherwise, address is the offset from the base object.
+     * Address is the offset from the base object.
      * This base plus relative offset addressing is taken directly from
      * the Unsafe interface.
-     * <p>
-     * Note: if base object is a byte array, this address ARRAY_BYTE_BASE_OFFSET,
-     * since the byte array data starts AFTER the byte array object header.
      */
     private final long address;
 
@@ -96,25 +71,6 @@ public final class Slice
      */
     private final long retainedSize;
 
-    /**
-     * Reference has two use cases:
-     * <p>
-     * 1. It can be an object this slice must hold onto to assure that the
-     * underlying memory is not freed by the garbage collector.
-     * It is typically a ByteBuffer object, but can be any object.
-     * This is not needed for arrays, since the array is referenced by {@code base}.
-     * <p>
-     * 2. If reference is not used to prevent garbage collector from freeing the
-     * underlying memory, it will be used to indicate if the slice is compact.
-     * When {@code reference == COMPACT}, the slice is considered as compact.
-     * Otherwise, it will be null.
-     * <p>
-     * A slice is considered compact if the base object is an heap array and
-     * it contains the whole array.
-     * Thus, for the first use case, the slice is always considered as not compact.
-     */
-    private final Object reference;
-
     private int hash;
 
     /**
@@ -122,11 +78,10 @@ public final class Slice
      */
     Slice()
     {
-        this.base = COMPACT;
+        this.base = EMPTY_BYTE_ARRAY;
         this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = 0;
         this.retainedSize = INSTANCE_SIZE;
-        this.reference = COMPACT;
     }
 
     /**
@@ -139,7 +94,6 @@ public final class Slice
         this.address = ARRAY_BYTE_BASE_OFFSET;
         this.size = base.length;
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = COMPACT;
     }
 
     /**
@@ -157,124 +111,14 @@ public final class Slice
         this.address = ARRAY_BYTE_BASE_OFFSET + offset;
         this.size = length;
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    @Deprecated(forRemoval = true)
-    Slice(boolean[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfBooleanArray(offset);
-        this.size = multiplyExact(length, ARRAY_BOOLEAN_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(short[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfShortArray(offset);
-        this.size = multiplyExact(length, ARRAY_SHORT_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(int[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfIntArray(offset);
-        this.size = multiplyExact(length, ARRAY_INT_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(long[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfLongArray(offset);
-        this.size = multiplyExact(length, ARRAY_LONG_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(float[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfFloatArray(offset);
-        this.size = multiplyExact(length, ARRAY_FLOAT_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
-    }
-
-    /**
-     * Creates a slice over the specified array range.
-     *
-     * @param offset the array position at which the slice begins
-     * @param length the number of array positions to include in the slice
-     */
-    Slice(double[] base, int offset, int length)
-    {
-        requireNonNull(base, "base is null");
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.address = sizeOfDoubleArray(offset);
-        this.size = multiplyExact(length, ARRAY_DOUBLE_INDEX_SCALE);
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
-        this.reference = (offset == 0 && length == base.length) ? COMPACT : NOT_COMPACT;
     }
 
     /**
      * Creates a slice for directly accessing the base object.
      */
-    Slice(@Nullable Object base, long address, int size, long retainedSize, @Nullable Object reference)
+    Slice(byte[] base, long address, int size, long retainedSize)
     {
-        if (address <= 0) {
+        if (address < ARRAY_BYTE_BASE_OFFSET) {
             throw new IllegalArgumentException(format("Invalid address: %s", address));
         }
         if (size <= 0) {
@@ -282,8 +126,7 @@ public final class Slice
         }
         checkArgument((address + size) >= size, "Address + size is greater than 64 bits");
 
-        this.reference = reference;
-        this.base = base;
+        this.base = requireNonNull(base, "base is null");
         this.address = address;
         this.size = size;
         // INSTANCE_SIZE is not included, as the caller is responsible for including it.
@@ -292,16 +135,16 @@ public final class Slice
 
     /**
      * Returns the base object of this Slice, or null.  This is appropriate for use
-     * with {@link Unsafe} if you wish to avoid all the safety belts e.g. bounds checks.
+     * with {@link Unsafe} if you wish to avoid all the safety belts e.g., bounds checks.
      */
-    public Object getBase()
+    public byte[] getBase()
     {
-        return base;
+        return byteArray();
     }
 
     /**
      * Return the address offset of this Slice.  This is appropriate for use
-     * with {@link Unsafe} if you wish to avoid all the safety belts e.g. bounds checks.
+     * with {@link Unsafe} if you wish to avoid all the safety belts e.g., bounds checks.
      */
     public long getAddress()
     {
@@ -325,51 +168,29 @@ public final class Slice
     }
 
     /**
-     * A slice is considered compact if the base object is an array and it contains the whole array.
+     * A slice is considered compact if the base object is an array, and it contains the whole array.
      * As a result, it cannot be a view of a bigger slice.
      */
     public boolean isCompact()
     {
-        return reference == COMPACT;
-    }
-
-    private void checkHasByteArray()
-            throws UnsupportedOperationException
-    {
-        if (!hasByteArray()) {
-            throw new UnsupportedOperationException("Slice is not backed by a byte array");
-        }
-    }
-
-    public boolean hasByteArray()
-    {
-        return base instanceof byte[];
+        return address == ARRAY_BYTE_BASE_OFFSET && size == base.length;
     }
 
     /**
-     * Returns the byte array wrapped by this Slice, if any. Callers are expected to check {@link Slice#hasByteArray()} before calling
-     * this method since not all instances are backed by a byte array. Callers should also take care to use {@link Slice#byteArrayOffset()}
+     * Returns the byte array wrapped by this Slice. Callers should also take care to use {@link Slice#byteArrayOffset()}
      * since the contents of this Slice may not start at array index 0.
-     *
-     * @throws UnsupportedOperationException if this Slice has no underlying byte array
      */
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public byte[] byteArray()
-            throws UnsupportedOperationException
     {
-        checkHasByteArray();
-        return (byte[]) base;
+        return base;
     }
 
     /**
-     * Returns the start index the content of this slice within the byte array wrapped by this slice. Callers should
-     * check {@link Slice#hasByteArray()} before calling this method since not all Slices wrap a heap byte array
-     *
-     * @throws UnsupportedOperationException if this Slice has no underlying byte array
+     * Returns the start index the content of this slice within the byte array wrapped by this slice.
      */
     public int byteArrayOffset()
-            throws UnsupportedOperationException
     {
-        checkHasByteArray();
         return (int) (address - ARRAY_BYTE_BASE_OFFSET);
     }
 
@@ -551,7 +372,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -563,7 +384,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -581,7 +402,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -593,7 +414,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -650,20 +471,7 @@ public final class Slice
             throws IOException
     {
         checkFromIndexSize(index, length, length());
-
-        if (hasByteArray()) {
-            out.write(byteArray(), byteArrayOffset() + index, length);
-            return;
-        }
-
-        byte[] buffer = new byte[4096];
-        while (length > 0) {
-            int size = min(buffer.length, length);
-            getBytes(index, buffer, 0, size);
-            out.write(buffer, 0, size);
-            length -= size;
-            index += size;
-        }
+        out.write(byteArray(), byteArrayOffset() + index, length);
     }
 
     /**
@@ -682,7 +490,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -694,7 +502,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -715,7 +523,7 @@ public final class Slice
     }
 
     /**
-     * Returns a copy of this buffer as a int array.
+     * Returns a copy of this buffer as an int array.
      *
      * @param index the absolute index to start at
      * @param length the number of ints to return
@@ -730,7 +538,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -742,7 +550,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -778,7 +586,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -790,7 +598,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -826,7 +634,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -838,7 +646,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -874,7 +682,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @throws IndexOutOfBoundsException if the specified {@code index} is less than {@code 0}, or
@@ -886,7 +694,7 @@ public final class Slice
     }
 
     /**
-     * Transfers portion of data from this slice into the specified destination starting at
+     * Transfers a portion of data from this slice into the specified destination starting at
      * the specified absolute {@code index}.
      *
      * @param destinationIndex the first index of the destination
@@ -1078,30 +886,15 @@ public final class Slice
             throws IOException
     {
         checkFromIndexSize(index, length, length());
-        if (hasByteArray()) {
-            byte[] bytes = byteArray();
-            int offset = byteArrayOffset() + index;
-            while (length > 0) {
-                int bytesRead = in.read(bytes, offset, length);
-                if (bytesRead < 0) {
-                    throw new IndexOutOfBoundsException("End of stream");
-                }
-                length -= bytesRead;
-                offset += bytesRead;
-            }
-            return;
-        }
-
-        byte[] bytes = new byte[4096];
-
+        byte[] bytes = byteArray();
+        int offset = byteArrayOffset() + index;
         while (length > 0) {
-            int bytesRead = in.read(bytes, 0, min(bytes.length, length));
+            int bytesRead = in.read(bytes, offset, length);
             if (bytesRead < 0) {
                 throw new IndexOutOfBoundsException("End of stream");
             }
-            copyMemory(bytes, ARRAY_BYTE_BASE_OFFSET, base, address + index, bytesRead);
             length -= bytesRead;
-            index += bytesRead;
+            offset += bytesRead;
         }
     }
 
@@ -1252,7 +1045,7 @@ public final class Slice
 
     /**
      * Returns a slice of this buffer's sub-region. Modifying the content of
-     * the returned buffer or this buffer affects each other's content.
+     * the returned buffer, or this buffer affects each other's content.
      */
     public Slice slice(int index, int length)
     {
@@ -1264,10 +1057,7 @@ public final class Slice
             return Slices.EMPTY_SLICE;
         }
 
-        if (reference == COMPACT) {
-            return new Slice(base, address + index, length, retainedSize, NOT_COMPACT);
-        }
-        return new Slice(base, address + index, length, retainedSize, reference);
+        return new Slice(base, address + index, length, retainedSize);
     }
 
     public int indexOfByte(int b)
@@ -1311,12 +1101,12 @@ public final class Slice
             return offset;
         }
 
-        // Do we have enough characters
+        // Do we have enough characters?
         if (pattern.length() < SIZE_OF_INT || size < SIZE_OF_LONG) {
             return indexOfBruteForce(pattern, offset);
         }
 
-        // Using first four bytes for faster search. We are not using eight bytes for long
+        // Using the first four bytes for faster search. We are not using eight bytes for long
         // because we want more strings to get use of fast search.
         int head = pattern.getIntUnchecked(0);
 
@@ -1331,12 +1121,12 @@ public final class Slice
             // Read four bytes in sequence
             int value = getIntUnchecked(index);
 
-            // Compare all bytes of value with first byte of search data
+            // Compare all bytes of value with the first byte of search data
             // see https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
             int valueXor = value ^ firstByteMask;
             int hasZeroBytes = (valueXor - 0x01010101) & ~valueXor & 0x80808080;
 
-            // If valueXor doesn't have any zero byte then there is no match and we can advance
+            // If valueXor doesn't have any zero bytes, then there is no match and we can advance
             if (hasZeroBytes == 0) {
                 index += SIZE_OF_INT;
                 continue;
@@ -1457,11 +1247,10 @@ public final class Slice
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Slice)) {
+        if (!(o instanceof Slice that)) {
             return false;
         }
 
-        Slice that = (Slice) o;
         if (length() != that.length()) {
             return false;
         }
@@ -1470,8 +1259,8 @@ public final class Slice
     }
 
     /**
-     * Returns the hash code of this slice.  The hash code is cached once calculated
-     * and any future changes to the slice will not effect the hash code.
+     * Returns the hash code of this slice.  The hash code is cached once calculated,
+     * and any future changes to the slice will not affect the hash code.
      */
     @SuppressWarnings("NonFinalFieldReferencedInHashCode")
     @Override
@@ -1584,7 +1373,7 @@ public final class Slice
 
     /**
      * Decodes the contents of this slice into a string using the US_ASCII
-     * character set.  The low order 7 bits if each byte are converted directly
+     * character set.  The low-order 7 bits of each byte are converted directly
      * into a code point for the string.
      */
     public String toStringAscii()
@@ -1599,19 +1388,11 @@ public final class Slice
             return "";
         }
 
-        if (hasByteArray()) {
-            return new String(byteArray(), byteArrayOffset() + index, length, StandardCharsets.US_ASCII);
-        }
-
-        char[] chars = new char[length];
-        for (int pos = index; pos < length; pos++) {
-            chars[pos] = (char) (getByteUnchecked(pos) & 0x7F);
-        }
-        return new String(chars);
+        return new String(byteArray(), byteArrayOffset() + index, length, StandardCharsets.US_ASCII);
     }
 
     /**
-     * Decodes the a portion of this slice into a string with the specified
+     * Decodes the specified portion of this slice into a string with the specified
      * character set name.
      */
     public String toString(int index, int length, Charset charset)
@@ -1619,10 +1400,7 @@ public final class Slice
         if (length == 0) {
             return "";
         }
-        if (hasByteArray()) {
-            return new String(byteArray(), byteArrayOffset() + index, length, charset);
-        }
-        return new String(getBytes(index, length), charset);
+        return new String(byteArray(), byteArrayOffset() + index, length, charset);
     }
 
     public ByteBuffer toByteBuffer()
@@ -1638,32 +1416,17 @@ public final class Slice
             return EMPTY_BYTE_BUFFER;
         }
 
-        if (hasByteArray()) {
-            return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
-        }
-
-        if ((reference instanceof ByteBuffer buffer) && buffer.isDirect()) {
-            int position = toIntExact(address - bufferAddress(buffer)) + index;
-            buffer = buffer.duplicate();
-            buffer.position(position);
-            buffer.limit(position + length);
-            return buffer.slice();
-        }
-
-        throw new UnsupportedOperationException("Conversion to ByteBuffer not supported for this Slice");
+        return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
     }
 
     /**
-     * Decodes the a portion of this slice into a string with the specified
-     * character set name.
+     * Returns information about the slice offset, and length
      */
     @Override
     public String toString()
     {
         StringBuilder builder = new StringBuilder("Slice{");
-        if (base != null) {
-            builder.append("base=").append(identityToString(base)).append(", ");
-        }
+        builder.append("base=").append(identityToString(base)).append(", ");
         builder.append("address=").append(address);
         builder.append(", length=").append(length());
         builder.append('}');
