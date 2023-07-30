@@ -17,15 +17,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -149,7 +144,6 @@ public class TestSlice
         byte[] bytes = new byte[Byte.MAX_VALUE];
         for (int i = 0; i < bytes.length; i++) {
             Slice slice = Slices.wrappedBuffer(bytes, i, bytes.length - i);
-            assertThat(slice.hasByteArray()).isTrue();
             assertThat(slice.byteArrayOffset()).isEqualTo(i);
             assertThat(slice.byteArray()).isSameAs(bytes);
             bytes[i] = (byte) i;
@@ -766,30 +760,6 @@ public class TestSlice
     }
 
     @Test
-    public void testMemoryMappedReads()
-            throws IOException
-    {
-        Path path = Files.createTempFile("longs", null);
-        List<Long> values = createRandomLongs(20000);
-
-        Slice output = allocate(values.size() * (int) SIZE_OF_LONG);
-        for (int i = 0; i < values.size(); i++) {
-            output.setLong(i * SIZE_OF_LONG, values.get(i));
-        }
-
-        Files.write(path, output.getBytes());
-
-        Slice slice = Slices.mapFileReadOnly(path.toFile());
-        for (int i = 0; i < values.size(); i++) {
-            long actual = slice.getLong(i * SIZE_OF_LONG);
-            long expected = values.get(i);
-            assertThat(actual).isEqualTo(expected);
-        }
-
-        assertThat(slice.getBytes()).isEqualTo(output.getBytes());
-    }
-
-    @Test
     public void testRetainedSize()
             throws Exception
     {
@@ -923,26 +893,6 @@ public class TestSlice
     }
 
     @Test
-    public void testToByteBufferDirect()
-    {
-        byte[] original = "hello world".getBytes(UTF_8);
-
-        ByteBuffer buffer = ByteBuffer.allocateDirect(original.length + 5);
-        buffer.putShort((short) 0xABCD);
-        buffer.put(original);
-        buffer.flip().position(2);
-
-        Slice slice = Slices.wrappedBuffer(buffer);
-        assertThat(slice.getBytes()).isEqualTo(original);
-
-        assertToByteBuffer(slice, original);
-
-        // conversion does not depend on wrapped buffer position or limit
-        buffer.position(8).limit(12);
-        assertToByteBuffer(slice, original);
-    }
-
-    @Test
     public void testToByteBufferEmpty()
     {
         ByteBuffer buffer = allocate(0).toByteBuffer();
@@ -967,16 +917,6 @@ public class TestSlice
         byte[] data = new byte[buffer.remaining()];
         buffer.get(data);
         return data;
-    }
-
-    private static List<Long> createRandomLongs(int count)
-    {
-        Random random = new Random();
-        List<Long> list = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            list.add(random.nextLong());
-        }
-        return Collections.unmodifiableList(list);
     }
 
     protected Slice allocate(int size)
