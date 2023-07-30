@@ -122,11 +122,16 @@ public final class Slices
             return new Slice(null, address + buffer.position(), buffer.remaining(), buffer.capacity(), buffer);
         }
 
-        if (buffer.hasArray()) {
-            return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
+        return wrappedHeapBuffer(buffer);
+    }
+
+    public static Slice wrappedHeapBuffer(ByteBuffer buffer)
+    {
+        if (!buffer.hasArray()) {
+            throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
         }
 
-        throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
+        return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
     }
 
     /**
