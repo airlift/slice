@@ -225,7 +225,7 @@ public final class Slice
         return getByteUnchecked(index);
     }
 
-    byte getByteUnchecked(int index)
+    public byte getByteUnchecked(int index)
     {
         return base[baseOffset + index];
     }
@@ -255,7 +255,7 @@ public final class Slice
         return getShortUnchecked(index);
     }
 
-    short getShortUnchecked(int index)
+    public short getShortUnchecked(int index)
     {
         return (short) SHORT_HANDLE.get(base, baseOffset + index);
     }
@@ -285,7 +285,7 @@ public final class Slice
         return getIntUnchecked(index);
     }
 
-    int getIntUnchecked(int index)
+    public int getIntUnchecked(int index)
     {
         return (int) INT_HANDLE.get(base, baseOffset + index);
     }
@@ -315,7 +315,7 @@ public final class Slice
         return getLongUnchecked(index);
     }
 
-    long getLongUnchecked(int index)
+    public long getLongUnchecked(int index)
     {
         return (long) LONG_HANDLE.get(base, baseOffset + index);
     }
@@ -330,6 +330,11 @@ public final class Slice
     public float getFloat(int index)
     {
         checkFromIndexSize(index, SIZE_OF_FLOAT, length());
+        return getFloatUnchecked(index);
+    }
+
+    public float getFloatUnchecked(int index)
+    {
         return (float) FLOAT_HANDLE.get(base, baseOffset + index);
     }
 
@@ -343,6 +348,11 @@ public final class Slice
     public double getDouble(int index)
     {
         checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
+        return getDoubleUnchecked(index);
+    }
+
+    public double getDoubleUnchecked(int index)
+    {
         return (double) DOUBLE_HANDLE.get(base, baseOffset + index);
     }
 
