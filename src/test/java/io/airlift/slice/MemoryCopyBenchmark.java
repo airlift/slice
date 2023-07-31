@@ -18,6 +18,7 @@ import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -29,24 +30,43 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Verify.verify;
 import static io.airlift.slice.JvmUtils.unsafe;
 
 @SuppressWarnings("restriction")
 @BenchmarkMode(Mode.Throughput)
-@Fork(5)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Fork(1)
+@Warmup(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 public class MemoryCopyBenchmark
 {
-    static final int PAGE_SIZE = 4 * 1024;
-    static final int N_PAGES = 256 * 1024;
-    static final int ALLOC_SIZE = PAGE_SIZE * N_PAGES;
+    private static final int PAGE_SIZE = 4 * 1024;
+    private static final int N_PAGES = 256 * 1024;
+    private static final int ALLOC_SIZE = PAGE_SIZE * N_PAGES;
 
     @State(Scope.Thread)
     public static class Buffers
     {
+        @Param({
+                "0",
+                "32",
+                "128",
+                "512",
+                "1024",
+                "1048576",
+                "134217728",
+        })
+        public int size;
+
+        @Param({
+                "ARRAY_COPY",
+                "SLICE",
+                "CUSTOM_LOOP",
+                "UNSAFE",
+        })
+        public CopyStrategy copyStrategy;
+
         Slice data;
         long startOffset;
         long destOffset;
@@ -68,144 +88,24 @@ public class MemoryCopyBenchmark
     }
 
     @Benchmark
-    public Slice b00sliceZero(Buffers buffers)
+    public Slice copy(Buffers buffers)
     {
-        return doCopy(buffers, CopyStrategy.SLICE, 0);
-    }
-
-    @Benchmark
-    public Slice b01customLoopZero(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 0);
-    }
-
-    @Benchmark
-    public Slice b02unsafeZero(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 0);
-    }
-
-    @Benchmark
-    public Slice b03slice32B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.SLICE, 32);
-    }
-
-    @Benchmark
-    public Slice b04customLoop32B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 32);
-    }
-
-    @Benchmark
-    public Slice b05unsafe32B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 32);
-    }
-
-    @Benchmark
-    public Slice b06slice128B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.SLICE, 128);
-    }
-
-    @Benchmark
-    public Slice b07customLoop128B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 128);
-    }
-
-    @Benchmark
-    public Slice b08unsafe128B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 128);
-    }
-
-    @Benchmark
-    public Slice b09slice512B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.SLICE, 512);
-    }
-
-    @Benchmark
-    public Slice b10customLoop512B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 512);
-    }
-
-    @Benchmark
-    public Slice b11unsafe512B(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 512);
-    }
-
-    @Benchmark
-    public Slice b12slice1K(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.SLICE, 1024);
-    }
-
-    @Benchmark
-    public Slice b13customLoop1K(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 1024);
-    }
-
-    @Benchmark
-    public Slice b14unsafe1K(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 1024);
-    }
-
-    @Benchmark
-    public Slice b15slice1M(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.SLICE, 1024 * 1024);
-    }
-
-    @Benchmark
-    public Slice b16customLoop1M(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 1024 * 1024);
-    }
-
-    @Benchmark
-    public Slice b17unsafe1M(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 1024 * 1024);
-    }
-
-    @Benchmark
-    public Slice b18slice128M(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.SLICE, 128 * 1024 * 1024);
-    }
-
-    @Benchmark
-    public Slice b19customLoop128M(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.CUSTOM_LOOP, 128 * 1024 * 1024);
-    }
-
-    @Benchmark
-    public Slice b20unsafe128M(Buffers buffers)
-    {
-        return doCopy(buffers, CopyStrategy.UNSAFE, 128 * 1024 * 1024);
-    }
-
-    static Slice doCopy(Buffers buffers, CopyStrategy strategy, int length)
-    {
-        verify(buffers.startOffset >= 0, "startOffset < 0");
-        verify(buffers.destOffset >= 0, "destOffset < 0");
-        verify(buffers.startOffset + length < ALLOC_SIZE, "startOffset + length >= ALLOC_SIZE");
-        verify(buffers.destOffset + length < ALLOC_SIZE, "destOffset + length >= ALLOC_SIZE");
-
-        strategy.doCopy(buffers.data, buffers.startOffset, buffers.destOffset, length);
+        buffers.copyStrategy.doCopy(buffers.data, buffers.startOffset, buffers.destOffset, buffers.size);
         return buffers.data;
     }
 
-    private enum CopyStrategy
+    public enum CopyStrategy
     {
+        ARRAY_COPY {
+            @Override
+            public void doCopy(Slice data, long src, long dest, int length)
+            {
+                byte[] byteArray = data.byteArray();
+                int byteArrayOffset = data.byteArrayOffset();
+                System.arraycopy(byteArray, (int) (byteArrayOffset + src), byteArray, (int) (byteArrayOffset + src), length);
+            }
+        },
+
         SLICE {
             @Override
             public void doCopy(Slice data, long src, long dest, int length)
