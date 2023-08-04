@@ -14,7 +14,7 @@
 package io.airlift.slice;
 
 import com.google.common.primitives.UnsignedBytes;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -22,6 +22,7 @@ import java.util.Arrays;
 import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.intBitsToFloat;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestByteArrays
 {
@@ -165,64 +166,74 @@ public class TestByteArrays
         assertBytes(bytes, 0x00, 0x00, 0xEF, 0xBE, 0xAD, 0xDE, 0xBE, 0xBA, 0xFE, 0xCA);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadingShortBounds()
     {
-        ByteArrays.getShort(new byte[3], 2);
+        assertThatThrownBy(() -> ByteArrays.getShort(new byte[3], 2))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadingIntBounds()
     {
-        ByteArrays.getInt(new byte[5], 2);
+        assertThatThrownBy(() -> ByteArrays.getInt(new byte[5], 2))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadingLongBounds()
     {
-        ByteArrays.getLong(new byte[9], 2);
+        assertThatThrownBy(() -> ByteArrays.getLong(new byte[9], 2))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadingFloatBounds()
     {
-        ByteArrays.getFloat(new byte[5], 2);
+        assertThatThrownBy(() -> ByteArrays.getFloat(new byte[5], 2))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadingDoubleBounds()
     {
-        ByteArrays.getDouble(new byte[9], 2);
+        assertThatThrownBy(() -> ByteArrays.getDouble(new byte[9], 2))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testWritingShortBounds()
     {
-        ByteArrays.setShort(new byte[3], 2, (short) 123);
+        assertThatThrownBy(() -> ByteArrays.setShort(new byte[3], 2, (short) 123))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testWritingIntBounds()
     {
-        ByteArrays.setInt(new byte[5], 2, 123);
+        assertThatThrownBy(() -> ByteArrays.setInt(new byte[5], 2, 123))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testWritingLongBounds()
     {
-        ByteArrays.setLong(new byte[9], 2, 123);
+        assertThatThrownBy(() -> ByteArrays.setLong(new byte[9], 2, 123))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testWritingFloatBounds()
     {
-        ByteArrays.setFloat(new byte[5], 2, 123.0f);
+        assertThatThrownBy(() -> ByteArrays.setFloat(new byte[5], 2, 123.0f))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testWritingDoubleBounds()
     {
-        ByteArrays.setDouble(new byte[9], 2, 123.0);
+        assertThatThrownBy(() -> ByteArrays.setDouble(new byte[9], 2, 123.0))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
     private static void assertBytes(byte[] actual, int... expected)

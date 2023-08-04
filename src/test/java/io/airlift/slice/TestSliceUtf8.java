@@ -16,7 +16,7 @@ package io.airlift.slice;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -272,22 +272,28 @@ public class TestSliceUtf8
         assertThat(substring(utf8, 0, 0)).isEqualTo(EMPTY_SLICE);
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "UTF-8 does not contain 10 code points")
+    @Test
     public void testSubstringInvalidStart()
     {
-        substring(utf8Slice(STRING_HELLO), 10, 2);
+        assertThatThrownBy(() -> substring(utf8Slice(STRING_HELLO), 10, 2))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("UTF-8 does not contain 10 code points");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "UTF-8 does not contain 7 code points")
+    @Test
     public void testSubstringInvalidLength()
     {
-        substring(utf8Slice(STRING_HELLO), 0, 7);
+        assertThatThrownBy(() -> substring(utf8Slice(STRING_HELLO), 0, 7))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("UTF-8 does not contain 7 code points");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 is not well formed")
+    @Test
     public void testSubstringInvalidUtf8()
     {
-        substring(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_3_BYTE, CONTINUATION_BYTE), 0, 4);
+        assertThatThrownBy(() -> substring(wrappedBuffer((byte) 'f', (byte) 'o', (byte) 'o', START_3_BYTE, CONTINUATION_BYTE), 0, 4))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("UTF-8 is not well formed");
     }
 
     @Test
@@ -723,99 +729,131 @@ public class TestSliceUtf8
         }
     }
 
-    @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0xFFFFFFFF")
+    @Test
     public void testLengthOfNegativeCodePoint()
     {
-        lengthOfCodePoint(-1);
+        assertThatThrownBy(() -> lengthOfCodePoint(-1))
+                .isInstanceOf(InvalidCodePointException.class)
+                .hasMessage("Invalid code point 0xFFFFFFFF");
     }
 
-    @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0x110000")
+    @Test
     public void testLengthOfOutOfRangeCodePoint()
     {
-        lengthOfCodePoint(MAX_CODE_POINT + 1);
+        assertThatThrownBy(() -> lengthOfCodePoint(MAX_CODE_POINT + 1))
+                .isInstanceOf(InvalidCodePointException.class)
+                .hasMessage("Invalid code point 0x110000");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xBF of code point")
+    @Test
     public void testLengthOfCodePointContinuationByte()
     {
-        lengthOfCodePointFromStartByte(CONTINUATION_BYTE);
+        assertThatThrownBy(() -> lengthOfCodePointFromStartByte(CONTINUATION_BYTE))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("Illegal start 0xBF of code point");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFB of code point")
+    @Test
     public void testLengthOfCodePoint5ByteSequence()
     {
-        lengthOfCodePointFromStartByte(START_5_BYTE);
+        assertThatThrownBy(() -> lengthOfCodePointFromStartByte(START_5_BYTE))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("Illegal start 0xFB of code point");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFD of code point")
+    @Test
     public void testLengthOfCodePoint6ByteByte()
     {
-        lengthOfCodePointFromStartByte(START_6_BYTE);
+        assertThatThrownBy(() -> lengthOfCodePointFromStartByte(START_6_BYTE))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("Illegal start 0xFD of code point");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFE of code point")
+    @Test
     public void testLengthOfCodePointFEByte()
     {
-        lengthOfCodePointFromStartByte(INVALID_FE_BYTE);
+        assertThatThrownBy(() -> lengthOfCodePointFromStartByte(INVALID_FE_BYTE))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("Illegal start 0xFE of code point");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFF of code point")
+    @Test
     public void testLengthOfCodePointFFByte()
     {
-        lengthOfCodePointFromStartByte(INVALID_FF_BYTE);
+        assertThatThrownBy(() -> lengthOfCodePointFromStartByte(INVALID_FF_BYTE))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("Illegal start 0xFF of code point");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 sequence truncated")
+    @Test
     public void testCodePointAtTruncated2()
     {
-        getCodePointAt(wrappedBuffer((byte) 'x', START_2_BYTE), 1);
+        assertThatThrownBy(() -> getCodePointAt(wrappedBuffer((byte) 'x', START_2_BYTE), 1))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("UTF-8 sequence truncated");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 sequence truncated")
+    @Test
     public void testCodePointAtTruncated3()
     {
-        getCodePointAt(wrappedBuffer((byte) 'x', START_3_BYTE, CONTINUATION_BYTE), 1);
+        assertThatThrownBy(() -> getCodePointAt(wrappedBuffer((byte) 'x', START_3_BYTE, CONTINUATION_BYTE), 1))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("UTF-8 sequence truncated");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 sequence truncated")
+    @Test
     public void testCodePointAtTruncated4()
     {
-        getCodePointAt(wrappedBuffer((byte) 'x', START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), 1);
+        assertThatThrownBy(() -> getCodePointAt(wrappedBuffer((byte) 'x', START_4_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), 1))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("UTF-8 sequence truncated");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "Illegal start 0xFB of code point")
+    @Test
     public void testCodePointAt5ByteSequence()
     {
-        getCodePointAt(wrappedBuffer((byte) 'x', START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), 1);
+        assertThatThrownBy(() -> getCodePointAt(wrappedBuffer((byte) 'x', START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), 1))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("Illegal start 0xFB of code point");
     }
 
-    @Test(expectedExceptions = InvalidUtf8Exception.class, expectedExceptionsMessageRegExp = "UTF-8 is not well formed")
+    @Test
     public void testCodePointBefore5ByteSequence()
     {
-        getCodePointBefore(wrappedBuffer((byte) 'x', START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), 6);
+        assertThatThrownBy(() -> getCodePointBefore(wrappedBuffer((byte) 'x', START_5_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE, CONTINUATION_BYTE), 6))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessage("UTF-8 is not well formed");
     }
 
-    @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0xFFFFFFFF")
+    @Test
     public void testSetNegativeCodePoint()
     {
-        setCodePointAt(-1, Slices.allocate(8), 0);
+        assertThatThrownBy(() -> setCodePointAt(-1, Slices.allocate(8), 0))
+                .isInstanceOf(InvalidCodePointException.class)
+                .hasMessage("Invalid code point 0xFFFFFFFF");
     }
 
-    @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0xD800")
+    @Test
     public void testSetSurrogateCodePoint()
     {
-        setCodePointAt(MIN_SURROGATE, Slices.allocate(8), 0);
+        assertThatThrownBy(() -> setCodePointAt(MIN_SURROGATE, Slices.allocate(8), 0))
+                .isInstanceOf(InvalidCodePointException.class)
+                .hasMessage("Invalid code point 0xD800");
     }
 
-    @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0x110000")
+    @Test
     public void testSetOutOfRangeCodePoint()
     {
-        setCodePointAt(MAX_CODE_POINT + 1, Slices.allocate(8), 0);
+        assertThatThrownBy(() -> setCodePointAt(MAX_CODE_POINT + 1, Slices.allocate(8), 0))
+                .isInstanceOf(InvalidCodePointException.class)
+                .hasMessage("Invalid code point 0x110000");
     }
 
-    @Test(expectedExceptions = InvalidCodePointException.class, expectedExceptionsMessageRegExp = "Invalid code point 0xFFFFFFBF")
+    @Test
     public void testSetCodePointContinuationByte()
     {
-        setCodePointAt(CONTINUATION_BYTE, Slices.allocate(8), 0);
+        assertThatThrownBy(() -> setCodePointAt(CONTINUATION_BYTE, Slices.allocate(8), 0))
+                .isInstanceOf(InvalidCodePointException.class)
+                .hasMessage("Invalid code point 0xFFFFFFBF");
     }
 }

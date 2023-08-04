@@ -13,8 +13,8 @@
  */
 package io.airlift.slice;
 
+import org.junit.jupiter.api.Test;
 import org.openjdk.jol.info.ClassLayout;
-import org.testng.annotations.Test;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static java.lang.Math.toIntExact;

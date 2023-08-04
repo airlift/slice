@@ -13,14 +13,16 @@
  */
 package io.airlift.slice;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@SuppressWarnings("resource")
 public class TestInputStreamSliceInput
         extends AbstractSliceInputTest
 {
@@ -49,32 +51,32 @@ public class TestInputStreamSliceInput
         assertThat(input.read()).isEqualTo(-1);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadByteBeyondEnd()
     {
-        SliceInput input = buildSliceInput(new byte[0]);
-        input.readByte();
+        assertThatThrownBy(() -> buildSliceInput(new byte[0]).readByte())
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadShortBeyondEnd()
     {
-        SliceInput input = buildSliceInput(new byte[1]);
-        input.readShort();
+        assertThatThrownBy(() -> buildSliceInput(new byte[1]).readShort())
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadIntBeyondEnd()
     {
-        SliceInput input = buildSliceInput(new byte[3]);
-        input.readInt();
+        assertThatThrownBy(() -> buildSliceInput(new byte[3]).readInt())
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
-    @Test(expectedExceptions = IndexOutOfBoundsException.class)
+    @Test
     public void testReadLongBeyondEnd()
     {
-        SliceInput input = buildSliceInput(new byte[7]);
-        input.readLong();
+        assertThatThrownBy(() -> buildSliceInput(new byte[7]).readLong())
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 
     @Test

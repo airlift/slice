@@ -13,7 +13,7 @@
  */
 package io.airlift.slice;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static org.assertj.core.api.Assertions.assertThat;
