@@ -29,9 +29,8 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public abstract class AbstractSliceInputTest
 {
@@ -62,7 +61,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readBoolean(), valueIndex % 2 == 0);
+                assertThat(input.readBoolean()).isEqualTo(valueIndex % 2 == 0);
             }
         });
     }
@@ -81,7 +80,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readByte(), (byte) valueIndex);
+                assertThat(input.readByte()).isEqualTo((byte) valueIndex);
             }
         });
     }
@@ -100,13 +99,13 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.read(), valueIndex & 0xFF);
+                assertThat(input.read()).isEqualTo(valueIndex & 0xFF);
             }
 
             @Override
             public void verifyReadOffEnd(SliceInput input)
             {
-                assertEquals(input.read(), -1);
+                assertThat(input.read()).isEqualTo(-1);
             }
         });
     }
@@ -125,7 +124,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readShort(), (short) valueIndex);
+                assertThat(input.readShort()).isEqualTo((short) valueIndex);
             }
         });
     }
@@ -144,7 +143,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readUnsignedShort(), valueIndex & 0xFFF);
+                assertThat(input.readUnsignedShort()).isEqualTo(valueIndex & 0xFFF);
             }
         });
     }
@@ -163,7 +162,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readInt(), valueIndex);
+                assertThat(input.readInt()).isEqualTo(valueIndex);
             }
         });
     }
@@ -182,7 +181,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readUnsignedInt(), valueIndex);
+                assertThat(input.readUnsignedInt()).isEqualTo(valueIndex);
             }
         });
     }
@@ -201,7 +200,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readLong(), valueIndex);
+                assertThat(input.readLong()).isEqualTo(valueIndex);
             }
         });
     }
@@ -220,7 +219,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readFloat(), valueIndex + 0.12f);
+                assertThat(input.readFloat()).isEqualTo(valueIndex + 0.12f);
             }
         });
     }
@@ -239,7 +238,7 @@ public abstract class AbstractSliceInputTest
             @Override
             public void verifyValue(SliceInput input, int valueIndex)
             {
-                assertEquals(input.readDouble(), valueIndex + 0.12);
+                assertThat(input.readDouble()).isEqualTo(valueIndex + 0.12);
             }
         });
     }
@@ -265,7 +264,7 @@ public abstract class AbstractSliceInputTest
                 short[] shorts = new short[27];
                 input.readShorts(shorts, 5, 17);
                 for (int i = 0; i < 17; i++) {
-                    assertEquals(shorts[i + 5], (short) ((i + 3) * 37 + valueIndex));
+                    assertThat(shorts[i + 5]).isEqualTo((short) ((i + 3) * 37 + valueIndex));
                 }
             }
         });
@@ -281,7 +280,7 @@ public abstract class AbstractSliceInputTest
             {
                 int[] ints = new int[23];
                 for (int i = 0; i < ints.length; i++) {
-                    ints[i] = (int) (i * 37 + valueIndex);
+                    ints[i] = i * 37 + valueIndex;
                 }
                 output.writeInts(ints, 3, 17);
             }
@@ -292,7 +291,7 @@ public abstract class AbstractSliceInputTest
                 int[] ints = new int[27];
                 input.readInts(ints, 5, 17);
                 for (int i = 0; i < 17; i++) {
-                    assertEquals(ints[i + 5], (int) ((i + 3) * 37 + valueIndex));
+                    assertThat(ints[i + 5]).isEqualTo((i + 3) * 37 + valueIndex);
                 }
             }
         });
@@ -308,7 +307,7 @@ public abstract class AbstractSliceInputTest
             {
                 long[] longs = new long[23];
                 for (int i = 0; i < longs.length; i++) {
-                    longs[i] = (long) (i * 37 + valueIndex);
+                    longs[i] = i * 37 + valueIndex;
                 }
                 output.writeLongs(longs, 3, 17);
             }
@@ -319,7 +318,7 @@ public abstract class AbstractSliceInputTest
                 long[] longs = new long[27];
                 input.readLongs(longs, 5, 17);
                 for (int i = 0; i < 17; i++) {
-                    assertEquals(longs[i + 5], (long) ((i + 3) * 37 + valueIndex));
+                    assertThat(longs[i + 5]).isEqualTo(((i + 3) * 37 + valueIndex));
                 }
             }
         });
@@ -346,7 +345,7 @@ public abstract class AbstractSliceInputTest
                 float[] floats = new float[27];
                 input.readFloats(floats, 5, 17);
                 for (int i = 0; i < 17; i++) {
-                    assertEquals(floats[i + 5], (float) ((i + 3) * 37 + valueIndex));
+                    assertThat(floats[i + 5]).isEqualTo(((i + 3) * 37 + valueIndex));
                 }
             }
         });
@@ -362,7 +361,7 @@ public abstract class AbstractSliceInputTest
             {
                 double[] doubles = new double[23];
                 for (int i = 0; i < doubles.length; i++) {
-                    doubles[i] = (double) (i * 37 + valueIndex);
+                    doubles[i] = i * 37 + valueIndex;
                 }
                 output.writeDoubles(doubles, 3, 17);
             }
@@ -373,7 +372,7 @@ public abstract class AbstractSliceInputTest
                 double[] doubles = new double[27];
                 input.readDoubles(doubles, 5, 17);
                 for (int i = 0; i < 17; i++) {
-                    assertEquals(doubles[i + 5], (double) ((i + 3) * 37 + valueIndex));
+                    assertThat(doubles[i + 5]).isEqualTo((i + 3) * 37 + valueIndex);
                 }
             }
         });
@@ -395,7 +394,7 @@ public abstract class AbstractSliceInputTest
                 @Override
                 public void verifyReadOffEnd(SliceInput input)
                 {
-                    assertEquals(input.skip(valueSize()), valueSize() - 1);
+                    assertThat(input.skip(valueSize())).isEqualTo(valueSize() - 1);
                 }
             });
             testSliceInput(new SkipSliceInputTester(readSize)
@@ -409,7 +408,7 @@ public abstract class AbstractSliceInputTest
                 @Override
                 public void verifyReadOffEnd(SliceInput input)
                 {
-                    assertEquals(input.skip(valueSize()), valueSize() - 1);
+                    assertThat(input.skip(valueSize())).isEqualTo(valueSize() - 1);
                 }
             });
 
@@ -428,7 +427,7 @@ public abstract class AbstractSliceInputTest
                         int skipSize = input.skipBytes(length);
                         length -= skipSize;
                     }
-                    assertEquals(input.skip(0), 0);
+                    assertThat(input.skip(0)).isZero();
                 }
             });
             testSliceInput(new SkipSliceInputTester(readSize)
@@ -445,7 +444,7 @@ public abstract class AbstractSliceInputTest
                         long skipSize = input.skip(length);
                         length -= skipSize;
                     }
-                    assertEquals(input.skip(0), 0);
+                    assertThat(input.skip(0)).isZero();
                 }
             });
         }
@@ -530,7 +529,7 @@ public abstract class AbstractSliceInputTest
                     if (bytesRead == -1) {
                         throw new IndexOutOfBoundsException();
                     }
-                    assertTrue(bytesRead > 0, "Expected to read at least one byte");
+                    assertThat(bytesRead).isGreaterThan(0);
                     input.readBytes(bytes, bytesRead, bytes.length - bytesRead);
                     return new String(bytes, 0, valueSize(), UTF_8);
                 }
@@ -589,7 +588,7 @@ public abstract class AbstractSliceInputTest
         for (int i = slice.length() / tester.valueSize() - 1; i >= 0; i--) {
             int position = i * tester.valueSize();
             input.setPosition(position);
-            assertEquals(input.position(), position);
+            assertThat(input.position()).isEqualTo(position);
             tester.verifyValue(input, i);
         }
     }
@@ -599,7 +598,7 @@ public abstract class AbstractSliceInputTest
         SliceInput input = createSliceInput(slice);
         for (int i = 0; i < slice.length() / tester.valueSize(); i++) {
             int position = i * tester.valueSize();
-            assertEquals(input.position(), position);
+            assertThat(input.position()).isEqualTo(position);
             tester.verifyValue(input, i);
         }
     }
@@ -642,12 +641,8 @@ public abstract class AbstractSliceInputTest
 
         public void verifyReadOffEnd(SliceInput input)
         {
-            try {
-                verifyValue(input, 1);
-                fail("expected IndexOutOfBoundsException");
-            }
-            catch (IndexOutOfBoundsException expected) {
-            }
+            assertThatThrownBy(() -> verifyValue(input, 1))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
         }
     }
 
@@ -685,7 +680,7 @@ public abstract class AbstractSliceInputTest
         {
             String actual = readActual(input);
             String expected = getExpectedStringValue(valueIndex, valueSize());
-            assertEquals(actual, expected);
+            assertThat(actual).isEqualTo(expected);
         }
 
         protected abstract String readActual(SliceInput input);

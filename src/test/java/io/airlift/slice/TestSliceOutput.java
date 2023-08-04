@@ -16,7 +16,7 @@ package io.airlift.slice;
 import org.testng.annotations.Test;
 
 import static io.airlift.slice.SizeOf.instanceSize;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSliceOutput
 {
@@ -30,7 +30,7 @@ public class TestSliceOutput
 
             Slice expected = Slices.wrappedBuffer((byte) i);
 
-            assertEquals(actual, expected);
+            assertThat(actual).isEqualTo(expected);
         }
     }
 
@@ -44,7 +44,7 @@ public class TestSliceOutput
 
             Slice expected = Slices.wrappedBuffer((byte) i);
 
-            assertEquals(actual, expected);
+            assertThat(actual).isEqualTo(expected);
         }
     }
 
@@ -58,7 +58,7 @@ public class TestSliceOutput
 
             Slice expected = Slices.wrappedBuffer((byte) i);
 
-            assertEquals(actual, expected);
+            assertThat(actual).isEqualTo(expected);
         }
     }
 
@@ -74,7 +74,7 @@ public class TestSliceOutput
                 .slice();
 
         Slice expected = Slices.wrappedBuffer(new byte[] {0, 1, 2, 3, 4});
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test
@@ -84,12 +84,12 @@ public class TestSliceOutput
         DynamicSliceOutput output = new DynamicSliceOutput(10);
 
         long originalRetainedSize = output.getRetainedSize();
-        assertEquals(originalRetainedSize, sliceOutputInstanceSize + output.getUnderlyingSlice().getRetainedSize());
-        assertEquals(output.size(), 0);
+        assertThat(originalRetainedSize).isEqualTo(sliceOutputInstanceSize + output.getUnderlyingSlice().getRetainedSize());
+        assertThat(output.size()).isZero();
         output.appendLong(0);
         output.appendShort(0);
-        assertEquals(output.getRetainedSize(), originalRetainedSize);
-        assertEquals(output.size(), 10);
+        assertThat(output.getRetainedSize()).isEqualTo(originalRetainedSize);
+        assertThat(output.size()).isEqualTo(10);
     }
 
     @Test
@@ -107,10 +107,10 @@ public class TestSliceOutput
                 .appendByte(2)
                 .appendByte(3)
                 .appendByte(4);
-        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {0, 1, 2, 3, 4}));
+        assertThat(output.slice()).isEqualTo(Slices.wrappedBuffer(new byte[] {0, 1, 2, 3, 4}));
 
         output.reset();
-        assertEquals(output.slice(), Slices.EMPTY_SLICE);
+        assertThat(output.slice()).isEqualTo(Slices.EMPTY_SLICE);
 
         output
                 .appendByte(2)
@@ -118,18 +118,18 @@ public class TestSliceOutput
                 .appendByte(6)
                 .appendByte(8)
                 .appendByte(10);
-        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2, 4, 6, 8, 10}));
+        assertThat(output.slice()).isEqualTo(Slices.wrappedBuffer(new byte[] {2, 4, 6, 8, 10}));
 
         output.reset(5);
-        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2, 4, 6, 8, 10}));
+        assertThat(output.slice()).isEqualTo(Slices.wrappedBuffer(new byte[] {2, 4, 6, 8, 10}));
 
         output.reset(3);
-        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2, 4, 6}));
+        assertThat(output.slice()).isEqualTo(Slices.wrappedBuffer(new byte[] {2, 4, 6}));
 
         output.reset(1);
-        assertEquals(output.slice(), Slices.wrappedBuffer(new byte[] {2}));
+        assertThat(output.slice()).isEqualTo(Slices.wrappedBuffer(new byte[] {2}));
 
         output.reset(0);
-        assertEquals(output.slice(), Slices.EMPTY_SLICE);
+        assertThat(output.slice()).isEqualTo(Slices.EMPTY_SLICE);
     }
 }

@@ -21,14 +21,14 @@ import java.util.Arrays;
 
 import static java.lang.Double.longBitsToDouble;
 import static java.lang.Float.intBitsToFloat;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestByteArrays
 {
     @Test
     public void testReading()
     {
-        assertEquals(ByteOrder.nativeOrder(), ByteOrder.LITTLE_ENDIAN);
+        assertThat(ByteOrder.nativeOrder()).isEqualTo(ByteOrder.LITTLE_ENDIAN);
 
         byte[] bytes = new byte[10];
         Slice slice = Slices.wrappedBuffer(bytes);
@@ -38,36 +38,36 @@ public class TestByteArrays
         // little endian memory layout: EF BE AD DE BE BA FE CA 00 00
         assertBytes(slice.getBytes(), 0xEF, 0xBE, 0xAD, 0xDE, 0xBE, 0xBA, 0xFE, 0xCA, 0x00, 0x00);
 
-        assertEquals(ByteArrays.getShort(bytes, 0), (short) 0xBEEF);
-        assertEquals(ByteArrays.getShort(bytes, 1), (short) 0xADBE);
-        assertEquals(ByteArrays.getShort(bytes, 2), (short) 0xDEAD);
-        assertEquals(ByteArrays.getShort(bytes, 3), (short) 0xBEDE);
+        assertThat(ByteArrays.getShort(bytes, 0)).isEqualTo((short) 0xBEEF);
+        assertThat(ByteArrays.getShort(bytes, 1)).isEqualTo((short) 0xADBE);
+        assertThat(ByteArrays.getShort(bytes, 2)).isEqualTo((short) 0xDEAD);
+        assertThat(ByteArrays.getShort(bytes, 3)).isEqualTo((short) 0xBEDE);
 
-        assertEquals(ByteArrays.getInt(bytes, 0), 0xDEADBEEF);
-        assertEquals(ByteArrays.getInt(bytes, 1), 0xBEDEADBE);
-        assertEquals(ByteArrays.getInt(bytes, 2), 0xBABEDEAD);
-        assertEquals(ByteArrays.getInt(bytes, 3), 0xFEBABEDE);
-        assertEquals(ByteArrays.getInt(bytes, 4), 0xCAFEBABE);
+        assertThat(ByteArrays.getInt(bytes, 0)).isEqualTo(0xDEADBEEF);
+        assertThat(ByteArrays.getInt(bytes, 1)).isEqualTo(0xBEDEADBE);
+        assertThat(ByteArrays.getInt(bytes, 2)).isEqualTo(0xBABEDEAD);
+        assertThat(ByteArrays.getInt(bytes, 3)).isEqualTo(0xFEBABEDE);
+        assertThat(ByteArrays.getInt(bytes, 4)).isEqualTo(0xCAFEBABE);
 
-        assertEquals(ByteArrays.getLong(bytes, 0), 0xCAFEBABE_DEADBEEFL);
-        assertEquals(ByteArrays.getLong(bytes, 1), 0x00CAFEBA_BEDEADBEL);
-        assertEquals(ByteArrays.getLong(bytes, 2), 0x0000CAFE_BABEDEADL);
+        assertThat(ByteArrays.getLong(bytes, 0)).isEqualTo(0xCAFEBABE_DEADBEEFL);
+        assertThat(ByteArrays.getLong(bytes, 1)).isEqualTo(0x00CAFEBA_BEDEADBEL);
+        assertThat(ByteArrays.getLong(bytes, 2)).isEqualTo(0x0000CAFE_BABEDEADL);
 
-        assertEquals(ByteArrays.getFloat(bytes, 0), intBitsToFloat(0xDEADBEEF));
-        assertEquals(ByteArrays.getFloat(bytes, 1), intBitsToFloat(0xBEDEADBE));
-        assertEquals(ByteArrays.getFloat(bytes, 2), intBitsToFloat(0xBABEDEAD));
-        assertEquals(ByteArrays.getFloat(bytes, 3), intBitsToFloat(0xFEBABEDE));
-        assertEquals(ByteArrays.getFloat(bytes, 4), intBitsToFloat(0xCAFEBABE));
+        assertThat(ByteArrays.getFloat(bytes, 0)).isEqualTo(intBitsToFloat(0xDEADBEEF));
+        assertThat(ByteArrays.getFloat(bytes, 1)).isEqualTo(intBitsToFloat(0xBEDEADBE));
+        assertThat(ByteArrays.getFloat(bytes, 2)).isEqualTo(intBitsToFloat(0xBABEDEAD));
+        assertThat(ByteArrays.getFloat(bytes, 3)).isEqualTo(intBitsToFloat(0xFEBABEDE));
+        assertThat(ByteArrays.getFloat(bytes, 4)).isEqualTo(intBitsToFloat(0xCAFEBABE));
 
-        assertEquals(ByteArrays.getDouble(bytes, 0), longBitsToDouble(0xCAFEBABE_DEADBEEFL));
-        assertEquals(ByteArrays.getDouble(bytes, 1), longBitsToDouble(0x00CAFEBA_BEDEADBEL));
-        assertEquals(ByteArrays.getDouble(bytes, 2), longBitsToDouble(0x0000CAFE_BABEDEADL));
+        assertThat(ByteArrays.getDouble(bytes, 0)).isEqualTo(longBitsToDouble(0xCAFEBABE_DEADBEEFL));
+        assertThat(ByteArrays.getDouble(bytes, 1)).isEqualTo(longBitsToDouble(0x00CAFEBA_BEDEADBEL));
+        assertThat(ByteArrays.getDouble(bytes, 2)).isEqualTo(longBitsToDouble(0x0000CAFE_BABEDEADL));
     }
 
     @Test
     public void testWriting()
     {
-        assertEquals(ByteOrder.nativeOrder(), ByteOrder.LITTLE_ENDIAN);
+        assertThat(ByteOrder.nativeOrder()).isSameAs(ByteOrder.LITTLE_ENDIAN);
 
         byte[] bytes = new byte[10];
 
@@ -227,12 +227,12 @@ public class TestByteArrays
 
     private static void assertBytes(byte[] actual, int... expected)
     {
-        assertEquals(actual.length, expected.length);
+        assertThat(actual).hasSameSizeAs(expected);
         byte[] array = new byte[expected.length];
         for (int i = 0; i < expected.length; i++) {
             array[i] = UnsignedBytes.checkedCast(expected[i]);
         }
-        assertEquals(actual, array);
+        assertThat(actual).isEqualTo(array);
     }
 
     private static void zeroFill(byte[] bytes)

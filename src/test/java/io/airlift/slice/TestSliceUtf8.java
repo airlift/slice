@@ -54,10 +54,8 @@ import static java.lang.Character.getType;
 import static java.lang.Integer.signum;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.IntStream.concat;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestSliceUtf8
 {
@@ -183,26 +181,26 @@ public class TestSliceUtf8
         assertCodePointCount(STRING_ALL_CODE_POINTS);
         assertCodePointCount(STRING_ALL_CODE_POINTS_RANDOM);
 
-        assertEquals(countCodePoints(wrappedBuffer(START_1_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(START_2_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(START_3_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(START_4_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(START_5_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(START_6_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(INVALID_FE_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(INVALID_FF_BYTE)), 1);
-        assertEquals(countCodePoints(wrappedBuffer(CONTINUATION_BYTE)), 0);
+        assertThat(countCodePoints(wrappedBuffer(START_1_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(START_2_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(START_3_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(START_4_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(START_5_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(START_6_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(INVALID_FE_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(INVALID_FF_BYTE))).isEqualTo(1);
+        assertThat(countCodePoints(wrappedBuffer(CONTINUATION_BYTE))).isEqualTo(0);
     }
 
     private static void assertCodePointCount(String string)
     {
-        assertEquals(countCodePoints(utf8Slice(string)), string.codePoints().count());
+        assertThat(countCodePoints(utf8Slice(string))).isEqualTo(string.codePoints().count());
     }
 
     @Test
     public void testOffsetByCodePoints()
     {
-        assertEquals(offsetOfCodePoint(EMPTY_SLICE, 0), -1);
+        assertThat(offsetOfCodePoint(EMPTY_SLICE, 0)).isEqualTo(-1);
         assertOffsetByCodePoints(STRING_HELLO);
         assertOffsetByCodePoints(STRING_QUADRATICALLY);
         assertOffsetByCodePoints(STRING_OESTERREICH);
@@ -232,15 +230,15 @@ public class TestSliceUtf8
             }
             // avoid n^2 performance for large test string
             if (codePointIndex < 10000) {
-                assertEquals(offsetOfCodePoint(utf8, codePointIndex), expectedIndex);
+                assertThat(offsetOfCodePoint(utf8, codePointIndex)).isEqualTo(expectedIndex);
             }
 
             if (codePointIndex > 0) {
-                assertEquals(offsetOfCodePoint(utf8, lastIndex, 1), expectedIndex);
+                assertThat(offsetOfCodePoint(utf8, lastIndex, 1)).isEqualTo(expectedIndex);
             }
             lastIndex = expectedIndex;
         }
-        assertEquals(offsetOfCodePoint(utf8Slice(string), codePoints), -1);
+        assertThat(offsetOfCodePoint(utf8Slice(string), codePoints)).isEqualTo(-1);
     }
 
     @Test
@@ -268,10 +266,10 @@ public class TestSliceUtf8
             int count = Math.min(20, codePoints.length - start - start - 1);
             Slice actual = substring(utf8, start, count);
             Slice expected = wrappedBuffer(new String(codePoints, start, count).getBytes(UTF_8));
-            assertEquals(actual, expected);
+            assertThat(actual).isEqualTo(expected);
         }
-        assertEquals(substring(utf8, 0, codePoints.length), utf8);
-        assertEquals(substring(utf8, 0, 0), EMPTY_SLICE);
+        assertThat(substring(utf8, 0, codePoints.length)).isEqualTo(utf8);
+        assertThat(substring(utf8, 0, 0)).isEqualTo(EMPTY_SLICE);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "UTF-8 does not contain 10 code points")
@@ -316,23 +314,19 @@ public class TestSliceUtf8
         codePoints = Ints.toArray(Lists.reverse(Ints.asList(codePoints)));
         Slice expectedReverse = wrappedBuffer(new String(codePoints, 0, codePoints.length).getBytes(UTF_8));
 
-        assertEquals(actualReverse, expectedReverse);
+        assertThat(actualReverse).isEqualTo(expectedReverse);
     }
 
     private static void assertReverseWithInvalidSequence(byte[] invalidSequence)
     {
-        assertEquals(
-                reverse(wrappedBuffer(invalidSequence)),
-                wrappedBuffer(invalidSequence));
-        assertEquals(
-                reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence))),
-                wrappedBuffer(concat(invalidSequence, new byte[] {'c', 'b', 'a'})));
-        assertEquals(
-                reverse(wrappedBuffer(concat(invalidSequence, new byte[] {'x', 'y', 'z'}))),
-                wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence)));
-        assertEquals(
-                reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence, new byte[] {'x', 'y', 'z'}))),
-                wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence, new byte[] {'c', 'b', 'a'})));
+        assertThat(reverse(wrappedBuffer(invalidSequence)))
+                .isEqualTo(wrappedBuffer(invalidSequence));
+        assertThat(reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence))))
+                .isEqualTo(wrappedBuffer(concat(invalidSequence, new byte[] {'c', 'b', 'a'})));
+        assertThat(reverse(wrappedBuffer(concat(invalidSequence, new byte[] {'x', 'y', 'z'}))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence)));
+        assertThat(reverse(wrappedBuffer(concat(new byte[] {'a', 'b', 'c'}, invalidSequence, new byte[] {'x', 'y', 'z'}))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'z', 'y', 'x'}, invalidSequence, new byte[] {'c', 'b', 'a'})));
     }
 
     @Test
@@ -362,9 +356,13 @@ public class TestSliceUtf8
                         int expected = signum(leftString.compareTo(rightString));
 
                         int actual = compareUtf16BE(leftSlice, rightSlice);
-                        assertEquals(actual, expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                        assertThat(actual)
+                                .withFailMessage("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint)
+                                .isEqualTo(expected);
                         actual = compareUtf16BE(rightSlice, leftSlice);
-                        assertEquals(actual, -expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                        assertThat(actual)
+                                .withFailMessage("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint)
+                                .isEqualTo(-expected);
                     }
                 }
             }
@@ -377,18 +375,10 @@ public class TestSliceUtf8
         for (byte[] invalidSequence : INVALID_SEQUENCES) {
             Slice leftSlice = new Slice(concat(new byte[] {'F', 'O', 'O'}, invalidSequence));
             Slice rightSlice = new Slice(new byte[] {'F', 'O', 'O', 'B', 'a', 'r'});
-            try {
-                compareUtf16BE(leftSlice, rightSlice);
-                fail("Expected exception for invalid UTF-8");
-            }
-            catch (InvalidUtf8Exception e) {
-            }
-            try {
-                compareUtf16BE(rightSlice, leftSlice);
-                fail("Expected exception for invalid UTF-8");
-            }
-            catch (InvalidUtf8Exception e) {
-            }
+            assertThatThrownBy(() -> compareUtf16BE(leftSlice, rightSlice))
+                    .isInstanceOf(InvalidUtf8Exception.class);
+            assertThatThrownBy(() -> compareUtf16BE(rightSlice, leftSlice))
+                    .isInstanceOf(InvalidUtf8Exception.class);
         }
     }
 
@@ -404,9 +394,13 @@ public class TestSliceUtf8
                 int expected = signum(leftString.compareTo(rightString));
 
                 int actual = compareUtf16BE(leftCodePoint, rightCodePoint);
-                assertEquals(actual, expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                assertThat(actual)
+                        .withFailMessage("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint)
+                        .isEqualTo(expected);
                 actual = compareUtf16BE(rightCodePoint, leftCodePoint);
-                assertEquals(actual, -expected, String.format("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint));
+                assertThat(actual)
+                        .withFailMessage("left: 0x%x right: 0x%x", leftCodePoint, rightCodePoint)
+                        .isEqualTo(-expected);
             }
         }
     }
@@ -414,15 +408,15 @@ public class TestSliceUtf8
     @Test
     public void testIsAscii()
     {
-        assertTrue(isAscii(utf8Slice(STRING_HELLO)));
-        assertTrue(isAscii(utf8Slice(STRING_QUADRATICALLY)));
-        assertFalse(isAscii(utf8Slice(STRING_OESTERREICH)));
-        assertFalse(isAscii(utf8Slice(STRING_DULIOE_DULIOE)));
-        assertFalse(isAscii(utf8Slice(STRING_FAITH_HOPE_LOVE)));
-        assertFalse(isAscii(utf8Slice(STRING_NAIVE)));
-        assertFalse(isAscii(utf8Slice(STRING_OO)));
-        assertTrue(isAscii(utf8Slice(STRING_ASCII_CODE_POINTS)));
-        assertFalse(isAscii(utf8Slice(STRING_ALL_CODE_POINTS)));
+        assertThat(isAscii(utf8Slice(STRING_HELLO))).isTrue();
+        assertThat(isAscii(utf8Slice(STRING_QUADRATICALLY))).isTrue();
+        assertThat(isAscii(utf8Slice(STRING_OESTERREICH))).isFalse();
+        assertThat(isAscii(utf8Slice(STRING_DULIOE_DULIOE))).isFalse();
+        assertThat(isAscii(utf8Slice(STRING_FAITH_HOPE_LOVE))).isFalse();
+        assertThat(isAscii(utf8Slice(STRING_NAIVE))).isFalse();
+        assertThat(isAscii(utf8Slice(STRING_OO))).isFalse();
+        assertThat(isAscii(utf8Slice(STRING_ASCII_CODE_POINTS))).isTrue();
+        assertThat(isAscii(utf8Slice(STRING_ALL_CODE_POINTS))).isFalse();
     }
 
     @Test
@@ -506,7 +500,7 @@ public class TestSliceUtf8
 
     private static void assertFixInvalidUtf8(Slice testSlice, Slice expectedSlice)
     {
-        assertEquals(fixInvalidUtf8(testSlice), expectedSlice);
+        assertThat(fixInvalidUtf8(testSlice)).isEqualTo(expectedSlice);
     }
 
     @Test
@@ -532,49 +526,41 @@ public class TestSliceUtf8
 
     private static void assertCaseChangeWithInvalidSequence(byte[] invalidSequence)
     {
-        assertEquals(
-                toLowerCase(wrappedBuffer(invalidSequence)),
-                wrappedBuffer(invalidSequence));
-        assertEquals(
-                toUpperCase(wrappedBuffer(invalidSequence)),
-                wrappedBuffer(invalidSequence));
+        assertThat(toLowerCase(wrappedBuffer(invalidSequence)))
+                .isEqualTo(wrappedBuffer(invalidSequence));
+        assertThat(toUpperCase(wrappedBuffer(invalidSequence)))
+                .isEqualTo(wrappedBuffer(invalidSequence));
 
-        assertEquals(
-                toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence))),
-                wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence)));
-        assertEquals(
-                toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence))),
-                wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence)));
+        assertThat(toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence)));
+        assertThat(toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence)));
 
-        assertEquals(
-                toLowerCase(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'}))),
-                wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'})));
-        assertEquals(
-                toUpperCase(wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'}))),
-                wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'})));
+        assertThat(toLowerCase(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'}))))
+                .isEqualTo(wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'})));
+        assertThat(toUpperCase(wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'}))))
+                .isEqualTo(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'})));
 
-        assertEquals(
-                toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'}))),
-                wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'})));
-        assertEquals(
-                toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'}))),
-                wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'})));
+        assertThat(toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'}))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'})));
+        assertThat(toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'}))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'})));
     }
 
     private static void assertCaseChange(String string)
     {
         String expectedLower = lowerByCodePoint(string);
         Slice actualLower = toLowerCase(utf8Slice(string));
-        assertEquals(actualLower, wrappedBuffer(expectedLower.getBytes(UTF_8)));
+        assertThat(actualLower).isEqualTo(wrappedBuffer(expectedLower.getBytes(UTF_8)));
 
         String expectedUpper = upperByCodePoint(string);
         Slice actualUpper = toUpperCase(utf8Slice(string));
-        assertEquals(actualUpper, wrappedBuffer(expectedUpper.getBytes(UTF_8)));
+        assertThat(actualUpper).isEqualTo(wrappedBuffer(expectedUpper.getBytes(UTF_8)));
 
         // lower the upper and upper the lower
         // NOTE: not all code points roundtrip, so calculate the expected
-        assertEquals(toLowerCase(actualUpper), wrappedBuffer(lowerByCodePoint(expectedUpper).getBytes(UTF_8)));
-        assertEquals(toUpperCase(actualLower), wrappedBuffer(upperByCodePoint(expectedLower).getBytes(UTF_8)));
+        assertThat(toLowerCase(actualUpper)).isEqualTo(wrappedBuffer(lowerByCodePoint(expectedUpper).getBytes(UTF_8)));
+        assertThat(toUpperCase(actualLower)).isEqualTo(wrappedBuffer(upperByCodePoint(expectedLower).getBytes(UTF_8)));
     }
 
     private static String lowerByCodePoint(String string)
@@ -608,15 +594,15 @@ public class TestSliceUtf8
 
     private static void assertLeftTrim(byte[] sequence)
     {
-        assertEquals(leftTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
-        assertEquals(leftTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-        assertEquals(leftTrim(wrappedBuffer(concat(new byte[] {'@'}, sequence)), new int[] {'@'}), wrappedBuffer(sequence));
+        assertThat(leftTrim(wrappedBuffer(sequence))).isEqualTo(wrappedBuffer(sequence));
+        assertThat(leftTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
+        assertThat(leftTrim(wrappedBuffer(concat(new byte[] {'@'}, sequence)), new int[] {'@'})).isEqualTo(wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
-                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, sequence))), wrappedBuffer(sequence));
-                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, sequence)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-                assertEquals(leftTrim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
+                assertThat(leftTrim(wrappedBuffer(concat(whitespace, sequence)))).isEqualTo(wrappedBuffer(sequence));
+                assertThat(leftTrim(wrappedBuffer(concat(whitespace, sequence)), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
+                assertThat(leftTrim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence)), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
             }
         }
     }
@@ -640,16 +626,16 @@ public class TestSliceUtf8
 
     private static void assertRightTrim(byte[] sequence)
     {
-        assertEquals(rightTrim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
-        assertEquals(rightTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-        assertEquals(rightTrim(wrappedBuffer(concat(sequence, new byte[] {'@'})), new int[] {'@'}), wrappedBuffer(sequence));
+        assertThat(rightTrim(wrappedBuffer(sequence))).isEqualTo(wrappedBuffer(sequence));
+        assertThat(rightTrim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
+        assertThat(rightTrim(wrappedBuffer(concat(sequence, new byte[] {'@'})), new int[] {'@'})).isEqualTo(wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
-                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace))), wrappedBuffer(sequence));
-                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))), wrappedBuffer(sequence));
-                assertEquals(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
+                assertThat(rightTrim(wrappedBuffer(concat(sequence, whitespace)))).isEqualTo(wrappedBuffer(sequence));
+                assertThat(rightTrim(wrappedBuffer(concat(sequence, whitespace)), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
+                assertThat(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)))).isEqualTo(wrappedBuffer(sequence));
+                assertThat(rightTrim(wrappedBuffer(concat(sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
             }
         }
     }
@@ -672,22 +658,18 @@ public class TestSliceUtf8
 
     private static void assertTrim(byte[] sequence)
     {
-        assertEquals(trim(wrappedBuffer(sequence)), wrappedBuffer(sequence));
-        assertEquals(trim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-        assertEquals(trim(wrappedBuffer(concat(new byte[] {'@'}, sequence, new byte[] {'@'})), new int[] {'@'}), wrappedBuffer(sequence));
+        assertThat(trim(wrappedBuffer(sequence))).isEqualTo(wrappedBuffer(sequence));
+        assertThat(trim(wrappedBuffer(sequence), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
+        assertThat(trim(wrappedBuffer(concat(new byte[] {'@'}, sequence, new byte[] {'@'})), new int[] {'@'})).isEqualTo(wrappedBuffer(sequence));
         for (int codePoint : ALL_CODE_POINTS) {
             if (Character.isWhitespace(codePoint)) {
                 byte[] whitespace = new String(new int[] {codePoint}, 0, 1).getBytes(UTF_8);
-                assertEquals(trim(wrappedBuffer(concat(whitespace, sequence, whitespace))), wrappedBuffer(sequence));
-                assertEquals(trim(wrappedBuffer(concat(whitespace, sequence, whitespace)), WHITESPACE_CODE_POINTS), wrappedBuffer(sequence));
-                assertEquals(
-                        trim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))),
-                        wrappedBuffer(sequence));
-                assertEquals(
-                        trim(
-                                wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)),
-                                WHITESPACE_CODE_POINTS),
-                        wrappedBuffer(sequence));
+                assertThat(trim(wrappedBuffer(concat(whitespace, sequence, whitespace)))).isEqualTo(wrappedBuffer(sequence));
+                assertThat(trim(wrappedBuffer(concat(whitespace, sequence, whitespace)), WHITESPACE_CODE_POINTS)).isEqualTo(wrappedBuffer(sequence));
+                assertThat(trim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace))))
+                        .isEqualTo(wrappedBuffer(sequence));
+                assertThat(trim(wrappedBuffer(concat(whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace, sequence, whitespace, new byte[] {'\r', '\n', '\t', ' '}, whitespace)), WHITESPACE_CODE_POINTS))
+                        .isEqualTo(wrappedBuffer(sequence));
             }
         }
     }
@@ -698,46 +680,46 @@ public class TestSliceUtf8
     @Test
     public void testInvalidUtf8()
     {
-        assertEquals(countCodePoints(wrappedBuffer(INVALID_UTF8_1)), 0);
-        assertEquals(countCodePoints(wrappedBuffer(INVALID_UTF8_2)), 3);
+        assertThat(countCodePoints(wrappedBuffer(INVALID_UTF8_1))).isEqualTo(0);
+        assertThat(countCodePoints(wrappedBuffer(INVALID_UTF8_2))).isEqualTo(3);
 
-        assertEquals(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_1), 0), 0);
-        assertEquals(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_1), 1), -1);
+        assertThat(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_1), 0)).isEqualTo(0);
+        assertThat(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_1), 1)).isEqualTo(-1);
 
-        assertEquals(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 0), 0);
-        assertEquals(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 1), 2);
-        assertEquals(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 2), 3);
-        assertEquals(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 3), -1);
+        assertThat(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 0)).isEqualTo(0);
+        assertThat(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 1)).isEqualTo(2);
+        assertThat(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 2)).isEqualTo(3);
+        assertThat(offsetOfCodePoint(wrappedBuffer(INVALID_UTF8_2), 3)).isEqualTo(-1);
     }
 
     @Test
     public void testLengthOfCodePoint()
     {
-        assertEquals(lengthOfCodePointFromStartByte(START_1_BYTE), 1);
-        assertEquals(lengthOfCodePointFromStartByte(START_2_BYTE), 2);
-        assertEquals(lengthOfCodePointFromStartByte(START_3_BYTE), 3);
-        assertEquals(lengthOfCodePointFromStartByte(START_4_BYTE), 4);
+        assertThat(lengthOfCodePointFromStartByte(START_1_BYTE)).isEqualTo(1);
+        assertThat(lengthOfCodePointFromStartByte(START_2_BYTE)).isEqualTo(2);
+        assertThat(lengthOfCodePointFromStartByte(START_3_BYTE)).isEqualTo(3);
+        assertThat(lengthOfCodePointFromStartByte(START_4_BYTE)).isEqualTo(4);
 
         for (int codePoint : ALL_CODE_POINTS) {
             String string = new String(new int[] {codePoint}, 0, 1);
-            assertEquals(string.codePoints().count(), 1);
+            assertThat(string.codePoints().count()).isEqualTo(1);
 
             Slice utf8 = wrappedBuffer(string.getBytes(UTF_8));
-            assertEquals(lengthOfCodePoint(codePoint), utf8.length());
-            assertEquals(lengthOfCodePoint(utf8, 0), utf8.length());
-            assertEquals(lengthOfCodePointSafe(utf8, 0), utf8.length());
-            assertEquals(lengthOfCodePointFromStartByte(utf8.getByte(0)), utf8.length());
+            assertThat(lengthOfCodePoint(codePoint)).isEqualTo(utf8.length());
+            assertThat(lengthOfCodePoint(utf8, 0)).isEqualTo(utf8.length());
+            assertThat(lengthOfCodePointSafe(utf8, 0)).isEqualTo(utf8.length());
+            assertThat(lengthOfCodePointFromStartByte(utf8.getByte(0))).isEqualTo(utf8.length());
 
-            assertEquals(getCodePointAt(utf8, 0), codePoint);
-            assertEquals(getCodePointBefore(utf8, utf8.length()), codePoint);
+            assertThat(getCodePointAt(utf8, 0)).isEqualTo(codePoint);
+            assertThat(getCodePointBefore(utf8, utf8.length())).isEqualTo(codePoint);
 
-            assertEquals(codePointToUtf8(codePoint), utf8);
+            assertThat(codePointToUtf8(codePoint)).isEqualTo(utf8);
         }
 
         for (byte[] sequence : INVALID_SEQUENCES) {
-            assertEquals(lengthOfCodePointSafe(wrappedBuffer(sequence), 0), sequence.length);
-            assertEquals(lengthOfCodePointSafe(wrappedBuffer(concat(new byte[] {'x'}, sequence)), 1), sequence.length);
-            assertEquals(lengthOfCodePointSafe(wrappedBuffer(concat(sequence, new byte[] {'x'})), 0), sequence.length);
+            assertThat(lengthOfCodePointSafe(wrappedBuffer(sequence), 0)).isEqualTo(sequence.length);
+            assertThat(lengthOfCodePointSafe(wrappedBuffer(concat(new byte[] {'x'}, sequence)), 1)).isEqualTo(sequence.length);
+            assertThat(lengthOfCodePointSafe(wrappedBuffer(concat(sequence, new byte[] {'x'})), 0)).isEqualTo(sequence.length);
         }
     }
 

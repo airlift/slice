@@ -19,7 +19,7 @@ import java.io.ByteArrayInputStream;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestInputStreamSliceInput
         extends AbstractSliceInputTest
@@ -39,14 +39,14 @@ public class TestInputStreamSliceInput
     public void testEmptyInput()
     {
         SliceInput input = buildSliceInput(new byte[0]);
-        assertEquals(input.position(), 0);
+        assertThat(input.position()).isEqualTo(0);
     }
 
     @Test
     public void testEmptyRead()
     {
         SliceInput input = buildSliceInput(new byte[0]);
-        assertEquals(input.read(), -1);
+        assertThat(input.read()).isEqualTo(-1);
     }
 
     @Test(expectedExceptions = IndexOutOfBoundsException.class)
@@ -80,63 +80,63 @@ public class TestInputStreamSliceInput
     @Test
     public void testEncodingBoolean()
     {
-        assertEquals(buildSliceInput(new byte[] {1}).readBoolean(), true);
-        assertEquals(buildSliceInput(new byte[] {0}).readBoolean(), false);
+        assertThat(buildSliceInput(new byte[] {1}).readBoolean()).isTrue();
+        assertThat(buildSliceInput(new byte[] {0}).readBoolean()).isFalse();
     }
 
     @Test
     public void testEncodingByte()
     {
-        assertEquals(buildSliceInput(new byte[] {92}).readByte(), 92);
-        assertEquals(buildSliceInput(new byte[] {-100}).readByte(), -100);
-        assertEquals(buildSliceInput(new byte[] {-17}).readByte(), -17);
+        assertThat(buildSliceInput(new byte[] {92}).readByte()).isEqualTo((byte) 92);
+        assertThat(buildSliceInput(new byte[] {-100}).readByte()).isEqualTo((byte) -100);
+        assertThat(buildSliceInput(new byte[] {-17}).readByte()).isEqualTo((byte) -17);
 
-        assertEquals(buildSliceInput(new byte[] {92}).readUnsignedByte(), 92);
-        assertEquals(buildSliceInput(new byte[] {-100}).readUnsignedByte(), 156);
-        assertEquals(buildSliceInput(new byte[] {-17}).readUnsignedByte(), 239);
+        assertThat(buildSliceInput(new byte[] {92}).readUnsignedByte()).isEqualTo((short) 92);
+        assertThat(buildSliceInput(new byte[] {-100}).readUnsignedByte()).isEqualTo((short) 156);
+        assertThat(buildSliceInput(new byte[] {-17}).readUnsignedByte()).isEqualTo((short) 239);
     }
 
     @Test
     public void testEncodingShort()
     {
-        assertEquals(buildSliceInput(new byte[] {109, 92}).readShort(), 23661);
-        assertEquals(buildSliceInput(new byte[] {109, -100}).readShort(), -25491);
-        assertEquals(buildSliceInput(new byte[] {-52, -107}).readShort(), -27188);
+        assertThat(buildSliceInput(new byte[] {109, 92}).readShort()).isEqualTo((short) 23661);
+        assertThat(buildSliceInput(new byte[] {109, -100}).readShort()).isEqualTo((short) -25491);
+        assertThat(buildSliceInput(new byte[] {-52, -107}).readShort()).isEqualTo((short) -27188);
 
-        assertEquals(buildSliceInput(new byte[] {109, -100}).readUnsignedShort(), 40045);
-        assertEquals(buildSliceInput(new byte[] {-52, -107}).readUnsignedShort(), 38348);
+        assertThat(buildSliceInput(new byte[] {109, -100}).readUnsignedShort()).isEqualTo(40045);
+        assertThat(buildSliceInput(new byte[] {-52, -107}).readUnsignedShort()).isEqualTo(38348);
     }
 
     @Test
     public void testEncodingInteger()
     {
-        assertEquals(buildSliceInput(new byte[] {109, 92, 75, 58}).readInt(), 978017389);
-        assertEquals(buildSliceInput(new byte[] {-16, -60, -120, -1}).readInt(), -7813904);
+        assertThat(buildSliceInput(new byte[] {109, 92, 75, 58}).readInt()).isEqualTo(978017389);
+        assertThat(buildSliceInput(new byte[] {-16, -60, -120, -1}).readInt()).isEqualTo(-7813904);
     }
 
     @Test
     public void testEncodingLong()
     {
-        assertEquals(buildSliceInput(new byte[] {49, -114, -96, -23, -32, -96, -32, 127}).readLong(), 9214541725452766769L);
-        assertEquals(buildSliceInput(new byte[] {109, 92, 75, 58, 18, 120, -112, -17}).readLong(), -1184314682315678611L);
+        assertThat(buildSliceInput(new byte[] {49, -114, -96, -23, -32, -96, -32, 127}).readLong()).isEqualTo(9214541725452766769L);
+        assertThat(buildSliceInput(new byte[] {109, 92, 75, 58, 18, 120, -112, -17}).readLong()).isEqualTo(-1184314682315678611L);
     }
 
     @Test
     public void testEncodingDouble()
     {
-        assertEquals(buildSliceInput(new byte[] {31, -123, -21, 81, -72, 30, 9, 64}).readDouble(), 3.14);
-        assertEquals(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -8, 127}).readDouble(), Double.NaN);
-        assertEquals(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -16, -1}).readDouble(), Double.NEGATIVE_INFINITY);
-        assertEquals(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -16, 127}).readDouble(), Double.POSITIVE_INFINITY);
+        assertThat(buildSliceInput(new byte[] {31, -123, -21, 81, -72, 30, 9, 64}).readDouble()).isEqualTo(3.14);
+        assertThat(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -8, 127}).readDouble()).isNaN();
+        assertThat(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -16, -1}).readDouble()).isEqualTo(Double.NEGATIVE_INFINITY);
+        assertThat(buildSliceInput(new byte[] {0, 0, 0, 0, 0, 0, -16, 127}).readDouble()).isEqualTo(Double.POSITIVE_INFINITY);
     }
 
     @Test
     public void testEncodingFloat()
     {
-        assertEquals(buildSliceInput(new byte[] {-61, -11, 72, 64}).readFloat(), 3.14f);
-        assertEquals(buildSliceInput(new byte[] {0, 0, -64, 127}).readFloat(), Float.NaN);
-        assertEquals(buildSliceInput(new byte[] {0, 0, -128, -1}).readFloat(), Float.NEGATIVE_INFINITY);
-        assertEquals(buildSliceInput(new byte[] {0, 0, -128, 127}).readFloat(), Float.POSITIVE_INFINITY);
+        assertThat(buildSliceInput(new byte[] {-61, -11, 72, 64}).readFloat()).isEqualTo(3.14f);
+        assertThat(buildSliceInput(new byte[] {0, 0, -64, 127}).readFloat()).isNaN();
+        assertThat(buildSliceInput(new byte[] {0, 0, -128, -1}).readFloat()).isEqualTo(Float.NEGATIVE_INFINITY);
+        assertThat(buildSliceInput(new byte[] {0, 0, -128, 127}).readFloat()).isEqualTo(Float.POSITIVE_INFINITY);
     }
 
     @Test
@@ -144,7 +144,7 @@ public class TestInputStreamSliceInput
     {
         int bufferSize = 1024;
         InputStreamSliceInput input = new InputStreamSliceInput(new ByteArrayInputStream(new byte[] {0, 1}), bufferSize);
-        assertEquals(input.getRetainedSize(), instanceSize(InputStreamSliceInput.class) + sizeOfByteArray(bufferSize));
+        assertThat(input.getRetainedSize()).isEqualTo(instanceSize(InputStreamSliceInput.class) + sizeOfByteArray(bufferSize));
     }
 
     private SliceInput buildSliceInput(byte[] bytes)

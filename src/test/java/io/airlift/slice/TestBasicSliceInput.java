@@ -16,7 +16,7 @@ package io.airlift.slice;
 import org.testng.annotations.Test;
 
 import static io.airlift.slice.SizeOf.instanceSize;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestBasicSliceInput
         extends AbstractSliceInputTest
@@ -32,6 +32,6 @@ public class TestBasicSliceInput
     {
         Slice slice = Slices.allocate(1024);
         SliceInput input = new BasicSliceInput(slice);
-        assertEquals(input.getRetainedSize(), instanceSize(BasicSliceInput.class) + slice.getRetainedSize());
+        assertThat(input.getRetainedSize()).isEqualTo(instanceSize(BasicSliceInput.class) + slice.getRetainedSize());
     }
 }

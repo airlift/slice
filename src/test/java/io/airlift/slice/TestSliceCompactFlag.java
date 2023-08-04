@@ -17,10 +17,7 @@ import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotSame;
-import static org.testng.Assert.assertSame;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSliceCompactFlag
 {
@@ -74,10 +71,10 @@ public class TestSliceCompactFlag
 
         assertCompact(slice);
         assertCompact(slice.slice(0, slice.length()));
-        assertSame(slice.slice(0, slice.length()), slice);
+        assertThat(slice.slice(0, slice.length())).isSameAs(slice);
 
         assertCompact(Slices.copyOf(slice));
-        assertNotSame(Slices.copyOf(slice).getBase(), slice.getBase());
+        assertThat(Slices.copyOf(slice).getBase()).isNotSameAs(slice.getBase());
         assertCompact(Slices.copyOf(slice, 0, slice.length() - 1));
         assertCompact(Slices.copyOf(slice, 1, slice.length() - 1));
 
@@ -146,11 +143,11 @@ public class TestSliceCompactFlag
 
     private static void assertCompact(Slice data)
     {
-        assertTrue(data.isCompact());
+        assertThat(data.isCompact()).isTrue();
     }
 
     private static void assertNotCompact(Slice data)
     {
-        assertFalse(data.isCompact());
+        assertThat(data.isCompact()).isFalse();
     }
 }

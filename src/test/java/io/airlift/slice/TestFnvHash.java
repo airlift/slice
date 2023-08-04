@@ -16,7 +16,7 @@ package io.airlift.slice;
 import org.testng.annotations.Test;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestFnvHash
 {
@@ -43,11 +43,11 @@ public class TestFnvHash
                 0x6b385816,
         };
 
-        assertEquals(testData.length, expected.length);
+        assertThat(testData.length).isEqualTo(expected.length);
 
         for (int i = 0; i < testData.length; ++i) {
             Slice data = Slices.wrappedBuffer(testData[i]);
-            assertEquals(FnvHash.hash32(data), expected[i]);
+            assertThat(FnvHash.hash32(data)).isEqualTo(expected[i]);
         }
     }
 
@@ -74,11 +74,11 @@ public class TestFnvHash
                 0x456fbb181822b8f6L
         };
 
-        assertEquals(testData.length, expected.length);
+        assertThat(testData.length).isEqualTo(expected.length);
 
         for (int i = 0; i < testData.length; ++i) {
             Slice data = Slices.wrappedBuffer(testData[i]);
-            assertEquals(FnvHash.hash64(data), expected[i]);
+            assertThat(FnvHash.hash64(data)).isEqualTo(expected[i]);
         }
     }
 }

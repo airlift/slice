@@ -16,7 +16,7 @@ package io.airlift.slice;
 import com.google.common.primitives.Ints;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSpookyHashV2
 {
@@ -290,7 +290,9 @@ public class TestSpookyHashV2
             Slice data = makeData(offset, expected.length);
 
             for (int i = 0; i < expected.length; ++i) {
-                assertEquals(SpookyHashV2.hash32(data, offset, i, seed), expected[i], String.format("size: %s", i));
+                assertThat(SpookyHashV2.hash32(data, offset, i, seed))
+                        .withFailMessage(String.format("size: %s", i))
+                        .isEqualTo(expected[i]);
             }
         }
     }
@@ -301,7 +303,9 @@ public class TestSpookyHashV2
             Slice data = makeData(offset, expected.length);
 
             for (int i = 0; i < expected.length; ++i) {
-                assertEquals(SpookyHashV2.hash64(data, offset, i, seed), expected[i], String.format("size: %s", i));
+                assertThat(SpookyHashV2.hash64(data, offset, i, seed))
+                        .withFailMessage(String.format("size: %s", i))
+                        .isEqualTo(expected[i]);
             }
         }
     }
