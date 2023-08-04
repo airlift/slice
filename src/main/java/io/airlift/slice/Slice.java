@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
@@ -1599,8 +1600,7 @@ public final class Slice
         }
 
         if (hasByteArray()) {
-            //noinspection deprecation
-            return new String(byteArray(), 0, byteArrayOffset() + index, length);
+            return new String(byteArray(), byteArrayOffset() + index, length, StandardCharsets.US_ASCII);
         }
 
         char[] chars = new char[length];
