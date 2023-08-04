@@ -20,8 +20,7 @@ import java.nio.ByteBuffer;
 
 import static io.airlift.slice.JvmUtils.bufferAddress;
 import static io.airlift.slice.JvmUtils.unsafe;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestUnsafeSliceFactory
 {
@@ -38,7 +37,7 @@ public class TestUnsafeSliceFactory
                 slice.setInt(i, i);
             }
             for (int i = 0; i < size; i += Ints.BYTES) {
-                assertEquals(slice.getInt(i), i);
+                assertThat(slice.getInt(i)).isEqualTo(i);
             }
         }
         finally {
@@ -50,7 +49,7 @@ public class TestUnsafeSliceFactory
     public void testRawAddressWithReference()
     {
         ByteBuffer buffer = ByteBuffer.allocateDirect(100);
-        assertTrue(buffer.isDirect());
+        assertThat(buffer.isDirect()).isTrue();
         long address = bufferAddress(buffer);
 
         UnsafeSliceFactory factory = UnsafeSliceFactory.getInstance();
@@ -58,6 +57,6 @@ public class TestUnsafeSliceFactory
         Slice slice = factory.newSlice(address, buffer.capacity(), buffer);
 
         slice.setInt(32, 0xDEADBEEF);
-        assertEquals(slice.getInt(32), 0xDEADBEEF);
+        assertThat(slice.getInt(32)).isEqualTo(0xDEADBEEF);
     }
 }

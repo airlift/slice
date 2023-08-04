@@ -16,8 +16,7 @@ package io.airlift.slice;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestUnsignedGetters
 {
@@ -34,24 +33,24 @@ public class TestUnsignedGetters
     public void testUnsignedByte()
     {
         int expected = 0xA5;
-        assertTrue(expected > 0);
-        assertEquals(slice.getUnsignedByte(0), expected);
+        assertThat(expected > 0).isTrue();
+        assertThat(slice.getUnsignedByte(0)).isEqualTo((short) expected);
     }
 
     @Test
     public void testUnsignedShort()
     {
         int expected = 0xA5A5;
-        assertTrue(expected > 0);
-        assertEquals(slice.getUnsignedShort(0), expected);
+        assertThat(expected > 0).isTrue();
+        assertThat(slice.getUnsignedShort(0)).isEqualTo(expected);
     }
 
     @Test
     public void testUnsignedInt()
     {
         long expected = 0xA5A5A5A5L;
-        assertTrue(expected > 0);  // make sure we didn't forget the L in the constant above
-        assertEquals(slice.getUnsignedInt(0), expected);
+        assertThat(expected > 0).isTrue();  // make sure we didn't forget the L in the constant above
+        assertThat(slice.getUnsignedInt(0)).isEqualTo(expected);
     }
 
     protected Slice allocate(int size)

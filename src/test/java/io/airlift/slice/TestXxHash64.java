@@ -23,8 +23,7 @@ import java.io.IOException;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.XxHash64.hash;
 import static java.lang.Math.min;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestXxHash64
 {
@@ -71,24 +70,24 @@ public class TestXxHash64
     private static void assertHash(long seed, Slice data, int length, long expected)
             throws IOException
     {
-        assertEquals(hash(seed, data, 0, length), expected);
-        assertEquals(hash(seed, data.slice(0, length)), expected);
+        assertThat(hash(seed, data, 0, length)).isEqualTo(expected);
+        assertThat(hash(seed, data.slice(0, length))).isEqualTo(expected);
 
-        assertEquals(new XxHash64(seed).update(data.slice(0, length)).hash(), expected);
-        assertEquals(new XxHash64(seed).update(data, 0, length).hash(), expected);
-        assertEquals(new XxHash64(seed).update(data.getBytes(0, length)).hash(), expected);
-        assertEquals(new XxHash64(seed).update(data.getBytes(), 0, length).hash(), expected);
+        assertThat(new XxHash64(seed).update(data.slice(0, length)).hash()).isEqualTo(expected);
+        assertThat(new XxHash64(seed).update(data, 0, length).hash()).isEqualTo(expected);
+        assertThat(new XxHash64(seed).update(data.getBytes(0, length)).hash()).isEqualTo(expected);
+        assertThat(new XxHash64(seed).update(data.getBytes(), 0, length).hash()).isEqualTo(expected);
 
-        assertEquals(hash(seed, new ByteArrayInputStream(data.getBytes(0, length))), expected);
+        assertThat(hash(seed, new ByteArrayInputStream(data.getBytes(0, length)))).isEqualTo(expected);
 
         for (int chunkSize = 1; chunkSize <= length; chunkSize++) {
             XxHash64 hash = new XxHash64(seed);
             for (int i = 0; i < length; i += chunkSize) {
                 int updateSize = min(length - i, chunkSize);
                 hash.update(data.slice(i, updateSize));
-                assertEquals(hash.hash(), hash(seed, data, 0, i + updateSize));
+                assertThat(hash.hash()).isEqualTo(hash(seed, data, 0, i + updateSize));
             }
-            assertEquals(hash.hash(), expected);
+            assertThat(hash.hash()).isEqualTo(expected);
         }
     }
 
@@ -102,11 +101,11 @@ public class TestXxHash64
             long expected = jpountz.hash(data, 0, data.length, 0);
 
             Slice slice = Slices.wrappedBuffer(data);
-            assertEquals(hash(slice), expected);
-            assertEquals(new XxHash64().update(slice).hash(), expected);
-            assertEquals(new XxHash64().update(data).hash(), expected);
+            assertThat(hash(slice)).isEqualTo(expected);
+            assertThat(new XxHash64().update(slice).hash()).isEqualTo(expected);
+            assertThat(new XxHash64().update(data).hash()).isEqualTo(expected);
 
-            assertEquals(hash(new ByteArrayInputStream(data)), expected);
+            assertThat(hash(new ByteArrayInputStream(data))).isEqualTo(expected);
         }
     }
 
@@ -115,35 +114,35 @@ public class TestXxHash64
     {
         long expected = 0xEF46DB3751D8E999L;
 
-        assertEquals(hash(EMPTY_SLICE), expected);
-        assertEquals(hash(EMPTY_SLICE, 0, 0), expected);
+        assertThat(hash(EMPTY_SLICE)).isEqualTo(expected);
+        assertThat(hash(EMPTY_SLICE, 0, 0)).isEqualTo(expected);
 
-        assertEquals(hash(0, EMPTY_SLICE), expected);
-        assertEquals(hash(0, EMPTY_SLICE, 0, 0), expected);
+        assertThat(hash(0, EMPTY_SLICE)).isEqualTo(expected);
+        assertThat(hash(0, EMPTY_SLICE, 0, 0)).isEqualTo(expected);
 
-        assertEquals(new XxHash64().update(EMPTY_SLICE).hash(), expected);
-        assertEquals(new XxHash64().update(EMPTY_SLICE, 0, 0).hash(), expected);
+        assertThat(new XxHash64().update(EMPTY_SLICE).hash()).isEqualTo(expected);
+        assertThat(new XxHash64().update(EMPTY_SLICE, 0, 0).hash()).isEqualTo(expected);
 
-        assertEquals(new XxHash64().update(EMPTY_BYTES).hash(), expected);
-        assertEquals(new XxHash64().update(EMPTY_BYTES, 0, 0).hash(), expected);
+        assertThat(new XxHash64().update(EMPTY_BYTES).hash()).isEqualTo(expected);
+        assertThat(new XxHash64().update(EMPTY_BYTES, 0, 0).hash()).isEqualTo(expected);
 
-        assertEquals(
+        assertThat(
                 new XxHash64()
                         .update(EMPTY_BYTES)
                         .update(EMPTY_BYTES, 0, 0)
                         .update(EMPTY_SLICE)
                         .update(EMPTY_SLICE, 0, 0)
-                        .hash(),
-                expected);
+                        .hash())
+                .isEqualTo(expected);
     }
 
     @Test
     public void testHashLong()
     {
         // Different seed
-        assertNotEquals(hash(42, buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
+        assertThat(hash(42, buffer.getLong(0))).isNotEqualTo(hash(buffer, 0, SizeOf.SIZE_OF_LONG));
         // Matching seed
-        assertEquals(hash(buffer.getLong(0)), hash(buffer, 0, SizeOf.SIZE_OF_LONG));
-        assertEquals(hash(42, buffer.getLong(0)), hash(42, buffer, 0, SizeOf.SIZE_OF_LONG));
+        assertThat(hash(buffer.getLong(0))).isEqualTo(hash(buffer, 0, SizeOf.SIZE_OF_LONG));
+        assertThat(hash(42, buffer.getLong(0))).isEqualTo(hash(42, buffer, 0, SizeOf.SIZE_OF_LONG));
     }
 }

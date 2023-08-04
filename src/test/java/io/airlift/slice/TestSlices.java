@@ -39,20 +39,17 @@ import static io.airlift.slice.Slices.wrappedHeapBuffer;
 import static io.airlift.slice.Slices.wrappedIntArray;
 import static io.airlift.slice.Slices.wrappedLongArray;
 import static io.airlift.slice.Slices.wrappedShortArray;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertSame;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSlices
 {
     @Test
     public void testEmptySlice()
     {
-        assertEquals(EMPTY_SLICE.length(), 0);
-        assertTrue(EMPTY_SLICE.hasByteArray());
-        assertEquals(EMPTY_SLICE.byteArray().length, 0);
-        assertEquals(EMPTY_SLICE.byteArrayOffset(), 0);
+        assertThat(EMPTY_SLICE.length()).isEqualTo(0);
+        assertThat(EMPTY_SLICE.hasByteArray()).isTrue();
+        assertThat(EMPTY_SLICE.byteArray().length).isEqualTo(0);
+        assertThat(EMPTY_SLICE.byteArrayOffset()).isEqualTo(0);
     }
 
     @Test
@@ -72,7 +69,7 @@ public class TestSlices
     {
         ByteBuffer heapByteBuffer = ByteBuffer.allocate(50);
         Slice slice = wrappedHeapBuffer(heapByteBuffer);
-        assertEquals(slice.getRetainedSize(), instanceSize(Slice.class) + sizeOf(heapByteBuffer.array()));
+        assertThat(slice.getRetainedSize()).isEqualTo(instanceSize(Slice.class) + sizeOf(heapByteBuffer.array()));
     }
 
     private static void testWrapping(ByteBuffer buffer)
@@ -85,25 +82,25 @@ public class TestSlices
         // test full buffer
         buffer.rewind();
         Slice slice = wrappedBuffer(buffer);
-        assertEquals(slice.length(), 50);
+        assertThat(slice.length()).isEqualTo(50);
         for (int i = 0; i < 50; i++) {
-            assertEquals(slice.getByte(i), i);
+            assertThat(slice.getByte(i)).isEqualTo((byte) i);
         }
 
         // test limited buffer
         buffer.position(10).limit(30);
         slice = wrappedBuffer(buffer);
-        assertEquals(slice.length(), 20);
+        assertThat(slice.length()).isEqualTo(20);
         for (int i = 0; i < 20; i++) {
-            assertEquals(slice.getByte(i), i + 10);
+            assertThat(slice.getByte(i)).isEqualTo((byte) (i + 10));
         }
 
         // test limited buffer after slicing
         buffer = buffer.slice();
         slice = wrappedBuffer(buffer);
-        assertEquals(slice.length(), 20);
+        assertThat(slice.length()).isEqualTo(20);
         for (int i = 0; i < 20; i++) {
-            assertEquals(slice.getByte(i), i + 10);
+            assertThat(slice.getByte(i)).isEqualTo((byte) (i + 10));
         }
     }
 
@@ -111,53 +108,53 @@ public class TestSlices
     public void testWrapAllTypes()
     {
         boolean[] booleanArray = {true, false, false, true, false, true};
-        assertEquals(wrappedBooleanArray(booleanArray).getByte(0) == 1, booleanArray[0]);
-        assertEquals(wrappedBooleanArray(booleanArray, 1, 4).getByte(0) == 1, booleanArray[1]);
-        assertEquals(wrappedBooleanArray(booleanArray, 1, 4).length(), 4 * SIZE_OF_BYTE);
-        assertEquals(wrappedBooleanArray(booleanArray).getByte(5 * SIZE_OF_BYTE) == 1, booleanArray[5]);
-        assertFalse(wrappedBooleanArray(booleanArray).hasByteArray());
+        assertThat(wrappedBooleanArray(booleanArray).getByte(0) == 1).isEqualTo(booleanArray[0]);
+        assertThat(wrappedBooleanArray(booleanArray, 1, 4).getByte(0) == 1).isEqualTo(booleanArray[1]);
+        assertThat(wrappedBooleanArray(booleanArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_BYTE);
+        assertThat(wrappedBooleanArray(booleanArray).getByte(5 * SIZE_OF_BYTE) == 1).isEqualTo(booleanArray[5]);
+        assertThat(wrappedBooleanArray(booleanArray).hasByteArray()).isFalse();
 
         byte[] byteArray = {(byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5};
-        assertEquals(wrappedBuffer(byteArray).getByte(0), byteArray[0]);
-        assertEquals(wrappedBuffer(byteArray, 1, 4).getByte(0), byteArray[1]);
-        assertEquals(wrappedBuffer(byteArray, 1, 4).length(), 4 * SIZE_OF_BYTE);
-        assertEquals(wrappedBuffer(byteArray).getByte(5 * SIZE_OF_BYTE), byteArray[5]);
-        assertTrue(wrappedBuffer(byteArray).hasByteArray());
+        assertThat(wrappedBuffer(byteArray).getByte(0)).isEqualTo(byteArray[0]);
+        assertThat(wrappedBuffer(byteArray, 1, 4).getByte(0)).isEqualTo(byteArray[1]);
+        assertThat(wrappedBuffer(byteArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_BYTE);
+        assertThat(wrappedBuffer(byteArray).getByte(5 * SIZE_OF_BYTE)).isEqualTo(byteArray[5]);
+        assertThat(wrappedBuffer(byteArray).hasByteArray()).isTrue();
 
         short[] shortArray = {(short) 0, (short) 1, (short) 2, (short) 3, (short) 4, (short) 5};
-        assertEquals(wrappedShortArray(shortArray).getShort(0), shortArray[0]);
-        assertEquals(wrappedShortArray(shortArray, 1, 4).getShort(0), shortArray[1]);
-        assertEquals(wrappedShortArray(shortArray, 1, 4).length(), 4 * SIZE_OF_SHORT);
-        assertEquals(wrappedShortArray(shortArray).getShort(5 * SIZE_OF_SHORT), shortArray[5]);
-        assertFalse(wrappedShortArray(shortArray).hasByteArray());
+        assertThat(wrappedShortArray(shortArray).getShort(0)).isEqualTo(shortArray[0]);
+        assertThat(wrappedShortArray(shortArray, 1, 4).getShort(0)).isEqualTo(shortArray[1]);
+        assertThat(wrappedShortArray(shortArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_SHORT);
+        assertThat(wrappedShortArray(shortArray).getShort(5 * SIZE_OF_SHORT)).isEqualTo(shortArray[5]);
+        assertThat(wrappedShortArray(shortArray).hasByteArray()).isFalse();
 
         int[] intArray = {0, 1, 2, 3, 4, 5};
-        assertEquals(wrappedIntArray(intArray).getInt(0), intArray[0]);
-        assertEquals(wrappedIntArray(intArray, 1, 4).getInt(0), intArray[1]);
-        assertEquals(wrappedIntArray(intArray, 1, 4).length(), 4 * SIZE_OF_INT);
-        assertEquals(wrappedIntArray(intArray).getInt(5 * SIZE_OF_INT), intArray[5]);
-        assertFalse(wrappedIntArray(intArray).hasByteArray());
+        assertThat(wrappedIntArray(intArray).getInt(0)).isEqualTo(intArray[0]);
+        assertThat(wrappedIntArray(intArray, 1, 4).getInt(0)).isEqualTo(intArray[1]);
+        assertThat(wrappedIntArray(intArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_INT);
+        assertThat(wrappedIntArray(intArray).getInt(5 * SIZE_OF_INT)).isEqualTo(intArray[5]);
+        assertThat(wrappedIntArray(intArray).hasByteArray()).isFalse();
 
         long[] longArray = {0L, 1L, 2L, 3L, 4L, 5L};
-        assertEquals(wrappedLongArray(longArray).getLong(0), longArray[0]);
-        assertEquals(wrappedLongArray(longArray, 1, 4).getLong(0), longArray[1]);
-        assertEquals(wrappedLongArray(longArray, 1, 4).length(), 4 * SIZE_OF_LONG);
-        assertEquals(wrappedLongArray(longArray).getLong(5 * SIZE_OF_LONG), longArray[5]);
-        assertFalse(wrappedLongArray(longArray).hasByteArray());
+        assertThat(wrappedLongArray(longArray).getLong(0)).isEqualTo(longArray[0]);
+        assertThat(wrappedLongArray(longArray, 1, 4).getLong(0)).isEqualTo(longArray[1]);
+        assertThat(wrappedLongArray(longArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_LONG);
+        assertThat(wrappedLongArray(longArray).getLong(5 * SIZE_OF_LONG)).isEqualTo(longArray[5]);
+        assertThat(wrappedLongArray(longArray).hasByteArray()).isFalse();
 
         float[] floatArray = {0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
-        assertEquals(wrappedFloatArray(floatArray).getFloat(0), floatArray[0]);
-        assertEquals(wrappedFloatArray(floatArray, 1, 4).getFloat(0), floatArray[1]);
-        assertEquals(wrappedFloatArray(floatArray, 1, 4).length(), 4 * SIZE_OF_FLOAT);
-        assertEquals(wrappedFloatArray(floatArray).getFloat(5 * SIZE_OF_FLOAT), floatArray[5]);
-        assertFalse(wrappedFloatArray(floatArray).hasByteArray());
+        assertThat(wrappedFloatArray(floatArray).getFloat(0)).isEqualTo(floatArray[0]);
+        assertThat(wrappedFloatArray(floatArray, 1, 4).getFloat(0)).isEqualTo(floatArray[1]);
+        assertThat(wrappedFloatArray(floatArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_FLOAT);
+        assertThat(wrappedFloatArray(floatArray).getFloat(5 * SIZE_OF_FLOAT)).isEqualTo(floatArray[5]);
+        assertThat(wrappedFloatArray(floatArray).hasByteArray()).isFalse();
 
         double[] doubleArray = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-        assertEquals(wrappedDoubleArray(doubleArray).getDouble(0), doubleArray[0]);
-        assertEquals(wrappedDoubleArray(doubleArray, 1, 4).getDouble(0), doubleArray[1]);
-        assertEquals(wrappedDoubleArray(doubleArray, 1, 4).length(), 4 * SIZE_OF_DOUBLE);
-        assertEquals(wrappedDoubleArray(doubleArray).getDouble(5 * SIZE_OF_DOUBLE), doubleArray[5]);
-        assertFalse(wrappedDoubleArray(doubleArray).hasByteArray());
+        assertThat(wrappedDoubleArray(doubleArray).getDouble(0)).isEqualTo(doubleArray[0]);
+        assertThat(wrappedDoubleArray(doubleArray, 1, 4).getDouble(0)).isEqualTo(doubleArray[1]);
+        assertThat(wrappedDoubleArray(doubleArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_DOUBLE);
+        assertThat(wrappedDoubleArray(doubleArray).getDouble(5 * SIZE_OF_DOUBLE)).isEqualTo(doubleArray[5]);
+        assertThat(wrappedDoubleArray(doubleArray).hasByteArray()).isFalse();
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Cannot allocate slice larger than 2147483639 bytes")
@@ -171,16 +168,16 @@ public class TestSlices
     {
         Slice fourBytes = wrappedBuffer(new byte[] {1, 2, 3, 4});
 
-        assertEquals(ensureSize(null, 42).length(), 42);
-        assertSame(ensureSize(fourBytes, 3), fourBytes);
-        assertEquals(ensureSize(fourBytes, 8), wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
-        assertEquals(ensureSize(fourBytes, 5), wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
+        assertThat(ensureSize(null, 42).length()).isEqualTo(42);
+        assertThat(ensureSize(fourBytes, 3)).isSameAs(fourBytes);
+        assertThat(ensureSize(fourBytes, 8)).isEqualTo(wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
+        assertThat(ensureSize(fourBytes, 5)).isEqualTo(wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
 
         // Test that `ensureSize(s, slightly less than Integer.MAX_VALUE)` won't allocate a Slice beyond limit
         double initialSize = Integer.MAX_VALUE + 100L;
         while (initialSize > 50_000_000 && initialSize / SLICE_ALLOW_SKEW > SLICE_ALLOC_THRESHOLD) {
             initialSize /= SLICE_ALLOW_SKEW;
         }
-        assertEquals(ensureSize(allocate((int) initialSize), Integer.MAX_VALUE - 50).length(), MAX_ARRAY_SIZE);
+        assertThat(ensureSize(allocate((int) initialSize), Integer.MAX_VALUE - 50).length()).isEqualTo(MAX_ARRAY_SIZE);
     }
 }

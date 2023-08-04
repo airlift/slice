@@ -28,8 +28,7 @@ import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkPositionIndex;
 import static io.airlift.slice.SizeOf.instanceSize;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestChunkedSliceInput
         extends AbstractSliceInputTest
@@ -109,7 +108,7 @@ public class TestChunkedSliceInput
                 .map(i -> i < bufferSize ? 1 : 2)
                 .boxed()
                 .collect(Collectors.toList());
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test
@@ -126,7 +125,7 @@ public class TestChunkedSliceInput
             chunkedSliceInput.readByte();
             assertRetainedSize(chunkedSliceInput);
             long retainedSize = chunkedSliceInput.getRetainedSize();
-            assertTrue(retainedSize > bufferSize && retainedSize < length);
+            assertThat(retainedSize).isBetween((long) bufferSize, retainedSize);
         }
     }
 
@@ -154,6 +153,6 @@ public class TestChunkedSliceInput
                 throw new RuntimeException(e);
             }
         }
-        assertEquals(input.getRetainedSize(), retainedSize);
+        assertThat(input.getRetainedSize()).isEqualTo(retainedSize);
     }
 }

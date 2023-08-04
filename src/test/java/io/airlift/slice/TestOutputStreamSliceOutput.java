@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestOutputStreamSliceOutput
 {
@@ -193,11 +193,11 @@ public class TestOutputStreamSliceOutput
         try (SliceOutput sliceOutput = new OutputStreamSliceOutput(byteArrayOutputStream, 16384)) {
             sliceOutput.writeZero(offset);
             operations.accept(sliceOutput);
-            assertEquals(sliceOutput.size(), offset + output.length);
+            assertThat(sliceOutput.size()).isEqualTo(offset + output.length);
         }
 
         byte[] expected = new byte[offset + output.length];
         System.arraycopy(output, 0, expected, offset, output.length);
-        assertEquals(byteArrayOutputStream.toByteArray(), expected);
+        assertThat(byteArrayOutputStream.toByteArray()).isEqualTo(expected);
     }
 }

@@ -18,7 +18,7 @@ import org.testng.annotations.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestMurmur3Hash32
 {
@@ -30,7 +30,7 @@ public class TestMurmur3Hash32
         int expected = Hashing.murmur3_32_fixed().hashBytes(data).asInt();
         int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data));
 
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test(invocationCount = 100)
@@ -41,7 +41,7 @@ public class TestMurmur3Hash32
         int expected = Hashing.murmur3_32_fixed().hashBytes(data).asInt();
         int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data));
 
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test(invocationCount = 100)
@@ -55,7 +55,7 @@ public class TestMurmur3Hash32
         int expected = Hashing.murmur3_32_fixed().hashBytes(data, offset, length).asInt();
         int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data), offset, length);
 
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test(invocationCount = 100)
@@ -68,7 +68,7 @@ public class TestMurmur3Hash32
         int expected = Hashing.murmur3_32_fixed(seed).hashBytes(data).asInt();
         int actual = Murmur3Hash32.hash(seed, Slices.wrappedBuffer(data), 0, data.length);
 
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test
@@ -80,7 +80,7 @@ public class TestMurmur3Hash32
             int expected = Hashing.murmur3_32_fixed().hashBytes(data).asInt();
             int actual = Murmur3Hash32.hash(Slices.wrappedBuffer(data));
 
-            assertEquals(actual, expected);
+            assertThat(actual).isEqualTo(expected);
         }
     }
 
@@ -93,7 +93,7 @@ public class TestMurmur3Hash32
         slice.setInt(0, value);
         int expected = Murmur3Hash32.hash(slice);
         int actual = Murmur3Hash32.hash(value);
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     @Test(invocationCount = 100)
@@ -105,7 +105,7 @@ public class TestMurmur3Hash32
         slice.setLong(0, value);
         int expected = Murmur3Hash32.hash(slice);
         int actual = Murmur3Hash32.hash(value);
-        assertEquals(actual, expected);
+        assertThat(actual).isEqualTo(expected);
     }
 
     private static byte[] randomBytes(int length)
