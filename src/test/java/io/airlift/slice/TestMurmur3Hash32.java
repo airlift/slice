@@ -14,7 +14,8 @@
 package io.airlift.slice;
 
 import com.google.common.hash.Hashing;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -22,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestMurmur3Hash32
 {
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testLessThan4Bytes()
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(4));
@@ -33,7 +34,7 @@ public class TestMurmur3Hash32
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testMoreThan4Bytes()
     {
         byte[] data = randomBytes(131);
@@ -44,7 +45,7 @@ public class TestMurmur3Hash32
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testOffsetAndLength()
     {
         byte[] data = randomBytes(131);
@@ -58,7 +59,7 @@ public class TestMurmur3Hash32
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testNonDefaultSeed()
     {
         byte[] data = randomBytes(131);
@@ -84,7 +85,7 @@ public class TestMurmur3Hash32
         }
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testSingleInt()
     {
         int value = ThreadLocalRandom.current().nextInt();
@@ -96,7 +97,7 @@ public class TestMurmur3Hash32
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testSingleLong()
     {
         long value = ThreadLocalRandom.current().nextLong();

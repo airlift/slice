@@ -13,7 +13,7 @@
  */
 package io.airlift.slice;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -40,6 +40,7 @@ import static io.airlift.slice.Slices.wrappedIntArray;
 import static io.airlift.slice.Slices.wrappedLongArray;
 import static io.airlift.slice.Slices.wrappedShortArray;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestSlices
 {
@@ -157,10 +158,12 @@ public class TestSlices
         assertThat(wrappedDoubleArray(doubleArray).hasByteArray()).isFalse();
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Cannot allocate slice larger than 2147483639 bytes")
+    @Test
     public void testAllocationLimit()
     {
-        allocate(Integer.MAX_VALUE - 1);
+        assertThatThrownBy(() -> allocate(Integer.MAX_VALUE - 1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Cannot allocate slice larger than 2147483639 bytes");
     }
 
     @Test

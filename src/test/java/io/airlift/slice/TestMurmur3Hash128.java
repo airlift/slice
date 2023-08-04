@@ -15,7 +15,8 @@ package io.airlift.slice;
 
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -23,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestMurmur3Hash128
 {
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testLessThan16Bytes()
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(16));
@@ -34,7 +35,7 @@ public class TestMurmur3Hash128
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testMoreThan16Bytes()
     {
         byte[] data = randomBytes(131);
@@ -45,7 +46,7 @@ public class TestMurmur3Hash128
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testOffsetAndLength()
     {
         byte[] data = randomBytes(131);
@@ -59,7 +60,7 @@ public class TestMurmur3Hash128
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testNonDefaultSeed()
     {
         byte[] data = randomBytes(131);
@@ -85,7 +86,7 @@ public class TestMurmur3Hash128
         }
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testLessThan16Bytes64()
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(16));
@@ -96,7 +97,7 @@ public class TestMurmur3Hash128
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testMoreThan16Bytes64()
     {
         byte[] data = randomBytes(131);
@@ -107,7 +108,7 @@ public class TestMurmur3Hash128
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testOffsetAndLength64()
     {
         byte[] data = randomBytes(131);
@@ -121,7 +122,7 @@ public class TestMurmur3Hash128
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testNonDefaultSeed64()
     {
         byte[] data = randomBytes(131);
@@ -147,7 +148,7 @@ public class TestMurmur3Hash128
         }
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void test64ReturnsMsb()
     {
         byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(200));
@@ -158,7 +159,7 @@ public class TestMurmur3Hash128
         assertThat(actual).isEqualTo(expected);
     }
 
-    @Test(invocationCount = 100)
+    @RepeatedTest(100)
     public void testSingleLong()
     {
         long value = ThreadLocalRandom.current().nextLong();

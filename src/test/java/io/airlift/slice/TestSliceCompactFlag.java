@@ -13,7 +13,7 @@
  */
 package io.airlift.slice;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
