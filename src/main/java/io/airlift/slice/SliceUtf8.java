@@ -806,8 +806,10 @@ public final class SliceUtf8
 
         int correctIndex = codePointCount + position;
         // Length rounded to 8 bytes
-        int length8 = utf8.length() & 0x7FFF_FFF8;
-        // While we have enough bytes left and we need at least 8 characters process 8 bytes at once
+        int length8 = (utf8.length() & 0x7FFF_FFF8) - 8;
+        // process 8 bytes at a time
+        // at most this can find 8 code points (if they are all US_ASCII), so this
+        // is only called if there are at least 8 more code points needed
         while (position < length8 && correctIndex >= position + 8) {
             // Count bytes which are NOT the start of a code point
             correctIndex += countContinuationBytes(utf8.getLongUnchecked(position));
@@ -815,7 +817,7 @@ public final class SliceUtf8
             position += 8;
         }
         // Length rounded to 4 bytes
-        int length4 = utf8.length() & 0x7FFF_FFFC;
+        int length4 = (utf8.length() & 0x7FFF_FFFC) - 4;
         // While we have enough bytes left and we need at least 4 characters process 4 bytes at once
         while (position < length4 && correctIndex >= position + 4) {
             // Count bytes which are NOT the start of a code point

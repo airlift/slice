@@ -211,6 +211,15 @@ public class TestSliceUtf8
         assertOffsetByCodePoints(STRING_ASCII_CODE_POINTS);
         assertOffsetByCodePoints(STRING_ALL_CODE_POINTS);
         assertOffsetByCodePoints(STRING_ALL_CODE_POINTS_RANDOM);
+
+        // test a wide range of values to ensure there is no over read
+        for (int codePointCount = 0; codePointCount < 64; codePointCount++) {
+            for (int length = 0; length < 64; length++) {
+                for (int position = 0; position < length + 1; position++) {
+                    offsetOfCodePoint(utf8Slice("€".repeat(length)), position, codePointCount);
+                }
+            }
+        }
     }
 
     private static void assertOffsetByCodePoints(String string)
