@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>slice</artifactId>
-    <version>0.47-SNAPSHOT</version>
+    <version>0.47</version>
     <packaging>jar</packaging>
 
     <name>slice</name>
@@ -109,4 +109,8 @@
             </plugin>
         </plugins>
     </build>
+
+  <scm>
+    <tag>0.47</tag>
+  </scm>
 </project>
