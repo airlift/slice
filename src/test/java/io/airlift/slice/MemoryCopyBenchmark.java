@@ -33,6 +33,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static io.airlift.slice.JvmUtils.unsafe;
+import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 @SuppressWarnings("restriction")
 @BenchmarkMode(Mode.Throughput)
@@ -118,8 +119,8 @@ public class MemoryCopyBenchmark
             @Override
             public void doCopy(Slice data, long src, long dest, int length)
             {
-                Object base = data.getBase();
-                long offset = data.getAddress();
+                byte[] base = data.byteArray();
+                long offset = data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET;
                 while (length >= SizeOf.SIZE_OF_LONG) {
                     long srcLong = unsafe.getLong(base, src + offset);
                     unsafe.putLong(base, dest + offset, srcLong);
@@ -142,9 +143,10 @@ public class MemoryCopyBenchmark
             @Override
             public void doCopy(Slice data, long srcOffset, long destOffset, int length)
             {
-                Object base = data.getBase();
-                srcOffset += data.getAddress();
-                destOffset += data.getAddress();
+                byte[] base = data.byteArray();
+                long address = data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET;
+                srcOffset += address;
+                destOffset += address;
                 int bytesToCopy = length - (length % 8);
                 unsafe.copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
                 unsafe.copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);

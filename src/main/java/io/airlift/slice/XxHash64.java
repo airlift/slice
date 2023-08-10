@@ -79,7 +79,7 @@ public final class XxHash64
     public XxHash64 update(Slice data, int offset, int length)
     {
         checkFromIndexSize(offset, length, data.length());
-        updateHash(data.getBase(), data.getAddress() + offset, length);
+        updateHash(data.byteArray(), (long) data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET + offset, length);
         return this;
     }
 
@@ -110,7 +110,7 @@ public final class XxHash64
         return hash;
     }
 
-    private void updateHash(Object base, long address, int length)
+    private void updateHash(byte[] base, long address, int length)
     {
         if (bufferSize > 0) {
             int available = min(32 - bufferSize, length);
@@ -139,7 +139,7 @@ public final class XxHash64
         }
     }
 
-    private int updateBody(Object base, long address, int length)
+    private int updateBody(byte[] base, long address, int length)
     {
         int remaining = length;
         while (remaining >= 32) {
@@ -211,8 +211,8 @@ public final class XxHash64
     {
         checkFromIndexSize(offset, length, data.length());
 
-        Object base = data.getBase();
-        final long address = data.getAddress() + offset;
+        byte[] base = data.byteArray();
+        final long address = (long) data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET + offset;
 
         long hash;
         if (length >= 32) {
@@ -231,7 +231,7 @@ public final class XxHash64
         return updateTail(hash, base, address, index, length);
     }
 
-    private static long updateTail(long hash, Object base, long address, int index, int length)
+    private static long updateTail(long hash, byte[] base, long address, int index, int length)
     {
         while (index <= length - 8) {
             hash = updateTail(hash, unsafe.getLong(base, address + index));
@@ -253,7 +253,7 @@ public final class XxHash64
         return hash;
     }
 
-    private static long updateBody(long seed, Object base, long address, int length)
+    private static long updateBody(long seed, byte[] base, long address, int length)
     {
         long v1 = seed + PRIME64_1 + PRIME64_2;
         long v2 = seed + PRIME64_2;

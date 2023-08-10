@@ -14,7 +14,6 @@
 package io.airlift.slice;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import sun.misc.Unsafe;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -129,24 +128,6 @@ public final class Slice
         this.size = size;
         // INSTANCE_SIZE is not included, as the caller is responsible for including it.
         this.retainedSize = retainedSize;
-    }
-
-    /**
-     * Returns the base object of this Slice, or null.  This is appropriate for use
-     * with {@link Unsafe} if you wish to avoid all the safety belts e.g., bounds checks.
-     */
-    public byte[] getBase()
-    {
-        return byteArray();
-    }
-
-    /**
-     * Return the address offset of this Slice.  This is appropriate for use
-     * with {@link Unsafe} if you wish to avoid all the safety belts e.g., bounds checks.
-     */
-    public long getAddress()
-    {
-        return baseOffset + ARRAY_BYTE_BASE_OFFSET;
     }
 
     /**
