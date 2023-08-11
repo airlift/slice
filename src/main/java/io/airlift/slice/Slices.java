@@ -15,6 +15,7 @@ package io.airlift.slice;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -39,6 +40,10 @@ public final class Slices
 
     public static Slice ensureSize(Slice existingSlice, int minWritableBytes)
     {
+        if (minWritableBytes < 0) {
+            throw new IllegalArgumentException("minWritableBytes is negative");
+        }
+
         if (existingSlice == null) {
             return allocate(minWritableBytes);
         }
@@ -66,9 +71,13 @@ public final class Slices
             }
         }
 
-        Slice newSlice = allocate(newCapacity);
-        newSlice.setBytes(0, existingSlice, 0, existingSlice.length());
-        return newSlice;
+        byte[] bytes = existingSlice.byteArray();
+        int offset = existingSlice.byteArrayOffset();
+        // copy of range can be more efficient because it avoids zeroing memory
+        byte[] copy = Arrays.copyOfRange(bytes, offset, offset + newCapacity);
+        // but if the slice is a view, we need to zero the end of the array
+        Arrays.fill(copy, existingSlice.length(), bytes.length - offset, (byte) 0);
+        return new Slice(copy);
     }
 
     public static Slice allocate(int capacity)

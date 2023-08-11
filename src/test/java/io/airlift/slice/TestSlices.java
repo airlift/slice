@@ -122,8 +122,25 @@ public class TestSlices
     @Test
     public void testEnsureSize()
     {
-        Slice fourBytes = wrappedBuffer(new byte[] {1, 2, 3, 4});
+        Slice slice = Slices.utf8Slice("testValueAbc").slice(4, 5);
+        assertThat(slice.byteArray()).hasSize(12);
+        assertThat(slice.byteArrayOffset()).isEqualTo(4);
+        assertThat(slice.length()).isEqualTo(5);
+        assertThat(slice.toStringUtf8()).isEqualTo("Value");
 
+        // grow to a size within the existing outer slice
+        Slice newSlice = ensureSize(slice, 6);
+        // new byte array is always allocated if size changes
+        assertThat(newSlice.byteArray()).isNotSameAs(slice.byteArray());
+        // size is doubled when small
+        assertThat(newSlice.byteArray()).hasSize(10);
+        // new Slice covers the entire byte array range
+        assertThat(newSlice.byteArrayOffset()).isEqualTo(0);
+        assertThat(newSlice.length()).isEqualTo(10);
+        // the existing data outside the slice view is not copied
+        assertThat(newSlice.toStringUtf8()).isEqualTo("Value\0\0\0\0\0");
+
+        Slice fourBytes = wrappedBuffer(new byte[] {1, 2, 3, 4});
         assertThat(ensureSize(null, 42).length()).isEqualTo(42);
         assertThat(ensureSize(fourBytes, 3)).isSameAs(fourBytes);
         assertThat(ensureSize(fourBytes, 8)).isEqualTo(wrappedBuffer(new byte[] {1, 2, 3, 4, 0, 0, 0, 0}));
