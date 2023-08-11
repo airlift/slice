@@ -1029,6 +1029,31 @@ public final class Slice
         return new Slice(base, baseOffset + index, length, retainedSize);
     }
 
+    /**
+     * Returns a copy of this buffer's sub-region. Modifying the content of
+     * the returned buffer does not affect this buffer, and vice versa.
+     */
+    public Slice copy()
+    {
+        if (size == 0) {
+            return Slices.EMPTY_SLICE;
+        }
+        return new Slice(Arrays.copyOfRange(base, baseOffset, baseOffset + size));
+    }
+
+    /**
+     * Returns a copy of the specified region. Modifying the content of
+     * the returned buffer does not affect this buffer, and vice versa.
+     */
+    public Slice copy(int index, int length)
+    {
+        checkFromIndexSize(index, length, size);
+        if (length == 0) {
+            return Slices.EMPTY_SLICE;
+        }
+        return new Slice(Arrays.copyOfRange(base, baseOffset + index, baseOffset + index + length));
+    }
+
     public int indexOfByte(int b)
     {
         checkArgument((b >> Byte.SIZE) == 0, "byte value out of range");

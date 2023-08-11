@@ -777,30 +777,30 @@ public class TestSlice
             throws Exception
     {
         // slightly stronger guarantees for empty slice
-        assertThat(Slices.copyOf(EMPTY_SLICE)).isSameAs(EMPTY_SLICE);
-        assertThat(Slices.copyOf(utf8Slice("hello world"), 1, 0)).isSameAs(EMPTY_SLICE);
+        assertThat(EMPTY_SLICE.copy()).isSameAs(EMPTY_SLICE);
+        assertThat(utf8Slice("hello world").copy(1, 0)).isSameAs(EMPTY_SLICE);
 
         Slice slice = utf8Slice("hello world");
-        assertThat(Slices.copyOf(slice)).isEqualTo(slice);
-        assertThat(Slices.copyOf(slice, 1, 3)).isEqualTo(slice.slice(1, 3));
+        assertThat(slice.copy()).isEqualTo(slice);
+        assertThat(slice.copy(1, 3)).isEqualTo(slice.slice(1, 3));
 
         // verify it's an actual copy
         Slice original = utf8Slice("hello world");
-        Slice copy = Slices.copyOf(original);
+        Slice copy = original.copy();
 
         original.fill((byte) 0);
         assertThat(copy).isEqualTo(utf8Slice("hello world"));
 
         // read before beginning
-        assertThatThrownBy(() -> Slices.copyOf(slice, -1, slice.length()))
+        assertThatThrownBy(() -> slice.copy(-1, slice.length()))
                 .isInstanceOf(IndexOutOfBoundsException.class);
 
         // read after end
-        assertThatThrownBy(() -> Slices.copyOf(slice, slice.length() + 1, 1))
+        assertThatThrownBy(() -> slice.copy(slice.length() + 1, 1))
                 .isInstanceOf(IndexOutOfBoundsException.class);
 
         // start before but extend past end
-        assertThatThrownBy(() -> Slices.copyOf(slice, 1, slice.length()))
+        assertThatThrownBy(() -> slice.copy(1, slice.length()))
                 .isInstanceOf(IndexOutOfBoundsException.class);
     }
 

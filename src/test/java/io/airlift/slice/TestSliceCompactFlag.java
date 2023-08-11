@@ -43,17 +43,17 @@ public class TestSliceCompactFlag
         assertCompact(slice.slice(0, slice.length()));
         assertThat(slice.slice(0, slice.length())).isSameAs(slice);
 
-        assertCompact(Slices.copyOf(slice));
-        assertThat(Slices.copyOf(slice).byteArray()).isNotSameAs(slice.byteArray());
-        assertCompact(Slices.copyOf(slice, 0, slice.length() - 1));
-        assertCompact(Slices.copyOf(slice, 1, slice.length() - 1));
+        assertCompact(slice.copy());
+        assertThat(slice.copy().byteArray()).isNotSameAs(slice.byteArray());
+        assertCompact(slice.copy(0, slice.length() - 1));
+        assertCompact(slice.copy(1, slice.length() - 1));
 
         Slice subSlice1 = slice.slice(0, slice.length() - 1);
         Slice subSlice2 = slice.slice(1, slice.length() - 1);
         assertNotCompact(subSlice1);
         assertNotCompact(subSlice2);
-        assertCompact(Slices.copyOf(subSlice1));
-        assertCompact(Slices.copyOf(subSlice2));
+        assertCompact(subSlice1.copy());
+        assertCompact(subSlice2.copy());
     }
 
     @Test
