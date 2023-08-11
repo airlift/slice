@@ -50,7 +50,6 @@ public final class Slice
         implements Comparable<Slice>
 {
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
-    private static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
     private static final VarHandle SHORT_HANDLE = byteArrayViewVarHandle(short[].class, LITTLE_ENDIAN);
@@ -58,6 +57,9 @@ public final class Slice
     private static final VarHandle LONG_HANDLE = byteArrayViewVarHandle(long[].class, LITTLE_ENDIAN);
     private static final VarHandle FLOAT_HANDLE = byteArrayViewVarHandle(float[].class, LITTLE_ENDIAN);
     private static final VarHandle DOUBLE_HANDLE = byteArrayViewVarHandle(double[].class, LITTLE_ENDIAN);
+
+    // Do not move this field above the constants used in the empty constructor
+    static final Slice EMPTY_SLICE = new Slice();
 
     private final byte[] base;
 
@@ -76,11 +78,13 @@ public final class Slice
     private int hash;
 
     /**
-     * Creates an empty slice.
+     * This is only used to create the EMPTY_SLICE constant.
      */
-    Slice()
+    private Slice()
     {
-        this.base = EMPTY_BYTE_ARRAY;
+        // Since this is used to create a constant in this class, be careful to not use
+        // other uninitialized constants.
+        this.base = new byte[0];
         this.baseOffset = 0;
         this.size = 0;
         this.retainedSize = INSTANCE_SIZE;
@@ -92,6 +96,9 @@ public final class Slice
     Slice(byte[] base)
     {
         requireNonNull(base, "base is null");
+        if (base.length == 0) {
+            throw new IllegalArgumentException("Empty array");
+        }
         this.base = base;
         this.baseOffset = 0;
         this.size = base.length;
@@ -107,6 +114,9 @@ public final class Slice
     Slice(byte[] base, int offset, int length)
     {
         requireNonNull(base, "base is null");
+        if (base.length == 0) {
+            throw new IllegalArgumentException("Empty array");
+        }
         checkFromIndexSize(offset, length, base.length);
 
         this.base = base;
@@ -121,6 +131,9 @@ public final class Slice
     Slice(byte[] base, int baseOffset, int size, long retainedSize)
     {
         requireNonNull(base, "base is null");
+        if (base.length == 0) {
+            throw new IllegalArgumentException("Empty array");
+        }
         checkFromIndexSize(baseOffset, size, base.length);
 
         this.base = requireNonNull(base, "base is null");
