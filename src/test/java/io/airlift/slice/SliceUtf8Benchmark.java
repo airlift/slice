@@ -221,11 +221,11 @@ public class SliceUtf8Benchmark
         public void setup()
         {
             Slice whitespace = createRandomUtf8Slice(ascii ? ASCII_WHITESPACE : ALL_WHITESPACE, length + 1);
-            leftWhitespace = Slices.copyOf(whitespace);
+            leftWhitespace = whitespace.copy();
             leftWhitespace.setByte(leftWhitespace.length() - 1, 'X');
-            rightWhitespace = Slices.copyOf(whitespace);
+            rightWhitespace = whitespace.copy();
             rightWhitespace.setByte(0, 'X');
-            bothWhitespace = Slices.copyOf(whitespace);
+            bothWhitespace = whitespace.copy();
             bothWhitespace.setByte(length / 2, 'X');
         }
 
