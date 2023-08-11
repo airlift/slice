@@ -16,6 +16,7 @@ package io.airlift.slice;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
+import java.util.Random;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.instanceSize;
@@ -99,6 +100,23 @@ public class TestSlices
         assertThatThrownBy(() -> allocate(Integer.MAX_VALUE - 1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Cannot allocate slice larger than 2147483639 bytes");
+    }
+
+    @Test
+    public void testRandom()
+    {
+        assertThat(Slices.random(0)).isSameAs(EMPTY_SLICE);
+
+        Slice randomSlice = Slices.random(10);
+        assertThat(randomSlice.byteArrayOffset()).isEqualTo(0);
+        assertThat(randomSlice.length()).isEqualTo(10);
+
+        randomSlice = Slices.random(10, new Random(0));
+        assertThat(randomSlice.byteArrayOffset()).isEqualTo(0);
+        assertThat(randomSlice.length()).isEqualTo(10);
+        byte[] bytes = new byte[10];
+        new Random(0).nextBytes(bytes);
+        assertThat(randomSlice.byteArray()).isEqualTo(bytes);
     }
 
     @Test

@@ -18,8 +18,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 @State(Scope.Thread)
 public class BenchmarkData
 {
@@ -35,9 +33,8 @@ public class BenchmarkData
     @Setup
     public void setup()
     {
-        bytes = new byte[size];
-        ThreadLocalRandom.current().nextBytes(bytes);
-        slice = Slices.wrappedBuffer(bytes);
+        slice = Slices.random(size);
+        bytes = slice.byteArray();
     }
 
     public Slice getSlice()

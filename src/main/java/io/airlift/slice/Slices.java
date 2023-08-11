@@ -15,6 +15,8 @@ package io.airlift.slice;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -78,6 +80,27 @@ public final class Slices
             throw new SliceTooLargeException(format("Cannot allocate slice larger than %s bytes", MAX_ARRAY_SIZE));
         }
         return new Slice(new byte[capacity]);
+    }
+
+    /**
+     * Allocates a new slice containing random bytes from ThreadLocalRandom.
+     */
+    public static Slice random(int capacity)
+    {
+        // Note: this only exists because many static checkers do not allow passing ThreadLocalRandom to methods
+        Slice slice = allocate(capacity);
+        ThreadLocalRandom.current().nextBytes(slice.byteArray());
+        return slice;
+    }
+
+    /**
+     * Allocates a new slice containing random bytes.
+     */
+    public static Slice random(int capacity, Random random)
+    {
+        Slice slice = allocate(capacity);
+        random.nextBytes(slice.byteArray());
+        return slice;
     }
 
     public static Slice wrappedHeapBuffer(ByteBuffer buffer)

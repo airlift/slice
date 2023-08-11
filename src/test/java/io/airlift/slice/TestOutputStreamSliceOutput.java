@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -111,8 +110,7 @@ public class TestOutputStreamSliceOutput
     public void testEncodingBytes()
             throws Exception
     {
-        byte[] data = new byte[18000];
-        ThreadLocalRandom.current().nextBytes(data);
+        byte[] data = Slices.random(18000).byteArray();
 
         assertEncoding(sliceOutput -> sliceOutput.write(data, 0, 0), Arrays.copyOfRange(data, 0, 0));
         assertEncoding(sliceOutput -> sliceOutput.write(data, 0, 3), Arrays.copyOfRange(data, 0, 3));
@@ -128,9 +126,8 @@ public class TestOutputStreamSliceOutput
     public void testEncodingSlice()
             throws Exception
     {
-        byte[] data = new byte[18000];
-        ThreadLocalRandom.current().nextBytes(data);
-        Slice slice = Slices.wrappedBuffer(data);
+        Slice slice = Slices.random(18000);
+        byte[] data = slice.byteArray();
 
         assertEncoding(sliceOutput -> sliceOutput.writeBytes(slice, 0, 0), Arrays.copyOfRange(data, 0, 0));
         assertEncoding(sliceOutput -> sliceOutput.writeBytes(slice, 0, 3), Arrays.copyOfRange(data, 0, 3));
