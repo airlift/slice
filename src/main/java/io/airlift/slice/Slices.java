@@ -27,7 +27,7 @@ public final class Slices
     /**
      * A slice with size {@code 0}.
      */
-    public static final Slice EMPTY_SLICE = new Slice();
+    public static final Slice EMPTY_SLICE = Slice.EMPTY_SLICE;
 
     // see java.util.ArrayList for an explanation
     static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;

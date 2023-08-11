@@ -24,7 +24,7 @@ public class TestSliceCompactFlag
     @Test
     public void testSliceConstructors()
     {
-        assertCompact(new Slice());
+        assertCompact(Slices.EMPTY_SLICE);
 
         byte[] byteArray = {(byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5};
         assertCompact(new Slice(byteArray));
