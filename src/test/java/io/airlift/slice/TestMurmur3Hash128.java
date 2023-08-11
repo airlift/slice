@@ -27,10 +27,11 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testLessThan16Bytes()
     {
-        byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(16));
+        int length = ThreadLocalRandom.current().nextInt(16);
+        Slice data = Slices.random(length);
 
-        HashCode expected = Hashing.murmur3_128().hashBytes(data);
-        Slice actual = Murmur3Hash128.hash(Slices.wrappedBuffer(data));
+        HashCode expected = Hashing.murmur3_128().hashBytes(data.byteArray());
+        Slice actual = Murmur3Hash128.hash(data);
 
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
@@ -38,10 +39,10 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testMoreThan16Bytes()
     {
-        byte[] data = randomBytes(131);
+        Slice data = Slices.random(131);
 
-        HashCode expected = Hashing.murmur3_128().hashBytes(data);
-        Slice actual = Murmur3Hash128.hash(Slices.wrappedBuffer(data));
+        HashCode expected = Hashing.murmur3_128().hashBytes(data.byteArray());
+        Slice actual = Murmur3Hash128.hash(data);
 
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
@@ -49,13 +50,13 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testOffsetAndLength()
     {
-        byte[] data = randomBytes(131);
+        Slice data = Slices.random(131);
 
         int offset = 13;
         int length = 55;
 
-        HashCode expected = Hashing.murmur3_128().hashBytes(data, offset, length);
-        Slice actual = Murmur3Hash128.hash(Slices.wrappedBuffer(data), offset, length);
+        HashCode expected = Hashing.murmur3_128().hashBytes(data.byteArray(), offset, length);
+        Slice actual = Murmur3Hash128.hash(data, offset, length);
 
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
@@ -63,12 +64,12 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testNonDefaultSeed()
     {
-        byte[] data = randomBytes(131);
+        Slice data = Slices.random(131);
 
         int seed = 123456789;
 
-        HashCode expected = Hashing.murmur3_128(seed).hashBytes(data);
-        Slice actual = Murmur3Hash128.hash(seed, Slices.wrappedBuffer(data), 0, data.length);
+        HashCode expected = Hashing.murmur3_128(seed).hashBytes(data.byteArray());
+        Slice actual = Murmur3Hash128.hash(seed, data, 0, data.length());
 
         assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
     }
@@ -77,10 +78,10 @@ public class TestMurmur3Hash128
     public void testTail()
     {
         for (int i = 0; i < 16; i++) {
-            byte[] data = randomBytes(50 + i);
+            Slice data = Slices.random(50 + i);
 
-            HashCode expected = Hashing.murmur3_128().hashBytes(data);
-            Slice actual = Murmur3Hash128.hash(Slices.wrappedBuffer(data));
+            HashCode expected = Hashing.murmur3_128().hashBytes(data.byteArray());
+            Slice actual = Murmur3Hash128.hash(data);
 
             assertThat(actual.getBytes()).isEqualTo(expected.asBytes());
         }
@@ -89,10 +90,11 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testLessThan16Bytes64()
     {
-        byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(16));
+        int length = ThreadLocalRandom.current().nextInt(16);
+        Slice data = Slices.random(length);
 
-        long expected = Murmur3Hash128.hash(Slices.wrappedBuffer(data)).getLong(0);
-        long actual = Murmur3Hash128.hash64(Slices.wrappedBuffer(data));
+        long expected = Murmur3Hash128.hash(data).getLong(0);
+        long actual = Murmur3Hash128.hash64(data);
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -100,10 +102,10 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testMoreThan16Bytes64()
     {
-        byte[] data = randomBytes(131);
+        Slice data = Slices.random(131);
 
-        long expected = Murmur3Hash128.hash(Slices.wrappedBuffer(data)).getLong(0);
-        long actual = Murmur3Hash128.hash64(Slices.wrappedBuffer(data));
+        long expected = Murmur3Hash128.hash(data).getLong(0);
+        long actual = Murmur3Hash128.hash64(data);
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -111,13 +113,13 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testOffsetAndLength64()
     {
-        byte[] data = randomBytes(131);
+        Slice data = Slices.random(131);
 
         int offset = 13;
         int length = 55;
 
-        long expected = Murmur3Hash128.hash(Slices.wrappedBuffer(data), offset, length).getLong(0);
-        long actual = Murmur3Hash128.hash64(Slices.wrappedBuffer(data), offset, length);
+        long expected = Murmur3Hash128.hash(data, offset, length).getLong(0);
+        long actual = Murmur3Hash128.hash64(data, offset, length);
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -125,12 +127,12 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void testNonDefaultSeed64()
     {
-        byte[] data = randomBytes(131);
+        Slice data = Slices.random(131);
 
         int seed = 123456789;
 
-        long expected = Murmur3Hash128.hash(seed, Slices.wrappedBuffer(data), 0, data.length).getLong(0);
-        long actual = Murmur3Hash128.hash64(seed, Slices.wrappedBuffer(data), 0, data.length);
+        long expected = Murmur3Hash128.hash(seed, data, 0, data.length()).getLong(0);
+        long actual = Murmur3Hash128.hash64(seed, data, 0, data.length());
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -139,10 +141,10 @@ public class TestMurmur3Hash128
     public void testTail64()
     {
         for (int i = 0; i < 16; i++) {
-            byte[] data = randomBytes(50 + i);
+            Slice data = Slices.random(50 + i);
 
-            long expected = Murmur3Hash128.hash(Slices.wrappedBuffer(data)).getLong(0);
-            long actual = Murmur3Hash128.hash64(Slices.wrappedBuffer(data));
+            long expected = Murmur3Hash128.hash(data).getLong(0);
+            long actual = Murmur3Hash128.hash64(data);
 
             assertThat(actual).isEqualTo(expected);
         }
@@ -151,10 +153,11 @@ public class TestMurmur3Hash128
     @RepeatedTest(100)
     public void test64ReturnsMsb()
     {
-        byte[] data = randomBytes(ThreadLocalRandom.current().nextInt(200));
+        int length = ThreadLocalRandom.current().nextInt(200);
+        Slice data = Slices.random(length);
 
-        long expected = Murmur3Hash128.hash(Slices.wrappedBuffer(data)).getLong(0);
-        long actual = Murmur3Hash128.hash64(Slices.wrappedBuffer(data));
+        long expected = Murmur3Hash128.hash(data).getLong(0);
+        long actual = Murmur3Hash128.hash64(data);
 
         assertThat(actual).isEqualTo(expected);
     }
@@ -169,12 +172,5 @@ public class TestMurmur3Hash128
         long expected = Murmur3Hash128.hash64(slice);
         long actual = Murmur3Hash128.hash64(value);
         assertThat(actual).isEqualTo(expected);
-    }
-
-    private static byte[] randomBytes(int length)
-    {
-        byte[] result = new byte[length];
-        ThreadLocalRandom.current().nextBytes(result);
-        return result;
     }
 }
