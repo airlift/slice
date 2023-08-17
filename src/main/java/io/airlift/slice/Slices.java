@@ -118,7 +118,11 @@ public final class Slices
             throw new IllegalArgumentException("cannot wrap " + buffer.getClass().getName());
         }
 
-        return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
+        int length = buffer.remaining();
+        if (length == 0) {
+            return EMPTY_SLICE;
+        }
+        return new Slice(buffer.array(), buffer.arrayOffset() + buffer.position(), length);
     }
 
     /**

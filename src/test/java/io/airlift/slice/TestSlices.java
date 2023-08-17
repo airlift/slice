@@ -51,6 +51,9 @@ public class TestSlices
             buffer.put((byte) i);
         }
 
+        // test empty buffer
+        assertThat(wrappedHeapBuffer(buffer)).isSameAs(EMPTY_SLICE);
+
         // test full buffer
         buffer.rewind();
         Slice slice = wrappedHeapBuffer(buffer);
