@@ -7,13 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: ['17', '20']
+        java: ['17', '21']
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup JDK ${{ matrix.java }}
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v4
       with:
         java-version: ${{ matrix.java }}
+        distribution: 'temurin'
+        cache: 'maven'
     - name: Maven Install Dependencies
       run: mvn install -B -V -DskipTests -Dair.check.skip-all
     - name: Maven Test
