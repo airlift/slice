@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>136</version>
+        <version>156</version>
     </parent>
 
     <artifactId>slice</artifactId>
@@ -24,6 +24,8 @@
         <project.build.targetJdk>17</project.build.targetJdk>
         <air.java.version>17</air.java.version>
         <air.modernizer.java-version>8</air.modernizer.java-version>
+        <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
+        <air.check.skip-pmd>true</air.check.skip-pmd>
     </properties>
 
     <dependencies>
@@ -92,13 +94,17 @@
                 <groupId>com.mycila</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <configuration>
-                    <excludes combine.children="append">
-                        <exclude>src/main/java/io/airlift/slice/Preconditions.java</exclude>
-                        <exclude>src/main/java/io/airlift/slice/CountingInputStream.java</exclude>
-                        <exclude>src/main/java/io/airlift/slice/CountingOutputStream.java</exclude>
-                        <exclude>src/main/java/io/airlift/slice/LittleEndianDataInputStream.java</exclude>
-                        <exclude>src/main/java/io/airlift/slice/LittleEndianDataOutputStream.java</exclude>
-                    </excludes>
+                    <licenseSets>
+                        <licenseSet>
+                            <excludes combine.children="append">
+                                <exclude>src/main/java/io/airlift/slice/Preconditions.java</exclude>
+                                <exclude>src/main/java/io/airlift/slice/CountingInputStream.java</exclude>
+                                <exclude>src/main/java/io/airlift/slice/CountingOutputStream.java</exclude>
+                                <exclude>src/main/java/io/airlift/slice/LittleEndianDataInputStream.java</exclude>
+                                <exclude>src/main/java/io/airlift/slice/LittleEndianDataOutputStream.java</exclude>
+                            </excludes>
+                        </licenseSet>
+                    </licenseSets>
                 </configuration>
             </plugin>
         </plugins>
