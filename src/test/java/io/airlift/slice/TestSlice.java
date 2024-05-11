@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.lang.foreign.MemorySegment;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -59,6 +60,24 @@ public class TestSlice
                 assertThat(slice.getByte(i)).isEqualTo((byte) 0);
             }
         }
+    }
+
+    @Test
+    public void testSlicing()
+    {
+        Slice slice = Slices.utf8Slice("ala ma kota");
+
+        Slice subSlice = slice.slice(4, slice.length() - 4);
+        assertThat(subSlice).isEqualTo(utf8Slice("ma kota"));
+        assertThat(subSlice.byteArray()).isEqualTo(slice.byteArray());
+
+        Slice subSubSlice = subSlice.slice(3, subSlice.length() - 3);
+        assertThat(subSubSlice).isEqualTo(utf8Slice("kota"));
+        assertThat(subSubSlice.byteArray()).isEqualTo(subSlice.byteArray());
+
+        Slice subSubSubSlice = subSubSlice.slice(3, subSubSlice.length() - 3);
+        assertThat(subSubSubSlice).isEqualTo(utf8Slice("a"));
+        assertThat(subSubSubSlice.byteArray()).isEqualTo(subSubSlice.byteArray());
     }
 
     @Test
@@ -292,6 +311,41 @@ public class TestSlice
                 assertInt(allocate(size), index);
             }
         }
+    }
+
+    @Test
+    public void testMismatch()
+    {
+        Slice first = Slices.utf8Slice("ala ma kota");
+        Slice second = Slices.utf8Slice("ala ma psa");
+
+        int mismatch = first.mismatch(second);
+        assertThat(mismatch).isEqualTo(7);
+
+        assertThat(first.toStringUtf8().substring(0, mismatch))
+                .isEqualTo(second.toStringUtf8().substring(0, mismatch));
+
+        assertThat(first.toStringUtf8().substring(0, mismatch + 1))
+                .isNotEqualTo(second.toStringUtf8().substring(0, mismatch + 1));
+
+        // Different slices
+        assertThat(first.mismatch(utf8Slice("pies i kot")))
+                .isEqualTo(0);
+
+        assertThat(first.mismatch(0, first.length(), second, 5, second.length() - 5))
+                .isEqualTo(1);
+
+        assertThat(first.mismatch(first))
+                .isEqualTo(-1);
+
+        assertThat(second.mismatch(second))
+                .isEqualTo(-1);
+
+        assertThat(first.slice(0, mismatch).mismatch(second.slice(0, mismatch)))
+                .isEqualTo(-1);
+
+        assertThat(first.mismatch(0, mismatch, second, 0, mismatch))
+                .isEqualTo(-1);
     }
 
     private static void assertInt(Slice slice, int index)
@@ -763,7 +817,8 @@ public class TestSlice
     public void testRetainedSize()
             throws Exception
     {
-        int sliceInstanceSize = instanceSize(Slice.class);
+        MemorySegment heapAllocatedSegment = MemorySegment.ofArray(new byte[0]);
+        int sliceInstanceSize = instanceSize(Slice.class) + instanceSize(heapAllocatedSegment.getClass());
         Slice slice = Slices.allocate(10);
         assertThat(slice.getRetainedSize()).isEqualTo(sizeOfByteArray(10) + sliceInstanceSize);
         assertThat(slice.length()).isEqualTo(10);
@@ -908,6 +963,9 @@ public class TestSlice
                 byte[] expected = Arrays.copyOfRange(original, index, index + length);
                 assertThat(actual).isEqualTo(expected);
             }
+            byte[] actual = getBytes(slice.toByteBuffer(index));
+            byte[] expected = Arrays.copyOfRange(original, index, original.length);
+            assertThat(actual).isEqualTo(expected);
         }
     }
 
