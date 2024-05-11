@@ -96,7 +96,7 @@ public final class Slice
         // Since this is used to create a constant in this class, be careful to not use
         // other uninitialized constants.
         this.base = new byte[0];
-        this.segment = MemorySegment.NULL;
+        this.segment = MemorySegment.ofArray(base);
         this.baseOffset = 0;
         this.size = 0;
         this.retainedSize = INSTANCE_SIZE;
@@ -180,7 +180,9 @@ public final class Slice
     @SuppressFBWarnings("EI_EXPOSE_REP")
     public byte[] byteArray()
     {
-        return base;
+        return segment.heapBase()
+                .map(value -> (byte[]) value)
+                .orElseThrow();
     }
 
     /**
