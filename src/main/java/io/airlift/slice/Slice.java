@@ -228,7 +228,7 @@ public final class Slice
 
     public byte getByteUnchecked(int index)
     {
-        return base[baseOffset + index];
+        return segment.get(BYTE, baseOffset + index);
     }
 
     /**
@@ -258,7 +258,7 @@ public final class Slice
 
     public short getShortUnchecked(int index)
     {
-        return (short) SHORT_HANDLE.get(base, baseOffset + index);
+        return segment.get(SHORT, baseOffset + index);
     }
 
     /**
@@ -288,7 +288,7 @@ public final class Slice
 
     public int getIntUnchecked(int index)
     {
-        return (int) INT_HANDLE.get(base, baseOffset + index);
+        return segment.get(INT, baseOffset + index);
     }
 
     /**
@@ -318,7 +318,7 @@ public final class Slice
 
     public long getLongUnchecked(int index)
     {
-        return (long) LONG_HANDLE.get(base, baseOffset + index);
+        return segment.get(LONG, baseOffset + index);
     }
 
     /**
@@ -336,7 +336,7 @@ public final class Slice
 
     public float getFloatUnchecked(int index)
     {
-        return (float) FLOAT_HANDLE.get(base, baseOffset + index);
+        return segment.get(FLOAT, baseOffset + index);
     }
 
     /**
@@ -354,7 +354,7 @@ public final class Slice
 
     public double getDoubleUnchecked(int index)
     {
-        return (double) DOUBLE_HANDLE.get(base, baseOffset + index);
+        return segment.get(DOUBLE, baseOffset + index);
     }
 
     /**
