@@ -18,6 +18,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.foreign.MemorySegment;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -63,6 +64,8 @@ public final class Slice
 
     private final byte[] base;
 
+    private final MemorySegment segment;
+
     private final int baseOffset;
 
     /**
@@ -85,6 +88,7 @@ public final class Slice
         // Since this is used to create a constant in this class, be careful to not use
         // other uninitialized constants.
         this.base = new byte[0];
+        this.segment = MemorySegment.NULL;
         this.baseOffset = 0;
         this.size = 0;
         this.retainedSize = INSTANCE_SIZE;
@@ -100,6 +104,7 @@ public final class Slice
             throw new IllegalArgumentException("Empty array");
         }
         this.base = base;
+        this.segment = MemorySegment.ofArray(base);
         this.baseOffset = 0;
         this.size = base.length;
         this.retainedSize = INSTANCE_SIZE + sizeOf(base);
@@ -113,16 +118,7 @@ public final class Slice
      */
     Slice(byte[] base, int offset, int length)
     {
-        requireNonNull(base, "base is null");
-        if (base.length == 0) {
-            throw new IllegalArgumentException("Empty array");
-        }
-        checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.baseOffset = offset;
-        this.size = length;
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
+        this(base, offset, length, INSTANCE_SIZE + sizeOf(base));
     }
 
     /**
@@ -136,7 +132,8 @@ public final class Slice
         }
         checkFromIndexSize(baseOffset, size, base.length);
 
-        this.base = requireNonNull(base, "base is null");
+        this.base = base;
+        this.segment = MemorySegment.ofArray(base);
         this.baseOffset = baseOffset;
         this.size = size;
         // INSTANCE_SIZE is not included, as the caller is responsible for including it.
