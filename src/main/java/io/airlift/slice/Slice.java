@@ -372,7 +372,8 @@ public final class Slice
         checkFromIndexSize(destinationIndex, length, destination.length());
         checkFromIndexSize(index, length, length());
 
-        System.arraycopy(base, baseOffset + index, destination.base, destination.baseOffset + destinationIndex, length);
+        MemorySegment target = destination.segment.asSlice(destination.baseOffset + destinationIndex, length);
+        target.copyFrom(segment.asSlice(baseOffset + index, length));
     }
 
     /**
@@ -405,7 +406,8 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        System.arraycopy(base, baseOffset + index, destination, destinationIndex, length);
+        MemorySegment target = MemorySegment.ofArray(destination).asSlice(destinationIndex, length);
+        target.copyFrom(segment.asSlice(baseOffset + index, length));
     }
 
     /**
@@ -817,7 +819,9 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length());
 
-        System.arraycopy(source.base, source.baseOffset + sourceIndex, base, baseOffset + index, length);
+        MemorySegment target = segment.asSlice(baseOffset + index, length);
+        MemorySegment from = source.segment.asSlice(source.baseOffset + sourceIndex, length);
+        target.copyFrom(from);
     }
 
     /**
@@ -846,7 +850,9 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        System.arraycopy(source, sourceIndex, base, baseOffset + index, length);
+
+        MemorySegment from = MemorySegment.ofArray(source).asSlice(sourceIndex, length);
+        segment.asSlice(baseOffset + index, length).copyFrom(from);
     }
 
     /**
