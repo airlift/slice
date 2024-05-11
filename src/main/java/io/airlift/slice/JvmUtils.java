@@ -19,7 +19,6 @@ import java.lang.reflect.Field;
 import java.nio.Buffer;
 import java.nio.ByteOrder;
 
-import static io.airlift.slice.Preconditions.checkArgument;
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
 import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
@@ -69,13 +68,6 @@ final class JvmUtils
         if (actualIndexScale != expectedIndexScale) {
             throw new IllegalStateException(name + " array index scale must be " + expectedIndexScale + ", but is " + actualIndexScale);
         }
-    }
-
-    static long bufferAddress(Buffer buffer)
-    {
-        checkArgument(buffer.isDirect(), "buffer is not direct");
-
-        return unsafe.getLong(buffer, ADDRESS_OFFSET);
     }
 
     private JvmUtils() {}
