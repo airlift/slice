@@ -20,6 +20,7 @@ import org.openjdk.jol.util.MathUtil;
 import org.openjdk.jol.vm.VM;
 import org.openjdk.jol.vm.VirtualMachine;
 
+import java.lang.foreign.MemorySegment;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -76,8 +77,28 @@ public final class SizeOf
     public static final int OPTIONAL_DOUBLE_INSTANCE_SIZE = instanceSize(OptionalDouble.class);
 
     public static final int STRING_INSTANCE_SIZE = instanceSize(String.class);
+    public static final int MEMORY_SEGMENT_INSTANCE_SIZE = instanceSize(MemorySegment.ofArray(new byte[0]).getClass());
 
     private static final int SIMPLE_ENTRY_INSTANCE_SIZE = instanceSize(AbstractMap.SimpleEntry.class);
+
+    public static long sizeOf(MemorySegment segment)
+    {
+        if (segment.isNative()) {
+            return MEMORY_SEGMENT_INSTANCE_SIZE;
+        }
+
+        return MEMORY_SEGMENT_INSTANCE_SIZE + segment.heapBase() // base
+                .map(value -> switch (value) {
+                    case byte[] byteArray -> sizeOf(byteArray);
+                    case short[] shortArray -> sizeOf(shortArray);
+                    case int[] intArray -> sizeOf(intArray);
+                    case long[] longArray -> sizeOf(longArray);
+                    case float[] floatArray -> sizeOf(floatArray);
+                    case double[] doubleArray -> sizeOf(doubleArray);
+                    default -> throw new UnsupportedOperationException("Unsupported heap type: " + value.getClass());
+                })
+                .orElseThrow();
+    }
 
     public static long sizeOf(boolean[] array)
     {

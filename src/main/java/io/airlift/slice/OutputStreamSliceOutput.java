@@ -133,7 +133,7 @@ public class OutputStreamSliceOutput
     public void writeByte(int value)
     {
         ensureWritableBytes(SIZE_OF_BYTE);
-        slice.setByteUnchecked(bufferPosition, value);
+        slice.setByte(bufferPosition, value);
         bufferPosition += SIZE_OF_BYTE;
     }
 
@@ -141,7 +141,7 @@ public class OutputStreamSliceOutput
     public void writeShort(int value)
     {
         ensureWritableBytes(SIZE_OF_SHORT);
-        slice.setShortUnchecked(bufferPosition, value);
+        slice.setShort(bufferPosition, value);
         bufferPosition += SIZE_OF_SHORT;
     }
 
@@ -149,7 +149,7 @@ public class OutputStreamSliceOutput
     public void writeInt(int value)
     {
         ensureWritableBytes(SIZE_OF_INT);
-        slice.setIntUnchecked(bufferPosition, value);
+        slice.setInt(bufferPosition, value);
         bufferPosition += SIZE_OF_INT;
     }
 
@@ -157,7 +157,7 @@ public class OutputStreamSliceOutput
     public void writeLong(long value)
     {
         ensureWritableBytes(SIZE_OF_LONG);
-        slice.setLongUnchecked(bufferPosition, value);
+        slice.setLong(bufferPosition, value);
         bufferPosition += SIZE_OF_LONG;
     }
 
