@@ -1380,7 +1380,7 @@ public final class Slice
             return EMPTY_BYTE_BUFFER;
         }
 
-        return ByteBuffer.wrap(byteArray(), byteArrayOffset() + index, length).slice();
+        return segment.asSlice(index, length).asByteBuffer();
     }
 
     /**
