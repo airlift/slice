@@ -25,7 +25,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -39,12 +38,6 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_DOUBLE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_FLOAT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_INT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_LONG_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_SHORT_BASE_OFFSET;
 
 public final class Slice
         implements Comparable<Slice>
@@ -500,7 +493,7 @@ public final class Slice
         checkFromIndexSize(index, length * Short.BYTES, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        copyFromBase(index, destination, ARRAY_SHORT_BASE_OFFSET + ((long) destinationIndex * Short.BYTES), length * Short.BYTES);
+        copyToSegment(index, MemorySegment.ofArray(destination), SHORT, destinationIndex, length);
     }
 
     /**
@@ -548,7 +541,7 @@ public final class Slice
         checkFromIndexSize(index, length * Integer.BYTES, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        copyFromBase(index, destination, ARRAY_INT_BASE_OFFSET + ((long) destinationIndex * Integer.BYTES), length * Integer.BYTES);
+        copyToSegment(index, MemorySegment.ofArray(destination), INT, destinationIndex, length);
     }
 
     /**
@@ -596,7 +589,7 @@ public final class Slice
         checkFromIndexSize(index, length * Long.BYTES, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        copyFromBase(index, destination, ARRAY_LONG_BASE_OFFSET + ((long) destinationIndex * Long.BYTES), length * Long.BYTES);
+        copyToSegment(index, MemorySegment.ofArray(destination), LONG, destinationIndex, length);
     }
 
     /**
@@ -644,7 +637,7 @@ public final class Slice
         checkFromIndexSize(index, length * Float.BYTES, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        copyFromBase(index, destination, ARRAY_FLOAT_BASE_OFFSET + ((long) destinationIndex * Float.BYTES), length * Float.BYTES);
+        copyToSegment(index, MemorySegment.ofArray(destination), FLOAT, destinationIndex, length);
     }
 
     /**
@@ -692,7 +685,7 @@ public final class Slice
         checkFromIndexSize(index, length * Double.BYTES, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        copyFromBase(index, destination, ARRAY_DOUBLE_BASE_OFFSET + ((long) destinationIndex * Double.BYTES), length * Double.BYTES);
+        copyToSegment(index, MemorySegment.ofArray(destination), DOUBLE, destinationIndex, length);
     }
 
     /**
@@ -1410,14 +1403,9 @@ public final class Slice
         return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
     }
 
-    private void copyFromBase(int index, Object dest, long destAddress, int length)
+    private void copyToSegment(int index, MemorySegment toSegment, ValueLayout layout, int destinationIndex, int length)
     {
-        int baseAddress = ARRAY_BYTE_BASE_OFFSET + baseOffset + index;
-        // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
-        // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
-        // todo the optimization only works if the baseOffset is is a multiple of 8 for both src and dest
-        int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(base, baseAddress, dest, destAddress, bytesToCopy);
-        unsafe.copyMemory(base, baseAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
+        MemorySegment target = toSegment.asSlice(destinationIndex * layout.byteSize(), length * layout.byteSize());
+        target.copyFrom(segment.asSlice(baseOffset + index, length * layout.byteSize()));
     }
 }
