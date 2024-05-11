@@ -899,7 +899,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
 
-        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * SHORT.byteSize(), length * SHORT.byteSize()));
+        copyFromSegment(index, MemorySegment.ofArray(source), SHORT, sourceIndex, length);
     }
 
     /**
@@ -929,7 +929,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
 
-        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * INT.byteSize(), length * INT.byteSize()));
+        copyFromSegment(index, MemorySegment.ofArray(source), INT, sourceIndex, length);
     }
 
     /**
@@ -959,7 +959,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
 
-        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * LONG.byteSize(), length * LONG.byteSize()));
+        copyFromSegment(index, MemorySegment.ofArray(source), LONG, sourceIndex, length);
     }
 
     /**
@@ -989,7 +989,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
 
-        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * FLOAT.byteSize(), length * FLOAT.byteSize()));
+        copyFromSegment(index, MemorySegment.ofArray(source), FLOAT, sourceIndex, length);
     }
 
     /**
@@ -1019,7 +1019,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
 
-        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * DOUBLE.byteSize(), length * DOUBLE.byteSize()));
+        copyFromSegment(index, MemorySegment.ofArray(source), DOUBLE, sourceIndex, length);
     }
 
     /**
@@ -1403,9 +1403,15 @@ public final class Slice
         return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
     }
 
-    private void copyToSegment(int index, MemorySegment toSegment, ValueLayout layout, int destinationIndex, int length)
+    private void copyToSegment(int index, MemorySegment memorySegment, ValueLayout layout, int destinationIndex, int length)
     {
-        MemorySegment target = toSegment.asSlice(destinationIndex * layout.byteSize(), length * layout.byteSize());
+        MemorySegment target = memorySegment.asSlice(destinationIndex * layout.byteSize(), length * layout.byteSize());
         target.copyFrom(segment.asSlice(baseOffset + index, length * layout.byteSize()));
+    }
+
+    private void copyFromSegment(int index, MemorySegment memorySegment, ValueLayout layout, int sourceIndex, int length)
+    {
+        MemorySegment from = memorySegment.asSlice(sourceIndex * layout.byteSize(), length * layout.byteSize());
+        segment.asSlice(baseOffset + index).copyFrom(from);
     }
 }
