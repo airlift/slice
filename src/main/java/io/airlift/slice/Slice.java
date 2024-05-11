@@ -20,7 +20,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
-import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +35,6 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
-import static java.lang.invoke.MethodHandles.byteArrayViewVarHandle;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
@@ -53,12 +51,6 @@ public final class Slice
 {
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
-
-    private static final VarHandle SHORT_HANDLE = byteArrayViewVarHandle(short[].class, LITTLE_ENDIAN);
-    private static final VarHandle INT_HANDLE = byteArrayViewVarHandle(int[].class, LITTLE_ENDIAN);
-    private static final VarHandle LONG_HANDLE = byteArrayViewVarHandle(long[].class, LITTLE_ENDIAN);
-    private static final VarHandle FLOAT_HANDLE = byteArrayViewVarHandle(float[].class, LITTLE_ENDIAN);
-    private static final VarHandle DOUBLE_HANDLE = byteArrayViewVarHandle(double[].class, LITTLE_ENDIAN);
 
     private static final ValueLayout.OfByte BYTE = ValueLayout.JAVA_BYTE.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfShort SHORT = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(LITTLE_ENDIAN);
@@ -737,7 +729,7 @@ public final class Slice
 
     void setShortUnchecked(int index, int value)
     {
-        SHORT_HANDLE.set(base, baseOffset + index, (short) (value & 0xFFFF));
+        segment.set(SHORT, baseOffset + index, (short) (value & 0xFFFF));
     }
 
     /**
@@ -755,7 +747,7 @@ public final class Slice
 
     void setIntUnchecked(int index, int value)
     {
-        INT_HANDLE.set(base, baseOffset + index, value);
+        segment.set(INT, baseOffset + index, value);
     }
 
     /**
@@ -773,7 +765,7 @@ public final class Slice
 
     void setLongUnchecked(int index, long value)
     {
-        LONG_HANDLE.set(base, baseOffset + index, value);
+        segment.set(LONG, baseOffset + index, value);
     }
 
     /**
@@ -786,7 +778,7 @@ public final class Slice
     public void setFloat(int index, float value)
     {
         checkFromIndexSize(index, SIZE_OF_FLOAT, length());
-        FLOAT_HANDLE.set(base, baseOffset + index, value);
+        segment.set(FLOAT, baseOffset + index, value);
     }
 
     /**
@@ -799,7 +791,7 @@ public final class Slice
     public void setDouble(int index, double value)
     {
         checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
-        DOUBLE_HANDLE.set(base, baseOffset + index, value);
+        segment.set(DOUBLE, baseOffset + index, value);
     }
 
     /**
