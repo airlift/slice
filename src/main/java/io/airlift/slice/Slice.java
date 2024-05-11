@@ -198,7 +198,7 @@ public final class Slice
      */
     public void fill(byte value)
     {
-        Arrays.fill(base, baseOffset, baseOffset + size, value);
+        segment.asSlice(baseOffset, size).fill(value);
     }
 
     /**
@@ -211,7 +211,7 @@ public final class Slice
 
     public void clear(int offset, int length)
     {
-        Arrays.fill(base, baseOffset, baseOffset + size, (byte) 0);
+        segment.asSlice(offset, length).fill((byte) 0);
     }
 
     /**
