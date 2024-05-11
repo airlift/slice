@@ -1210,13 +1210,21 @@ public final class Slice
         checkFromIndexSize(offset, length, length());
         checkFromIndexSize(otherOffset, otherLength, that.length());
 
-        return Arrays.compareUnsigned(
-                base,
-                baseOffset + offset,
-                baseOffset + offset + length,
-                that.base,
-                that.baseOffset + otherOffset,
-                that.baseOffset + otherOffset + otherLength);
+        MemorySegment thisSlice = segment.asSlice(baseOffset + offset, length);
+        MemorySegment thatSlice = that.segment.asSlice(that.byteArrayOffset() + otherOffset, otherLength);
+
+        // Find index of the first mismatched byte
+        long mismatch = thisSlice.mismatch(thatSlice);
+        if (mismatch == -1) {
+            return 0;
+        }
+        if (mismatch >= thisSlice.byteSize()) {
+            return -1;
+        }
+        if (mismatch >= thatSlice.byteSize()) {
+            return 1;
+        }
+        return Byte.compareUnsigned(thisSlice.get(BYTE, mismatch), thatSlice.get(BYTE, mismatch));
     }
 
     /**
