@@ -50,7 +50,7 @@ public class BenchmarkSlice
     @Benchmark
     public Object equalsUnchecked(BenchmarkData data)
     {
-        return data.slice1.equalsUnchecked(0, data.slice2, 0, data.slice1.length());
+        return data.slice1.equals(0, data.slice1.length(), data.slice2, 0, data.slice1.length());
     }
 
     @Benchmark
