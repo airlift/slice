@@ -1295,13 +1295,8 @@ public final class Slice
 
     boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
     {
-        return Arrays.equals(
-                base,
-                baseOffset + offset,
-                baseOffset + offset + length,
-                that.base,
-                that.baseOffset + otherOffset,
-                that.baseOffset + otherOffset + length);
+        return segment.asSlice(baseOffset + offset, length)
+                .mismatch(that.segment.asSlice(that.baseOffset + otherOffset, length)) == -1;
     }
 
     /**
