@@ -905,7 +905,8 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_SHORT_BASE_OFFSET + ((long) sourceIndex * Short.BYTES), length * Short.BYTES);
+
+        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * SHORT.byteSize(), length * SHORT.byteSize()));
     }
 
     /**
@@ -934,7 +935,8 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_INT_BASE_OFFSET + ((long) sourceIndex * Integer.BYTES), length * Integer.BYTES);
+
+        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * INT.byteSize(), length * INT.byteSize()));
     }
 
     /**
@@ -963,7 +965,8 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_LONG_BASE_OFFSET + ((long) sourceIndex * Long.BYTES), length * Long.BYTES);
+
+        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * LONG.byteSize(), length * LONG.byteSize()));
     }
 
     /**
@@ -992,7 +995,8 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_FLOAT_BASE_OFFSET + ((long) sourceIndex * Float.BYTES), length * Float.BYTES);
+
+        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * FLOAT.byteSize(), length * FLOAT.byteSize()));
     }
 
     /**
@@ -1021,7 +1025,8 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_DOUBLE_BASE_OFFSET + ((long) sourceIndex * Double.BYTES), length * Double.BYTES);
+
+        segment.asSlice(index).copyFrom(MemorySegment.ofArray(source).asSlice(sourceIndex * DOUBLE.byteSize(), length * DOUBLE.byteSize()));
     }
 
     /**
@@ -1414,16 +1419,5 @@ public final class Slice
         int bytesToCopy = length - (length % 8);
         unsafe.copyMemory(base, baseAddress, dest, destAddress, bytesToCopy);
         unsafe.copyMemory(base, baseAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
-    }
-
-    private void copyToBase(int index, Object src, long srcAddress, int length)
-    {
-        int baseAddress = ARRAY_BYTE_BASE_OFFSET + baseOffset + index;
-        // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
-        // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
-        // todo the optimization only works if the baseOffset is is a multiple of 8 for both src and dest
-        int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(src, srcAddress, base, baseAddress, bytesToCopy);
-        unsafe.copyMemory(src, srcAddress + bytesToCopy, base, baseAddress + bytesToCopy, length - bytesToCopy);
     }
 }
