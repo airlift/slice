@@ -16,7 +16,6 @@ package io.airlift.slice;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
-import java.nio.Buffer;
 import java.nio.ByteOrder;
 
 import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
@@ -30,7 +29,6 @@ import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 final class JvmUtils
 {
     static final Unsafe unsafe;
-    private static final long ADDRESS_OFFSET;
 
     static {
         if (!ByteOrder.LITTLE_ENDIAN.equals(ByteOrder.nativeOrder())) {
@@ -54,9 +52,6 @@ final class JvmUtils
             assertArrayIndexScale("Long", ARRAY_LONG_INDEX_SCALE, 8);
             assertArrayIndexScale("Float", ARRAY_FLOAT_INDEX_SCALE, 4);
             assertArrayIndexScale("Double", ARRAY_DOUBLE_INDEX_SCALE, 8);
-
-            // fetch the address field for direct buffers
-            ADDRESS_OFFSET = unsafe.objectFieldOffset(Buffer.class.getDeclaredField("address"));
         }
         catch (ReflectiveOperationException e) {
             throw new RuntimeException(e);
