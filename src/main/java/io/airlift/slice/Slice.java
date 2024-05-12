@@ -1148,21 +1148,18 @@ public final class Slice
             return 0;
         }
 
-        MemorySegment thisSlice = segment.asSlice(offset, length);
-        MemorySegment thatSlice = that.segment.asSlice(otherOffset, otherLength);
-
         // Find index of the first mismatched byte
-        long mismatch = thisSlice.mismatch(thatSlice);
+        long mismatch = MemorySegment.mismatch(segment, offset, offset + length, that.segment, otherOffset, otherOffset + otherLength);
         if (mismatch == -1) {
             return 0;
         }
-        if (mismatch >= thisSlice.byteSize()) {
+        if (mismatch >= length) {
             return -1;
         }
-        if (mismatch >= thatSlice.byteSize()) {
+        if (mismatch >= otherLength) {
             return 1;
         }
-        return Byte.compareUnsigned(thisSlice.get(BYTE, mismatch), thatSlice.get(BYTE, mismatch));
+        return Byte.compareUnsigned(segment.get(BYTE, offset + mismatch), that.segment.get(BYTE, otherOffset + mismatch));
     }
 
     /**
@@ -1230,8 +1227,7 @@ public final class Slice
 
     boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
     {
-        return segment.asSlice(offset, length)
-                .mismatch(that.segment.asSlice(otherOffset, length)) == -1;
+        return MemorySegment.mismatch(segment, offset, offset + length, that.segment, otherOffset, otherOffset + length) == -1;
     }
 
     /**
