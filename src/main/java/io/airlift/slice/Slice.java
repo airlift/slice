@@ -26,10 +26,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static io.airlift.slice.Preconditions.checkArgument;
-import static io.airlift.slice.SizeOf.SIZE_OF_INT;
-import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static java.lang.Math.toIntExact;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
@@ -47,6 +46,9 @@ public final class Slice
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfFloat FLOAT = ValueLayout.JAVA_FLOAT_UNALIGNED.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfDouble DOUBLE = ValueLayout.JAVA_DOUBLE_UNALIGNED.withOrder(LITTLE_ENDIAN);
+
+    private static final int SIZE_OF_INT = toIntExact(INT.byteSize());
+    private static final int SIZE_OF_LONG = toIntExact(LONG.byteSize());
 
     // Do not move this field above the constants used in the empty constructor
     static final Slice EMPTY_SLICE = new Slice();
