@@ -474,7 +474,7 @@ public final class Slice
      */
     public void getShorts(int index, short[] destination, int destinationIndex, int length)
     {
-        copyToSegment(index, MemorySegment.ofArray(destination), SHORT, destinationIndex, length);
+        MemorySegment.copy(segment, SHORT, index, MemorySegment.ofArray(destination), SHORT, destinationIndex * SHORT.byteSize(), length);
     }
 
     /**
@@ -519,7 +519,7 @@ public final class Slice
      */
     public void getInts(int index, int[] destination, int destinationIndex, int length)
     {
-        copyToSegment(index, MemorySegment.ofArray(destination), INT, destinationIndex, length);
+        MemorySegment.copy(segment, INT, index, MemorySegment.ofArray(destination), INT, destinationIndex * INT.byteSize(), length);
     }
 
     /**
@@ -564,7 +564,7 @@ public final class Slice
      */
     public void getLongs(int index, long[] destination, int destinationIndex, int length)
     {
-        copyToSegment(index, MemorySegment.ofArray(destination), LONG, destinationIndex, length);
+        MemorySegment.copy(segment, LONG, index, MemorySegment.ofArray(destination), LONG, destinationIndex * LONG.byteSize(), length);
     }
 
     /**
@@ -609,7 +609,7 @@ public final class Slice
      */
     public void getFloats(int index, float[] destination, int destinationIndex, int length)
     {
-        copyToSegment(index, MemorySegment.ofArray(destination), FLOAT, destinationIndex, length);
+        MemorySegment.copy(segment, FLOAT, index, MemorySegment.ofArray(destination), FLOAT, destinationIndex * FLOAT.byteSize(), length);
     }
 
     /**
@@ -654,7 +654,7 @@ public final class Slice
      */
     public void getDoubles(int index, double[] destination, int destinationIndex, int length)
     {
-        copyToSegment(index, MemorySegment.ofArray(destination), DOUBLE, destinationIndex, length);
+        MemorySegment.copy(segment, DOUBLE, index, MemorySegment.ofArray(destination), DOUBLE, destinationIndex * DOUBLE.byteSize(), length);
     }
 
     /**
@@ -854,7 +854,7 @@ public final class Slice
      */
     public void setShorts(int index, short[] source, int sourceIndex, int length)
     {
-        copyFromSegment(index, MemorySegment.ofArray(source), SHORT, sourceIndex, length);
+        MemorySegment.copy(MemorySegment.ofArray(source), SHORT, sourceIndex * SHORT.byteSize(), segment, SHORT, index, length);
     }
 
     /**
@@ -881,7 +881,7 @@ public final class Slice
      */
     public void setInts(int index, int[] source, int sourceIndex, int length)
     {
-        copyFromSegment(index, MemorySegment.ofArray(source), INT, sourceIndex, length);
+        MemorySegment.copy(MemorySegment.ofArray(source), INT, sourceIndex * INT.byteSize(), segment, INT, index, length);
     }
 
     /**
@@ -908,7 +908,7 @@ public final class Slice
      */
     public void setLongs(int index, long[] source, int sourceIndex, int length)
     {
-        copyFromSegment(index, MemorySegment.ofArray(source), LONG, sourceIndex, length);
+        MemorySegment.copy(MemorySegment.ofArray(source), LONG, sourceIndex * LONG.byteSize(), segment, LONG, index, length);
     }
 
     /**
@@ -935,7 +935,7 @@ public final class Slice
      */
     public void setFloats(int index, float[] source, int sourceIndex, int length)
     {
-        copyFromSegment(index, MemorySegment.ofArray(source), FLOAT, sourceIndex, length);
+        MemorySegment.copy(MemorySegment.ofArray(source), FLOAT, sourceIndex * FLOAT.byteSize(), segment, FLOAT, index, length);
     }
 
     /**
@@ -962,7 +962,7 @@ public final class Slice
      */
     public void setDoubles(int index, double[] source, int sourceIndex, int length)
     {
-        copyFromSegment(index, MemorySegment.ofArray(source), DOUBLE, sourceIndex, length);
+        MemorySegment.copy(MemorySegment.ofArray(source), DOUBLE, sourceIndex * DOUBLE.byteSize(), segment, DOUBLE, index, length);
     }
 
     /**
@@ -1336,15 +1336,5 @@ public final class Slice
             return null;
         }
         return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
-    }
-
-    private void copyToSegment(int index, MemorySegment targetSegment, ValueLayout layout, int destinationIndex, int length)
-    {
-        MemorySegment.copy(segment, layout, index, targetSegment, layout, destinationIndex * layout.byteSize(), length);
-    }
-
-    private void copyFromSegment(int index, MemorySegment srcSegment, ValueLayout layout, int sourceIndex, int length)
-    {
-        MemorySegment.copy(srcSegment, layout, sourceIndex * layout.byteSize(), segment, layout, index, length);
     }
 }
