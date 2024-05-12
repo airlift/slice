@@ -359,8 +359,7 @@ public final class Slice
      */
     public void getBytes(int index, Slice destination, int destinationIndex, int length)
     {
-        MemorySegment target = destination.segment.asSlice(destinationIndex, length);
-        target.copyFrom(segment.asSlice(index, length));
+        MemorySegment.copy(segment, index, destination.segment, destinationIndex, length);
     }
 
     /**
@@ -390,8 +389,7 @@ public final class Slice
      */
     public void getBytes(int index, byte[] destination, int destinationIndex, int length)
     {
-        MemorySegment target = MemorySegment.ofArray(destination).asSlice(destinationIndex, length);
-        target.copyFrom(segment.asSlice(index, length));
+        MemorySegment.copy(segment, index, MemorySegment.ofArray(destination), destinationIndex, length);
     }
 
     /**
@@ -779,9 +777,7 @@ public final class Slice
      */
     public void setBytes(int index, Slice source, int sourceIndex, int length)
     {
-        MemorySegment target = segment.asSlice(index, length);
-        MemorySegment from = source.segment.asSlice(sourceIndex, length);
-        target.copyFrom(from);
+        MemorySegment.copy(source.segment, sourceIndex, segment, index, length);
     }
 
     /**
@@ -808,8 +804,7 @@ public final class Slice
      */
     public void setBytes(int index, byte[] source, int sourceIndex, int length)
     {
-        MemorySegment from = MemorySegment.ofArray(source).asSlice(sourceIndex, length);
-        segment.asSlice(index, length).copyFrom(from);
+        MemorySegment.copy(source, sourceIndex, segment, BYTE, index, length);
     }
 
     /**
@@ -1343,15 +1338,13 @@ public final class Slice
         return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
     }
 
-    private void copyToSegment(int index, MemorySegment memorySegment, ValueLayout layout, int destinationIndex, int length)
+    private void copyToSegment(int index, MemorySegment targetSegment, ValueLayout layout, int destinationIndex, int length)
     {
-        MemorySegment target = memorySegment.asSlice(destinationIndex * layout.byteSize(), length * layout.byteSize());
-        target.copyFrom(segment.asSlice(index, length * layout.byteSize()));
+        MemorySegment.copy(segment, layout, index, targetSegment, layout, destinationIndex * layout.byteSize(), length);
     }
 
-    private void copyFromSegment(int index, MemorySegment memorySegment, ValueLayout layout, int sourceIndex, int length)
+    private void copyFromSegment(int index, MemorySegment srcSegment, ValueLayout layout, int sourceIndex, int length)
     {
-        MemorySegment from = memorySegment.asSlice(sourceIndex * layout.byteSize(), length * layout.byteSize());
-        segment.asSlice(index).copyFrom(from);
+        MemorySegment.copy(srcSegment, layout, sourceIndex * layout.byteSize(), segment, layout, index, length);
     }
 }
