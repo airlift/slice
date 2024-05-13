@@ -272,9 +272,9 @@ public final class XxHash64
         int remaining = length;
         while (remaining >= 32) {
             v1 = mix(v1, base.get(LONG, offset));
-            v2 = mix(v2, base.get(LONG, offset + SIZE_OF_LONG));
-            v3 = mix(v3, base.get(LONG, offset + 2 * SIZE_OF_LONG));
-            v4 = mix(v4, base.get(LONG, offset + 3 * SIZE_OF_LONG));
+            v2 = mix(v2, base.get(LONG, offset + 8));
+            v3 = mix(v3, base.get(LONG, offset + 16));
+            v4 = mix(v4, base.get(LONG, offset + 24));
 
             offset += 32;
             remaining -= 32;
