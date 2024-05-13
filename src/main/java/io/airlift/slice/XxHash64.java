@@ -21,7 +21,6 @@ import java.lang.foreign.ValueLayout;
 import static java.lang.Long.rotateLeft;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public final class XxHash64
 {
@@ -35,12 +34,7 @@ public final class XxHash64
 
     private final long seed;
 
-    private static final ValueLayout.OfByte BYTE = ValueLayout.JAVA_BYTE.withOrder(LITTLE_ENDIAN);
-    private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(LITTLE_ENDIAN);
-    private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
-
     private final MemorySegment bufferSegment = MemorySegment.ofArray(new byte[32]);
-
     private int bufferSize;
 
     private long bodyLength;
@@ -87,7 +81,7 @@ public final class XxHash64
 
     public XxHash64 update(Slice data, int offset, int length)
     {
-        updateHash(data.asSegment(), offset, length);
+        updateHash(data.segment, offset, length);
         return this;
     }
 
@@ -155,10 +149,10 @@ public final class XxHash64
     {
         int remaining = length;
         while (remaining >= 32) {
-            v1 = mix(v1, base.get(LONG, offset));
-            v2 = mix(v2, base.get(LONG, offset + 8));
-            v3 = mix(v3, base.get(LONG, offset + 16));
-            v4 = mix(v4, base.get(LONG, offset + 24));
+            v1 = mix(v1, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset));
+            v2 = mix(v2, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + 8));
+            v3 = mix(v3, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + 16));
+            v4 = mix(v4, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + 24));
 
             offset += 32;
             remaining -= 32;
@@ -223,7 +217,7 @@ public final class XxHash64
     {
         long hash;
         if (length >= 32) {
-            hash = updateBody(seed, data.asSegment(), offset, length);
+            hash = updateBody(seed, data.segment, offset, length);
         }
         else {
             hash = seed + PRIME64_5;
@@ -241,17 +235,17 @@ public final class XxHash64
     private static long updateTail(long hash, MemorySegment base, int offset, int index, int length)
     {
         while (index <= length - 8) {
-            hash = updateTail(hash, base.get(LONG, offset + index));
+            hash = updateTail(hash, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + index));
             index += 8;
         }
 
         if (index <= length - 4) {
-            hash = updateTail(hash, base.get(INT, offset + index));
+            hash = updateTail(hash, base.get(ValueLayout.JAVA_INT_UNALIGNED, offset + index));
             index += 4;
         }
 
         while (index < length) {
-            hash = updateTail(hash, base.get(BYTE, offset + index));
+            hash = updateTail(hash, base.get(ValueLayout.JAVA_BYTE, offset + index));
             index++;
         }
 
@@ -269,10 +263,10 @@ public final class XxHash64
 
         int remaining = length;
         while (remaining >= 32) {
-            v1 = mix(v1, base.get(LONG, offset));
-            v2 = mix(v2, base.get(LONG, offset + 8));
-            v3 = mix(v3, base.get(LONG, offset + 16));
-            v4 = mix(v4, base.get(LONG, offset + 24));
+            v1 = mix(v1, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset));
+            v2 = mix(v2, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + 8));
+            v3 = mix(v3, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + 16));
+            v4 = mix(v4, base.get(ValueLayout.JAVA_LONG_UNALIGNED, offset + 24));
 
             offset += 32;
             remaining -= 32;

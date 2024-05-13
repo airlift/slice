@@ -55,7 +55,7 @@ public final class Slice
 
     private final byte[] base;
 
-    private final MemorySegment segment;
+    final MemorySegment segment;
 
     private final int baseOffset;
 
