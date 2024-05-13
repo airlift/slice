@@ -39,8 +39,6 @@ public final class XxHash64
     private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
 
-    private static final long SIZE_OF_LONG = LONG.byteSize();
-
     private final MemorySegment bufferSegment = MemorySegment.ofArray(new byte[32]);
 
     private int bufferSize;
@@ -158,9 +156,9 @@ public final class XxHash64
         int remaining = length;
         while (remaining >= 32) {
             v1 = mix(v1, base.get(LONG, offset));
-            v2 = mix(v2, base.get(LONG, offset + SIZE_OF_LONG));
-            v3 = mix(v3, base.get(LONG, offset + 2 * SIZE_OF_LONG));
-            v4 = mix(v4, base.get(LONG, offset + 3 * SIZE_OF_LONG));
+            v2 = mix(v2, base.get(LONG, offset + 8));
+            v3 = mix(v3, base.get(LONG, offset + 16));
+            v4 = mix(v4, base.get(LONG, offset + 24));
 
             offset += 32;
             remaining -= 32;
@@ -178,7 +176,7 @@ public final class XxHash64
 
     public static long hash(long seed, long value)
     {
-        long hash = seed + PRIME64_5 + SIZE_OF_LONG;
+        long hash = seed + PRIME64_5 + 8;
         hash = updateTail(hash, value);
         hash = finalShuffle(hash);
 
