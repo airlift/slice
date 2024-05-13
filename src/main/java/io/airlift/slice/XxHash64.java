@@ -22,7 +22,6 @@ import static java.lang.Long.rotateLeft;
 import static java.lang.Math.min;
 import static java.lang.Math.toIntExact;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
-import static java.util.Objects.checkFromIndexSize;
 
 public final class XxHash64
 {
@@ -42,8 +41,7 @@ public final class XxHash64
 
     private static final int SIZE_OF_LONG = toIntExact(LONG.byteSize());
 
-    private final byte[] buffer = new byte[32];
-    private final MemorySegment bufferSegment = MemorySegment.ofArray(buffer);
+    private final MemorySegment bufferSegment = MemorySegment.ofArray(new byte[32]);
 
     private int bufferSize;
 
@@ -225,7 +223,6 @@ public final class XxHash64
 
     public static long hash(long seed, Slice data, int offset, int length)
     {
-        checkFromIndexSize(offset, length, data.length());
         long hash;
         if (length >= 32) {
             hash = updateBody(seed, data.asSegment(), offset, length);
