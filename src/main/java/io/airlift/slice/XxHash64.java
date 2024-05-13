@@ -20,6 +20,7 @@ import java.lang.foreign.ValueLayout;
 
 import static java.lang.Long.rotateLeft;
 import static java.lang.Math.min;
+import static java.lang.Math.toIntExact;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.Objects.checkFromIndexSize;
 
@@ -38,6 +39,8 @@ public final class XxHash64
     private static final ValueLayout.OfByte BYTE = ValueLayout.JAVA_BYTE.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
+
+    private static final int SIZE_OF_LONG = toIntExact(LONG.byteSize());
 
     private final byte[] buffer = new byte[32];
     private final MemorySegment bufferSegment = MemorySegment.ofArray(buffer);
@@ -72,8 +75,7 @@ public final class XxHash64
 
     public XxHash64 update(byte[] data, int offset, int length)
     {
-        checkFromIndexSize(offset, length, data.length);
-        updateHash(data, offset, length);
+        updateHash(MemorySegment.ofArray(data), offset, length);
         return this;
     }
 
@@ -82,10 +84,20 @@ public final class XxHash64
         return update(data, 0, data.length());
     }
 
+    public XxHash64 update(MemorySegment segment)
+    {
+        return update(segment, 0, toIntExact(segment.byteSize()));
+    }
+
     public XxHash64 update(Slice data, int offset, int length)
     {
-        checkFromIndexSize(offset, length, data.length());
-        updateHash(data.byteArray(), data.byteArrayOffset() + offset, length);
+        updateHash(data.asSegment(), offset, length);
+        return this;
+    }
+
+    public XxHash64 update(MemorySegment data, int offset, int length)
+    {
+        updateHash(data, offset, length);
         return this;
     }
 
@@ -101,7 +113,7 @@ public final class XxHash64
 
         hash += bodyLength + bufferSize;
 
-        return updateTail(hash, buffer, 0, 0, bufferSize);
+        return updateTail(hash, bufferSegment, 0, 0, bufferSize);
     }
 
     private long computeBody()
@@ -116,19 +128,17 @@ public final class XxHash64
         return hash;
     }
 
-    private void updateHash(byte[] base, int offset, int length)
+    private void updateHash(MemorySegment base, int offset, int length)
     {
         if (bufferSize > 0) {
             int available = min(32 - bufferSize, length);
-
-            MemorySegment.copy(base, offset, bufferSegment, BYTE, bufferSize, available);
-
+            MemorySegment.copy(base, offset, bufferSegment, bufferSize, available);
             bufferSize += available;
             offset += available;
             length -= available;
 
             if (bufferSize == 32) {
-                updateBody(buffer, 0, bufferSize);
+                updateBody(bufferSegment, 0, bufferSize);
                 bufferSize = 0;
             }
         }
@@ -140,21 +150,19 @@ public final class XxHash64
         }
 
         if (length > 0) {
-            MemorySegment.copy(base, offset, bufferSegment, BYTE, 0, length);
+            MemorySegment.copy(base, offset, bufferSegment, 0, length);
             bufferSize = length;
         }
     }
 
-    private int updateBody(byte[] base, long offset, int length)
+    private int updateBody(MemorySegment base, long offset, int length)
     {
-        MemorySegment from = MemorySegment.ofArray(base);
-
         int remaining = length;
         while (remaining >= 32) {
-            v1 = mix(v1, from.get(LONG, offset));
-            v2 = mix(v2, from.get(LONG, offset + LONG.byteSize()));
-            v3 = mix(v3, from.get(LONG, offset + 2 * LONG.byteSize()));
-            v4 = mix(v4, from.get(LONG, offset + 3 * LONG.byteSize()));
+            v1 = mix(v1, base.get(LONG, offset));
+            v2 = mix(v2, base.get(LONG, offset + LONG.byteSize()));
+            v3 = mix(v3, base.get(LONG, offset + 2 * LONG.byteSize()));
+            v4 = mix(v4, base.get(LONG, offset + 3 * LONG.byteSize()));
 
             offset += 32;
             remaining -= 32;
@@ -172,7 +180,7 @@ public final class XxHash64
 
     public static long hash(long seed, long value)
     {
-        long hash = seed + PRIME64_5 + SizeOf.SIZE_OF_LONG;
+        long hash = seed + PRIME64_5 + SIZE_OF_LONG;
         hash = updateTail(hash, value);
         hash = finalShuffle(hash);
 
@@ -218,13 +226,9 @@ public final class XxHash64
     public static long hash(long seed, Slice data, int offset, int length)
     {
         checkFromIndexSize(offset, length, data.length());
-
-        byte[] base = data.byteArray();
-        final long address = (long) data.byteArrayOffset() + offset;
-
         long hash;
         if (length >= 32) {
-            hash = updateBody(seed, base, address, length);
+            hash = updateBody(seed, data.asSegment(), offset, length);
         }
         else {
             hash = seed + PRIME64_5;
@@ -236,25 +240,23 @@ public final class XxHash64
         // this is the point up to which updateBody() processed
         int index = length & 0xFFFFFFE0;
 
-        return updateTail(hash, base, address, index, length);
+        return updateTail(hash, data.asSegment(), offset, index, length);
     }
 
-    private static long updateTail(long hash, byte[] base, long address, int index, int length)
+    private static long updateTail(long hash, MemorySegment base, long address, int index, int length)
     {
-        MemorySegment baseSegment = MemorySegment.ofArray(base);
-
         while (index <= length - 8) {
-            hash = updateTail(hash, baseSegment.get(LONG, address + index));
+            hash = updateTail(hash, base.get(LONG, address + index));
             index += 8;
         }
 
         if (index <= length - 4) {
-            hash = updateTail(hash, baseSegment.get(INT, address + index));
+            hash = updateTail(hash, base.get(INT, address + index));
             index += 4;
         }
 
         while (index < length) {
-            hash = updateTail(hash, baseSegment.get(BYTE, address + index));
+            hash = updateTail(hash, base.get(BYTE, address + index));
             index++;
         }
 
@@ -263,23 +265,21 @@ public final class XxHash64
         return hash;
     }
 
-    private static long updateBody(long seed, byte[] base, long address, int length)
+    private static long updateBody(long seed, MemorySegment base, long offset, int length)
     {
         long v1 = seed + PRIME64_1 + PRIME64_2;
         long v2 = seed + PRIME64_2;
         long v3 = seed;
         long v4 = seed - PRIME64_1;
 
-        MemorySegment baseSegment = MemorySegment.ofArray(base);
-
         int remaining = length;
         while (remaining >= 32) {
-            v1 = mix(v1, baseSegment.get(LONG, address));
-            v2 = mix(v2, baseSegment.get(LONG, address + LONG.byteSize()));
-            v3 = mix(v3, baseSegment.get(LONG, address + 2 * LONG.byteSize()));
-            v4 = mix(v4, baseSegment.get(LONG, address + 3 * LONG.byteSize()));
+            v1 = mix(v1, base.get(LONG, offset));
+            v2 = mix(v2, base.get(LONG, offset + LONG.byteSize()));
+            v3 = mix(v3, base.get(LONG, offset + 2 * LONG.byteSize()));
+            v4 = mix(v4, base.get(LONG, offset + 3 * LONG.byteSize()));
 
-            address += 32;
+            offset += 32;
             remaining -= 32;
         }
 
