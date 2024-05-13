@@ -166,6 +166,11 @@ public final class Slice
                 .orElseThrow();
     }
 
+    public MemorySegment asSegment()
+    {
+        return segment;
+    }
+
     /**
      * Returns the start index the content of this slice within the byte array wrapped by this slice.
      */
