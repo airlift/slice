@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -37,6 +38,12 @@ import static java.util.Objects.requireNonNull;
 public final class Slice
         implements Comparable<Slice>
 {
+    static {
+        if (!ByteOrder.LITTLE_ENDIAN.equals(ByteOrder.nativeOrder())) {
+            throw new UnsupportedOperationException("Slice only supports little endian machines.");
+        }
+    }
+
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
