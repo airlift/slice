@@ -111,7 +111,7 @@ public final class XxHash64
 
         hash += bodyLength + bufferSize;
 
-        return updateTail(hash, bufferSegment, 0, bufferSize);
+        return updateTail(hash, bufferSegment, 0, 0, bufferSize);
     }
 
     private long computeBody()
@@ -237,23 +237,23 @@ public final class XxHash64
         // this is the point up to which updateBody() processed
         int index = length & 0xFFFFFFE0;
 
-        return updateTail(hash, data.asSegment().asSlice(offset), index, length);
+        return updateTail(hash, data.asSegment(), offset, index, length);
     }
 
-    private static long updateTail(long hash, MemorySegment base, int index, int length)
+    private static long updateTail(long hash, MemorySegment base, int offset, int index, int length)
     {
         while (index <= length - 8) {
-            hash = updateTail(hash, base.get(LONG, index));
+            hash = updateTail(hash, base.get(LONG, offset + index));
             index += 8;
         }
 
         if (index <= length - 4) {
-            hash = updateTail(hash, base.get(INT, index));
+            hash = updateTail(hash, base.get(INT, offset + index));
             index += 4;
         }
 
         while (index < length) {
-            hash = updateTail(hash, base.get(BYTE, index));
+            hash = updateTail(hash, base.get(BYTE, offset + index));
             index++;
         }
 
