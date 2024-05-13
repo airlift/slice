@@ -85,7 +85,7 @@ public final class XxHash64
     public XxHash64 update(Slice data, int offset, int length)
     {
         checkFromIndexSize(offset, length, data.length());
-        updateHash(data.byteArray(), (long) data.byteArrayOffset() + offset, length);
+        updateHash(data.byteArray(), data.byteArrayOffset() + offset, length);
         return this;
     }
 
@@ -116,15 +116,12 @@ public final class XxHash64
         return hash;
     }
 
-    private void updateHash(byte[] base, long offset, int length)
+    private void updateHash(byte[] base, int offset, int length)
     {
         if (bufferSize > 0) {
             int available = min(32 - bufferSize, length);
 
-            MemorySegment from = MemorySegment.ofArray(base)
-                    .asSlice(offset, available);
-
-            bufferSegment.asSlice(bufferSize, available).copyFrom(from);
+            MemorySegment.copy(base, offset, bufferSegment, BYTE, bufferSize, available);
 
             bufferSize += available;
             offset += available;
@@ -143,9 +140,7 @@ public final class XxHash64
         }
 
         if (length > 0) {
-            MemorySegment from = MemorySegment.ofArray(base)
-                            .asSlice(offset, length);
-            bufferSegment.copyFrom(from);
+            MemorySegment.copy(base, offset, bufferSegment, BYTE, 0, length);
             bufferSize = length;
         }
     }
