@@ -39,7 +39,7 @@ public final class XxHash64
     private static final ValueLayout.OfInt INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(LITTLE_ENDIAN);
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
 
-    private static final int SIZE_OF_LONG = toIntExact(LONG.byteSize());
+    private static final long SIZE_OF_LONG = LONG.byteSize();
 
     private final MemorySegment bufferSegment = MemorySegment.ofArray(new byte[32]);
 
@@ -158,9 +158,9 @@ public final class XxHash64
         int remaining = length;
         while (remaining >= 32) {
             v1 = mix(v1, base.get(LONG, offset));
-            v2 = mix(v2, base.get(LONG, offset + LONG.byteSize()));
-            v3 = mix(v3, base.get(LONG, offset + 2 * LONG.byteSize()));
-            v4 = mix(v4, base.get(LONG, offset + 3 * LONG.byteSize()));
+            v2 = mix(v2, base.get(LONG, offset + SIZE_OF_LONG));
+            v3 = mix(v3, base.get(LONG, offset + 2 * SIZE_OF_LONG));
+            v4 = mix(v4, base.get(LONG, offset + 3 * SIZE_OF_LONG));
 
             offset += 32;
             remaining -= 32;
@@ -272,9 +272,9 @@ public final class XxHash64
         int remaining = length;
         while (remaining >= 32) {
             v1 = mix(v1, base.get(LONG, offset));
-            v2 = mix(v2, base.get(LONG, offset + LONG.byteSize()));
-            v3 = mix(v3, base.get(LONG, offset + 2 * LONG.byteSize()));
-            v4 = mix(v4, base.get(LONG, offset + 3 * LONG.byteSize()));
+            v2 = mix(v2, base.get(LONG, offset + SIZE_OF_LONG));
+            v3 = mix(v3, base.get(LONG, offset + 2 * SIZE_OF_LONG));
+            v4 = mix(v4, base.get(LONG, offset + 3 * SIZE_OF_LONG));
 
             offset += 32;
             remaining -= 32;
