@@ -40,7 +40,7 @@ public final class XxHash64
     private static final ValueLayout.OfLong LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(LITTLE_ENDIAN);
 
     private final byte[] buffer = new byte[32];
-    private final MemorySegment segment = MemorySegment.ofArray(buffer);
+    private final MemorySegment bufferSegment = MemorySegment.ofArray(buffer);
 
     private int bufferSize;
 
@@ -116,18 +116,18 @@ public final class XxHash64
         return hash;
     }
 
-    private void updateHash(byte[] base, long address, int length)
+    private void updateHash(byte[] base, long offset, int length)
     {
         if (bufferSize > 0) {
             int available = min(32 - bufferSize, length);
 
             MemorySegment from = MemorySegment.ofArray(base)
-                    .asSlice(address, available);
+                    .asSlice(offset, available);
 
-            segment.asSlice(bufferSize, available).copyFrom(from);
+            bufferSegment.asSlice(bufferSize, available).copyFrom(from);
 
             bufferSize += available;
-            address += available;
+            offset += available;
             length -= available;
 
             if (bufferSize == 32) {
@@ -137,31 +137,31 @@ public final class XxHash64
         }
 
         if (length >= 32) {
-            int index = updateBody(base, address, length);
-            address += index;
+            int index = updateBody(base, offset, length);
+            offset += index;
             length -= index;
         }
 
         if (length > 0) {
             MemorySegment from = MemorySegment.ofArray(base)
-                            .asSlice(address, length);
-            segment.copyFrom(from);
+                            .asSlice(offset, length);
+            bufferSegment.copyFrom(from);
             bufferSize = length;
         }
     }
 
-    private int updateBody(byte[] base, long address, int length)
+    private int updateBody(byte[] base, long offset, int length)
     {
         MemorySegment from = MemorySegment.ofArray(base);
 
         int remaining = length;
         while (remaining >= 32) {
-            v1 = mix(v1, from.get(LONG, address));
-            v2 = mix(v2, from.get(LONG, address + LONG.byteSize()));
-            v3 = mix(v3, from.get(LONG, address + 2 * LONG.byteSize()));
-            v4 = mix(v4, from.get(LONG, address + 3 * LONG.byteSize()));
+            v1 = mix(v1, from.get(LONG, offset));
+            v2 = mix(v2, from.get(LONG, offset + LONG.byteSize()));
+            v3 = mix(v3, from.get(LONG, offset + 2 * LONG.byteSize()));
+            v4 = mix(v4, from.get(LONG, offset + 3 * LONG.byteSize()));
 
-            address += 32;
+            offset += 32;
             remaining -= 32;
         }
 
