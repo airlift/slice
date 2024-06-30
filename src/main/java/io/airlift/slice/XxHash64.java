@@ -110,10 +110,10 @@ public final class XxHash64
     {
         long hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
 
-        hash = update(hash, v1);
-        hash = update(hash, v2);
-        hash = update(hash, v3);
-        hash = update(hash, v4);
+        hash = (hash ^ mix(0, v1)) * PRIME64_1 + PRIME64_4;
+        hash = (hash ^ mix(0, v2)) * PRIME64_1 + PRIME64_4;
+        hash = (hash ^ mix(0, v3)) * PRIME64_1 + PRIME64_4;
+        hash = (hash ^ mix(0, v4)) * PRIME64_1 + PRIME64_4;
 
         return hash;
     }
@@ -274,10 +274,10 @@ public final class XxHash64
 
         long hash = rotateLeft(v1, 1) + rotateLeft(v2, 7) + rotateLeft(v3, 12) + rotateLeft(v4, 18);
 
-        hash = update(hash, v1);
-        hash = update(hash, v2);
-        hash = update(hash, v3);
-        hash = update(hash, v4);
+        hash = (hash ^ mix(0, v1)) * PRIME64_1 + PRIME64_4;
+        hash = (hash ^ mix(0, v2)) * PRIME64_1 + PRIME64_4;
+        hash = (hash ^ mix(0, v3)) * PRIME64_1 + PRIME64_4;
+        hash = (hash ^ mix(0, v4)) * PRIME64_1 + PRIME64_4;
 
         return hash;
     }
@@ -285,12 +285,6 @@ public final class XxHash64
     private static long mix(long current, long value)
     {
         return rotateLeft(current + value * PRIME64_2, 31) * PRIME64_1;
-    }
-
-    private static long update(long hash, long value)
-    {
-        long temp = hash ^ mix(0, value);
-        return temp * PRIME64_1 + PRIME64_4;
     }
 
     private static long updateTail(long hash, long value)
