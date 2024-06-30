@@ -28,11 +28,13 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.concurrent.TimeUnit;
 
+import static org.openjdk.jmh.results.format.ResultFormatType.JSON;
+
 @State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.SECONDS)
 @Fork(5)
-@Warmup(iterations = 5, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-@Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+@Warmup(iterations = 5, time = 100, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 100, timeUnit = TimeUnit.MILLISECONDS)
 public class BenchmarkXxHash64
 {
     @Benchmark
@@ -55,6 +57,7 @@ public class BenchmarkXxHash64
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
                 .include(".*" + BenchmarkXxHash64.class.getSimpleName() + ".*")
+                .resultFormat(JSON)
                 .build();
 
         new Runner(options).run();
