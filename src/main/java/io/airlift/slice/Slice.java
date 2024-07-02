@@ -1085,6 +1085,11 @@ public final class Slice
         return Byte.compareUnsigned(segment.get(BYTE, offset + mismatch), that.segment.get(BYTE, otherOffset + mismatch));
     }
 
+    public int mismatch(Slice other)
+    {
+        return toIntExact(segment.mismatch(other.segment));
+    }
+
     /**
      * Compares the specified object with this slice for equality.  Equality is
      * solely based on the contents of the slice.

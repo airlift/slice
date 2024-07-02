@@ -313,6 +313,35 @@ public class TestSlice
         }
     }
 
+    @Test
+    public void testMismatch()
+    {
+        Slice first = Slices.utf8Slice("ala ma kota");
+        Slice second = Slices.utf8Slice("ala ma psa");
+
+        int mismatch = first.mismatch(second);
+        assertThat(mismatch).isEqualTo(7);
+
+        assertThat(first.toStringUtf8().substring(0, mismatch))
+                .isEqualTo(second.toStringUtf8().substring(0, mismatch));
+
+        assertThat(first.toStringUtf8().substring(0, mismatch + 1))
+                .isNotEqualTo(second.toStringUtf8().substring(0, mismatch + 1));
+
+        // Different slices
+        assertThat(first.mismatch(utf8Slice("pies i kot")))
+                .isEqualTo(0);
+
+        assertThat(first.mismatch(first))
+                .isEqualTo(-1);
+
+        assertThat(second.mismatch(second))
+                .isEqualTo(-1);
+
+        assertThat(first.slice(0, mismatch).mismatch(second.slice(0, mismatch)))
+                .isEqualTo(-1);
+    }
+
     private static void assertInt(Slice slice, int index)
     {
         // fill slice with FF
