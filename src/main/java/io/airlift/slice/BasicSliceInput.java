@@ -150,6 +150,49 @@ public final class BasicSliceInput
         return v;
     }
 
+    public double getDouble(int offset)
+    {
+        return slice.getDouble(position + offset);
+    }
+
+    public float getFloat(int offset)
+    {
+        return slice.getFloat(position + offset);
+    }
+
+    public float getShort(int offset)
+    {
+        return slice.getShort(position + offset);
+    }
+
+    public int getInt(int offset)
+    {
+        return slice.getInt(position + offset);
+    }
+
+    public byte getByte(int offset)
+    {
+        return slice.getByte(position + offset);
+    }
+
+    public long getLong(int offset)
+    {
+        return slice.getLong(position + offset);
+    }
+
+    public byte[] getByteArray()
+    {
+        return slice.byteArray();
+    }
+
+    /**
+     * Returns the start index the content of this slice within the byte array wrapped by this slice.
+     */
+    public int getByteArrayOffset()
+    {
+        return position + slice.byteArrayOffset();
+    }
+
     /**
      * Returned slice is a view over {@code slice}
      */
@@ -162,6 +205,13 @@ public final class BasicSliceInput
         Slice newSlice = slice.slice(position, length);
         position += length;
         return newSlice;
+    }
+
+    public byte[] readBytes()
+    {
+        byte[] bytes = slice.getBytes();
+        position = slice.length();
+        return bytes;
     }
 
     @Override

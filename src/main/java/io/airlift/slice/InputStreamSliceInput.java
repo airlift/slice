@@ -110,7 +110,7 @@ public final class InputStreamSliceInput
     public byte readByte()
     {
         ensureAvailable(SIZE_OF_BYTE);
-        byte v = slice.getByteUnchecked(bufferPosition);
+        byte v = slice.getByte(bufferPosition);
         bufferPosition += SIZE_OF_BYTE;
         return v;
     }
@@ -125,7 +125,7 @@ public final class InputStreamSliceInput
     public short readShort()
     {
         ensureAvailable(SIZE_OF_SHORT);
-        short v = slice.getShortUnchecked(bufferPosition);
+        short v = slice.getShort(bufferPosition);
         bufferPosition += SIZE_OF_SHORT;
         return v;
     }
@@ -140,7 +140,7 @@ public final class InputStreamSliceInput
     public int readInt()
     {
         ensureAvailable(SIZE_OF_INT);
-        int v = slice.getIntUnchecked(bufferPosition);
+        int v = slice.getInt(bufferPosition);
         bufferPosition += SIZE_OF_INT;
         return v;
     }
@@ -149,7 +149,7 @@ public final class InputStreamSliceInput
     public long readLong()
     {
         ensureAvailable(SIZE_OF_LONG);
-        long v = slice.getLongUnchecked(bufferPosition);
+        long v = slice.getLong(bufferPosition);
         bufferPosition += SIZE_OF_LONG;
         return v;
     }
@@ -174,7 +174,7 @@ public final class InputStreamSliceInput
         }
 
         verify(availableBytes() > 0);
-        int v = slice.getByteUnchecked(bufferPosition) & 0xFF;
+        int v = slice.getByte(bufferPosition) & 0xFF;
         bufferPosition += SIZE_OF_BYTE;
         return v;
     }

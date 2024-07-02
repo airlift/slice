@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+import static io.airlift.slice.SizeOf.MEMORY_SEGMENT_INSTANCE_SIZE;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
@@ -40,6 +41,16 @@ public class TestSlices
         assertThat(EMPTY_SLICE.length()).isEqualTo(0);
         assertThat(EMPTY_SLICE.byteArray().length).isEqualTo(0);
         assertThat(EMPTY_SLICE.byteArrayOffset()).isEqualTo(0);
+    }
+
+    @Test
+    public void testWrapByteArray()
+    {
+        byte[] byteArray = {(byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5};
+        assertThat(wrappedBuffer(byteArray).getByte(0)).isEqualTo(byteArray[0]);
+        assertThat(wrappedBuffer(byteArray, 1, 4).getByte(0)).isEqualTo(byteArray[1]);
+        assertThat(wrappedBuffer(byteArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_BYTE);
+        assertThat(wrappedBuffer(byteArray).getByte(5 * SIZE_OF_BYTE)).isEqualTo(byteArray[5]);
     }
 
     @Test
@@ -84,17 +95,7 @@ public class TestSlices
     {
         ByteBuffer heapByteBuffer = ByteBuffer.allocate(50);
         Slice slice = wrappedHeapBuffer(heapByteBuffer);
-        assertThat(slice.getRetainedSize()).isEqualTo(instanceSize(Slice.class) + sizeOf(heapByteBuffer.array()));
-    }
-
-    @Test
-    public void testWrapByteArray()
-    {
-        byte[] byteArray = {(byte) 0, (byte) 1, (byte) 2, (byte) 3, (byte) 4, (byte) 5};
-        assertThat(wrappedBuffer(byteArray).getByte(0)).isEqualTo(byteArray[0]);
-        assertThat(wrappedBuffer(byteArray, 1, 4).getByte(0)).isEqualTo(byteArray[1]);
-        assertThat(wrappedBuffer(byteArray, 1, 4).length()).isEqualTo(4 * SIZE_OF_BYTE);
-        assertThat(wrappedBuffer(byteArray).getByte(5 * SIZE_OF_BYTE)).isEqualTo(byteArray[5]);
+        assertThat(slice.getRetainedSize()).isEqualTo(instanceSize(Slice.class) + MEMORY_SEGMENT_INSTANCE_SIZE + sizeOf(heapByteBuffer.array()));
     }
 
     @Test

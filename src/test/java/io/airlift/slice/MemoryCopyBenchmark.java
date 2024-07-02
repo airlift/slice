@@ -28,11 +28,12 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
+import sun.misc.Unsafe;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static io.airlift.slice.JvmUtils.unsafe;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 @SuppressWarnings("restriction")
@@ -42,9 +43,26 @@ import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 @Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 public class MemoryCopyBenchmark
 {
+    private static final Unsafe unsafe;
+
     private static final int PAGE_SIZE = 4 * 1024;
     private static final int N_PAGES = 256 * 1024;
     private static final int ALLOC_SIZE = PAGE_SIZE * N_PAGES;
+
+    static {
+        try {
+            // fetch theUnsafe object
+            Field field = Unsafe.class.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            unsafe = (Unsafe) field.get(null);
+            if (unsafe == null) {
+                throw new RuntimeException("Unsafe access not available");
+            }
+        }
+        catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     @State(Scope.Thread)
     public static class Buffers
