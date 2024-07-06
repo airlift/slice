@@ -164,7 +164,7 @@ public final class Slice
      */
     public byte getByte(int index)
     {
-        return segment.get(JAVA_BYTE, index);
+        return (byte) JAVA_BYTE.varHandle().get(segment, index);
     }
 
     /**
@@ -188,7 +188,7 @@ public final class Slice
      */
     public short getShort(int index)
     {
-        return segment.get(JAVA_SHORT_UNALIGNED, index);
+        return (short) JAVA_SHORT_UNALIGNED.varHandle().get(segment, index);
     }
 
     /**
@@ -212,7 +212,7 @@ public final class Slice
      */
     public int getInt(int index)
     {
-        return segment.get(JAVA_INT_UNALIGNED, index);
+        return (int) JAVA_INT_UNALIGNED.varHandle().get(segment, index);
     }
 
     /**
@@ -236,7 +236,7 @@ public final class Slice
      */
     public long getLong(int index)
     {
-        return segment.get(JAVA_LONG_UNALIGNED, index);
+        return (long) JAVA_LONG_UNALIGNED.varHandle().get(segment, index);
     }
 
     /**
@@ -248,7 +248,7 @@ public final class Slice
      */
     public float getFloat(int index)
     {
-        return segment.get(JAVA_FLOAT_UNALIGNED, index);
+        return (float) JAVA_FLOAT_UNALIGNED.varHandle().get(segment, index);
     }
 
     /**
@@ -260,7 +260,7 @@ public final class Slice
      */
     public double getDouble(int index)
     {
-        return segment.get(JAVA_DOUBLE_UNALIGNED, index);
+        return (double) JAVA_DOUBLE_UNALIGNED.varHandle().get(segment, index);
     }
 
     /**
@@ -597,7 +597,7 @@ public final class Slice
      */
     public void setByte(int index, int value)
     {
-        segment.set(JAVA_BYTE, index, (byte) (value & 0xFF));
+        JAVA_BYTE.varHandle().set(segment, index, (byte) (value & 0xFF));
     }
 
     /**
@@ -610,7 +610,7 @@ public final class Slice
      */
     public void setShort(int index, int value)
     {
-        segment.set(JAVA_SHORT_UNALIGNED, index, (short) (value & 0xFFFF));
+        JAVA_SHORT_UNALIGNED.varHandle().set(segment, index, (short) (value & 0xFFFF));
     }
 
     /**
@@ -622,7 +622,7 @@ public final class Slice
      */
     public void setInt(int index, int value)
     {
-        segment.set(JAVA_INT_UNALIGNED, index, value);
+        JAVA_INT_UNALIGNED.varHandle().set(segment, index, value);
     }
 
     /**
@@ -634,7 +634,7 @@ public final class Slice
      */
     public void setLong(int index, long value)
     {
-        segment.set(JAVA_LONG_UNALIGNED, index, value);
+        JAVA_LONG_UNALIGNED.varHandle().set(segment, index, value);
     }
 
     /**
@@ -646,7 +646,7 @@ public final class Slice
      */
     public void setFloat(int index, float value)
     {
-        segment.set(JAVA_FLOAT_UNALIGNED, index, value);
+        JAVA_FLOAT_UNALIGNED.varHandle().set(segment, index, value);
     }
 
     /**
@@ -658,7 +658,7 @@ public final class Slice
      */
     public void setDouble(int index, double value)
     {
-        segment.set(JAVA_DOUBLE_UNALIGNED, index, value);
+        JAVA_DOUBLE_UNALIGNED.varHandle().set(segment, index, value);
     }
 
     /**
@@ -1070,7 +1070,11 @@ public final class Slice
         if (mismatch >= otherLength) {
             return 1;
         }
-        return Byte.compareUnsigned(segment.get(JAVA_BYTE, offset + mismatch), that.segment.get(JAVA_BYTE, otherOffset + mismatch));
+
+        byte first = (byte) JAVA_BYTE.varHandle().get(segment, offset + mismatch);
+        byte second = (byte) JAVA_BYTE.varHandle().get(that.segment, otherOffset + mismatch);
+
+        return Byte.compareUnsigned(first, second);
     }
 
     public int mismatch(int offset, int length, Slice that, int otherOffset, int otherLength)
