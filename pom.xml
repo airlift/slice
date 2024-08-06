@@ -33,6 +33,9 @@
         <air.modernizer.java-version>8</air.modernizer.java-version>
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
+
+        <!-- do not run tests on release -->
+        <air.release.preparation-goals>clean verify -DskipTests</air.release.preparation-goals>
     </properties>
 
     <dependencies>
