@@ -18,6 +18,13 @@
 
     <inceptionYear>2012</inceptionYear>
 
+    <scm>
+        <connection>scm:git:git://github.com/airlift/slice.git</connection>
+        <developerConnection>scm:git:git@github.com:airlift/slice.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/airlift/slice/tree/master</url>
+    </scm>
+
     <properties>
         <air.javadoc.lint>-missing</air.javadoc.lint>
         <air.test.jvmsize>3584m</air.test.jvmsize>
