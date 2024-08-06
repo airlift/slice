@@ -17,6 +17,6 @@ jobs:
         distribution: 'temurin'
         cache: 'maven'
     - name: Maven Install Dependencies
-      run: mvn install -B -V -DskipTests -Dair.check.skip-all
+      run: ./mvnw install -B -V -DskipTests -Dair.check.skip-all
     - name: Maven Test
-      run: mvn install -B
+      run: ./mvnw install -B
