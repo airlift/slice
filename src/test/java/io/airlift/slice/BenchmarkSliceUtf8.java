@@ -59,7 +59,7 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @Fork(1)
 @Warmup(iterations = 4, time = 500, timeUnit = MILLISECONDS)
 @Measurement(iterations = 5, time = 500, timeUnit = MILLISECONDS)
-public class SliceUtf8Benchmark
+public class BenchmarkSliceUtf8
 {
     @Benchmark
     public int benchmarkLengthOfCodePointFromStartByte(BenchmarkData data)
@@ -266,7 +266,7 @@ public class SliceUtf8Benchmark
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + SliceUtf8Benchmark.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkSliceUtf8.class.getSimpleName() + ".*")
                 .build();
 
         new Runner(options).run();

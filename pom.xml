@@ -28,8 +28,8 @@
     <properties>
         <air.javadoc.lint>-missing</air.javadoc.lint>
         <air.test.jvmsize>3584m</air.test.jvmsize>
-        <project.build.targetJdk>17</project.build.targetJdk>
-        <air.java.version>17</air.java.version>
+        <project.build.targetJdk>22</project.build.targetJdk>
+        <air.java.version>22</air.java.version>
         <air.modernizer.java-version>8</air.modernizer.java-version>
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
@@ -48,7 +48,7 @@
         <dependency>
             <groupId>org.openjdk.jol</groupId>
             <artifactId>jol-core</artifactId>
-            <version>0.16</version>
+            <version>0.17</version>
         </dependency>
 
         <dependency>
