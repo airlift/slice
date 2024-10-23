@@ -35,6 +35,7 @@ import java.lang.reflect.Field;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
+import static org.openjdk.jmh.results.format.ResultFormatType.JSON;
 import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 
 @SuppressWarnings("restriction")
@@ -42,7 +43,7 @@ import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 @Fork(1)
 @Warmup(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-public class MemoryCopyBenchmark
+public class BenchmarkMemoryCopy
 {
     private static final Unsafe unsafe;
 
@@ -69,13 +70,10 @@ public class MemoryCopyBenchmark
     public static class Buffers
     {
         @Param({
-                "0",
                 "32",
                 "128",
-                "512",
                 "1024",
                 "1048576",
-                "134217728",
         })
         public int size;
 
@@ -188,7 +186,8 @@ public class MemoryCopyBenchmark
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
-                .include(".*" + MemoryCopyBenchmark.class.getSimpleName() + ".*")
+                .include(".*" + BenchmarkMemoryCopy.class.getSimpleName() + ".*")
+                .resultFormat(JSON)
                 .build();
 
         new Runner(options).run();
