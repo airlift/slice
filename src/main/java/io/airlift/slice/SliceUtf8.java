@@ -48,22 +48,26 @@ public final class SliceUtf8
 
     private static final int[] LOWER_CODE_POINTS;
     private static final int[] UPPER_CODE_POINTS;
+    private static final int[] TITLE_CODE_POINTS;
     private static final boolean[] WHITESPACE_CODE_POINTS;
 
     static {
         LOWER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         UPPER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
+        TITLE_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
         for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
             int type = Character.getType(codePoint);
             if (type != Character.SURROGATE) {
                 LOWER_CODE_POINTS[codePoint] = Character.toLowerCase(codePoint);
                 UPPER_CODE_POINTS[codePoint] = Character.toUpperCase(codePoint);
+                TITLE_CODE_POINTS[codePoint] = Character.toTitleCase(codePoint);
                 WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
             }
             else {
                 LOWER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 UPPER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
+                TITLE_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 WHITESPACE_CODE_POINTS[codePoint] = false;
             }
         }
@@ -530,9 +534,29 @@ public final class SliceUtf8
         return toLowerCaseAsciiOrCodePoints(utf8, offset, length);
     }
 
-    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int[] codePointTranslationMap)
+    /**
+     * Converts slice to title case code point by code point. The first cased
+     * code point of every whitespace-delimited word is title cased and the
+     * remaining code points of the word are lower cased. This method does not
+     * perform locale-sensitive, context-sensitive, or one-to-many mappings
+     * required for some languages. Specifically, this will return incorrect
+     * results for Lithuanian, Turkish, and Azeri.
+     * <p>
+     * Note: Invalid UTF-8 sequences are copied directly to the output and do
+     * not start a new word.
+     */
+    public static Slice toTitleCase(Slice utf8)
     {
-        return translateCodePoints(utf8, utf8Offset, utf8Length, 0, null, 0, codePointTranslationMap);
+        return toTitleCase(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Converts byte array range to title case code point by code point.
+     */
+    public static Slice toTitleCase(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return toTitleCaseCodePoints(utf8, offset, length);
     }
 
     private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[] codePointTranslationMap)
@@ -728,6 +752,83 @@ public final class SliceUtf8
         }
 
         return translated;
+    }
+
+    private static Slice toTitleCaseCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        // Output is allocated lazily on the first code point that changes; if nothing
+        // changes the input buffer is returned wrapped, mirroring the upper/lower paths.
+        Slice translatedUtf8 = null;
+        int translatedPosition = 0;
+        int position = 0;
+        boolean wordStart = true;
+
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+
+            int codePoint;
+            int codePointLength;
+            boolean valid;
+            if (value < 0x80) {
+                codePoint = value;
+                codePointLength = 1;
+                valid = true;
+            }
+            else {
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+                valid = codePoint >= 0;
+                codePointLength = valid ? lengthOfCodePoint(codePoint) : -codePoint;
+            }
+
+            int translatedCodePoint;
+            if (!valid) {
+                // Invalid UTF-8 sequences are copied verbatim and do not start a new word.
+                translatedCodePoint = codePoint;
+            }
+            else if (WHITESPACE_CODE_POINTS[codePoint]) {
+                wordStart = true;
+                translatedCodePoint = codePoint;
+            }
+            else {
+                translatedCodePoint = wordStart ? TITLE_CODE_POINTS[codePoint] : LOWER_CODE_POINTS[codePoint];
+                wordStart = false;
+            }
+
+            if (translatedCodePoint == codePoint) {
+                // No change: copy the original bytes when an output buffer already exists.
+                if (translatedUtf8 != null) {
+                    int nextTranslatedPosition = translatedPosition + codePointLength;
+                    if (nextTranslatedPosition > utf8Length) {
+                        translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+                    }
+
+                    copyUtf8SequenceUnsafe(utf8, utf8Offset, position, translatedUtf8, translatedPosition, codePointLength);
+                    translatedPosition = nextTranslatedPosition;
+                }
+                position += codePointLength;
+                continue;
+            }
+
+            if (translatedUtf8 == null) {
+                translatedUtf8 = Slices.allocate(utf8Length);
+                translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                translatedPosition = position;
+            }
+
+            int nextTranslatedPosition = translatedPosition + lengthOfCodePoint(translatedCodePoint);
+            if (nextTranslatedPosition > utf8Length) {
+                translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+            }
+
+            setCodePointAt(translatedCodePoint, translatedUtf8, translatedPosition);
+            position += codePointLength;
+            translatedPosition = nextTranslatedPosition;
+        }
+
+        if (translatedUtf8 == null) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+        return translatedUtf8.slice(0, translatedPosition);
     }
 
     private static void copyUtf8SequenceUnsafe(byte[] source, int sourceOffset, int sourcePosition, Slice destination, int destinationPosition, int length)

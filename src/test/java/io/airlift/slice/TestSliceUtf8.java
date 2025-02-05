@@ -45,6 +45,7 @@ import static io.airlift.slice.SliceUtf8.setCodePointAt;
 import static io.airlift.slice.SliceUtf8.substring;
 import static io.airlift.slice.SliceUtf8.toCodePoints;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
+import static io.airlift.slice.SliceUtf8.toTitleCase;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
 import static io.airlift.slice.SliceUtf8.trim;
 import static io.airlift.slice.SliceUtf8.tryGetCodePointAt;
@@ -752,11 +753,16 @@ public class TestSliceUtf8
                 .isEqualTo(wrappedBuffer(invalidSequence));
         assertThat(toUpperCase(wrappedBuffer(invalidSequence)))
                 .isEqualTo(wrappedBuffer(invalidSequence));
+        assertThat(toTitleCase(wrappedBuffer(invalidSequence)))
+                .isEqualTo(wrappedBuffer(invalidSequence));
 
         assertThat(toLowerCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence))))
                 .isEqualTo(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence)));
         assertThat(toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence))))
                 .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence)));
+        // an invalid sequence is copied verbatim and does not start a new word
+        assertThat(toTitleCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'o', 'o'}, invalidSequence)));
 
         assertThat(toLowerCase(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'}))))
                 .isEqualTo(wrappedBuffer(concat(invalidSequence, new byte[] {'f', 'o', 'o'})));
@@ -767,6 +773,13 @@ public class TestSliceUtf8
                 .isEqualTo(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'})));
         assertThat(toUpperCase(wrappedBuffer(concat(new byte[] {'f', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'}))))
                 .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'})));
+
+        // invalid sequence at start followed by text should not start a new word
+        assertThat(toTitleCase(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'O', 'O'}))))
+                .isEqualTo(wrappedBuffer(concat(invalidSequence, new byte[] {'F', 'o', 'o'})));
+        // invalid sequence in middle should not start a new word
+        assertThat(toTitleCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'}))))
+                .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'})));
     }
 
     private static void assertCaseChange(String string)
@@ -779,10 +792,52 @@ public class TestSliceUtf8
         Slice actualUpper = toUpperCase(utf8Slice(string));
         assertThat(actualUpper).isEqualTo(wrappedBuffer(expectedUpper.getBytes(UTF_8)));
 
+        String expectedTitle = titleByCodePoint(string);
+        Slice actualTitle = toTitleCase(utf8Slice(string));
+        assertThat(actualTitle).isEqualTo(wrappedBuffer(expectedTitle.getBytes(UTF_8)));
+
         // lower the upper and upper the lower
         // NOTE: not all code points roundtrip, so calculate the expected
         assertThat(toLowerCase(actualUpper)).isEqualTo(wrappedBuffer(lowerByCodePoint(expectedUpper).getBytes(UTF_8)));
         assertThat(toUpperCase(actualLower)).isEqualTo(wrappedBuffer(upperByCodePoint(expectedLower).getBytes(UTF_8)));
+    }
+
+    @Test
+    public void testTitleCase()
+    {
+        // first cased code point of every whitespace-delimited word is title cased, the rest lower cased
+        assertThat(toTitleCase(utf8Slice("hello world")).toStringUtf8()).isEqualTo("Hello World");
+        assertThat(toTitleCase(utf8Slice("HELLO WORLD")).toStringUtf8()).isEqualTo("Hello World");
+        assertThat(toTitleCase(utf8Slice("hELLO wORLD")).toStringUtf8()).isEqualTo("Hello World");
+
+        // already title cased input is returned wrapping the original range
+        Slice alreadyTitle = utf8Slice("Hello World");
+        assertThat(toTitleCase(alreadyTitle).toStringUtf8()).isEqualTo("Hello World");
+
+        // empty and whitespace-only input
+        assertThat(toTitleCase(EMPTY_SLICE).toStringUtf8()).isEqualTo("");
+        assertThat(toTitleCase(utf8Slice("   ")).toStringUtf8()).isEqualTo("   ");
+
+        // multiple and leading/trailing whitespace runs
+        assertThat(toTitleCase(utf8Slice("  foo   bar baz  ")).toStringUtf8()).isEqualTo("  Foo   Bar Baz  ");
+
+        // non-letter code points consume but do not break a word; whitespace resets it
+        assertThat(toTitleCase(utf8Slice("apple ☃ snowman")).toStringUtf8()).isEqualTo("Apple ☃ Snowman");
+        assertThat(toTitleCase(utf8Slice("123abc def")).toStringUtf8()).isEqualTo("123abc Def");
+
+        // non-ASCII title casing
+        assertThat(toTitleCase(utf8Slice("école straße")).toStringUtf8()).isEqualTo("École Straße");
+    }
+
+    @Test
+    public void testToTitleCaseNoOpWrapsInputRange()
+    {
+        byte[] bytes = "Hello World".getBytes(UTF_8);
+
+        Slice title = toTitleCase(bytes, 0, bytes.length);
+        bytes[0] = 'Y';
+
+        assertThat(title.toStringUtf8()).isEqualTo("Yello World");
     }
 
     private static String lowerByCodePoint(String string)
@@ -795,6 +850,23 @@ public class TestSliceUtf8
     {
         int[] upperCodePoints = string.codePoints().map(Character::toUpperCase).toArray();
         return new String(upperCodePoints, 0, upperCodePoints.length);
+    }
+
+    private static String titleByCodePoint(String string)
+    {
+        int[] codePoints = string.codePoints().toArray();
+        boolean wordStart = true;
+        for (int i = 0; i < codePoints.length; i++) {
+            int codePoint = codePoints[i];
+            if (Character.isWhitespace(codePoint)) {
+                wordStart = true;
+            }
+            else {
+                codePoints[i] = wordStart ? Character.toTitleCase(codePoint) : Character.toLowerCase(codePoint);
+                wordStart = false;
+            }
+        }
+        return new String(codePoints, 0, codePoints.length);
     }
 
     @Test
