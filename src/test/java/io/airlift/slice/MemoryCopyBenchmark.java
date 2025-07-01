@@ -23,12 +23,14 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.VerboseMode;
 
+import java.lang.foreign.MemorySegment;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -38,8 +40,8 @@ import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
 @SuppressWarnings("restriction")
 @BenchmarkMode(Mode.Throughput)
 @Fork(1)
-@Warmup(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
-@Measurement(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
+@Warmup(iterations = 10, time = 100, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 10, time = 100, timeUnit = TimeUnit.MILLISECONDS)
 public class MemoryCopyBenchmark
 {
     private static final int PAGE_SIZE = 4 * 1024;
@@ -65,10 +67,12 @@ public class MemoryCopyBenchmark
                 "SLICE",
                 "CUSTOM_LOOP",
                 "UNSAFE",
+                "FFM",
         })
         public CopyStrategy copyStrategy;
 
         Slice data;
+        MemorySegment segment;
         long startOffset;
         long destOffset;
 
@@ -79,6 +83,7 @@ public class MemoryCopyBenchmark
             for (int idx = 0; idx < data.length() / 8; idx++) {
                 data.setLong(idx, ThreadLocalRandom.current().nextLong());
             }
+            segment = MemorySegment.ofArray(data.byteArray());
 
             long startOffsetPages = ThreadLocalRandom.current().nextInt(N_PAGES / 4);
             long destOffsetPages = ThreadLocalRandom.current().nextInt(N_PAGES / 4) + N_PAGES / 2;
@@ -91,7 +96,7 @@ public class MemoryCopyBenchmark
     @Benchmark
     public Slice copy(Buffers buffers)
     {
-        buffers.copyStrategy.doCopy(buffers.data, buffers.startOffset, buffers.destOffset, buffers.size);
+        buffers.copyStrategy.doCopy(buffers.data, buffers.segment, buffers.startOffset, buffers.destOffset, buffers.size);
         return buffers.data;
     }
 
@@ -99,7 +104,7 @@ public class MemoryCopyBenchmark
     {
         ARRAY_COPY {
             @Override
-            public void doCopy(Slice data, long src, long dest, int length)
+            public void doCopy(Slice data, MemorySegment segment, long src, long dest, int length)
             {
                 byte[] byteArray = data.byteArray();
                 int byteArrayOffset = data.byteArrayOffset();
@@ -109,7 +114,7 @@ public class MemoryCopyBenchmark
 
         SLICE {
             @Override
-            public void doCopy(Slice data, long src, long dest, int length)
+            public void doCopy(Slice data, MemorySegment segment, long src, long dest, int length)
             {
                 data.setBytes((int) dest, data, (int) src, length);
             }
@@ -117,7 +122,7 @@ public class MemoryCopyBenchmark
 
         CUSTOM_LOOP {
             @Override
-            public void doCopy(Slice data, long src, long dest, int length)
+            public void doCopy(Slice data, MemorySegment segment, long src, long dest, int length)
             {
                 byte[] base = data.byteArray();
                 long offset = data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET;
@@ -141,7 +146,7 @@ public class MemoryCopyBenchmark
 
         UNSAFE {
             @Override
-            public void doCopy(Slice data, long srcOffset, long destOffset, int length)
+            public void doCopy(Slice data, MemorySegment segment, long srcOffset, long destOffset, int length)
             {
                 byte[] base = data.byteArray();
                 long address = data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET;
@@ -151,9 +156,17 @@ public class MemoryCopyBenchmark
                 unsafe.copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
                 unsafe.copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);
             }
+        },
+
+        FFM {
+            @Override
+            public void doCopy(Slice data, MemorySegment segment, long srcOffset, long destOffset, int length)
+            {
+                MemorySegment.copy(segment, srcOffset, segment, destOffset, length);
+            }
         };
 
-        public abstract void doCopy(Slice data, long src, long dest, int length);
+        public abstract void doCopy(Slice data, MemorySegment segment, long src, long dest, int length);
     }
 
     public static void main(String[] args)
@@ -161,6 +174,7 @@ public class MemoryCopyBenchmark
     {
         Options options = new OptionsBuilder()
                 .verbosity(VerboseMode.NORMAL)
+                .resultFormat(ResultFormatType.JSON)
                 .include(".*" + MemoryCopyBenchmark.class.getSimpleName() + ".*")
                 .build();
 
