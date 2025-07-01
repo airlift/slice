@@ -30,6 +30,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
+import static io.airlift.slice.SliceUtf8.toTitleCase;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Double.doubleToLongBits;
@@ -193,6 +194,17 @@ public class TestSlice
 
         assertThat(utf8Slice(s)).isEqualTo(slice);
         assertThat(slice.toStringUtf8()).isEqualTo(s);
+        assertThat(utf8Slice(s).toStringUtf8()).isEqualTo(s);
+    }
+
+    @Test
+    public void testUtf8TitleCaseConversion()
+    {
+        String s = "apple \u2603 snowman";
+        Slice slice = Slices.copiedBuffer(s, UTF_8);
+
+        assertThat(toTitleCase(utf8Slice(s))).isEqualTo(toTitleCase(slice));
+        assertThat(toTitleCase(slice).toStringUtf8()).isEqualTo("Apple \u2603 Snowman");
         assertThat(utf8Slice(s).toStringUtf8()).isEqualTo(s);
     }
 
