@@ -18,13 +18,13 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.foreign.MemorySegment;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-import static io.airlift.slice.JvmUtils.unsafe;
 import static io.airlift.slice.Preconditions.checkArgument;
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -39,12 +39,6 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_DOUBLE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_FLOAT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_INT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_LONG_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_SHORT_BASE_OFFSET;
 
 public final class Slice
         implements Comparable<Slice>
@@ -377,10 +371,10 @@ public final class Slice
      */
     public void getBytes(int index, Slice destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(destinationIndex, length, destination.length());
-        checkFromIndexSize(index, length, length());
-
-        System.arraycopy(base, baseOffset + index, destination.base, destination.baseOffset + destinationIndex, length);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), baseOffset + index,
+                MemorySegment.ofArray(destination.base), destination.baseOffset + destinationIndex,
+                length);
     }
 
     /**
@@ -410,10 +404,10 @@ public final class Slice
      */
     public void getBytes(int index, byte[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        System.arraycopy(base, baseOffset + index, destination, destinationIndex, length);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), baseOffset + index,
+                MemorySegment.ofArray(destination), destinationIndex,
+                length);
     }
 
     /**
@@ -498,10 +492,10 @@ public final class Slice
      */
     public void getShorts(int index, short[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length * Short.BYTES, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        copyFromBase(index, destination, ARRAY_SHORT_BASE_OFFSET + ((long) destinationIndex * Short.BYTES), length * Short.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), index,
+                MemorySegment.ofArray(destination), (long) destinationIndex * Short.BYTES,
+                (long) length * Short.BYTES);
     }
 
     /**
@@ -546,10 +540,10 @@ public final class Slice
      */
     public void getInts(int index, int[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length * Integer.BYTES, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        copyFromBase(index, destination, ARRAY_INT_BASE_OFFSET + ((long) destinationIndex * Integer.BYTES), length * Integer.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), index,
+                MemorySegment.ofArray(destination), (long) destinationIndex * Integer.BYTES,
+                (long) length * Integer.BYTES);
     }
 
     /**
@@ -594,10 +588,10 @@ public final class Slice
      */
     public void getLongs(int index, long[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length * Long.BYTES, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        copyFromBase(index, destination, ARRAY_LONG_BASE_OFFSET + ((long) destinationIndex * Long.BYTES), length * Long.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), index,
+                MemorySegment.ofArray(destination), (long) destinationIndex * Long.BYTES,
+                (long) length * Long.BYTES);
     }
 
     /**
@@ -642,10 +636,10 @@ public final class Slice
      */
     public void getFloats(int index, float[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length * Float.BYTES, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        copyFromBase(index, destination, ARRAY_FLOAT_BASE_OFFSET + ((long) destinationIndex * Float.BYTES), length * Float.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), index,
+                MemorySegment.ofArray(destination), (long) destinationIndex * Float.BYTES,
+                (long) length * Float.BYTES);
     }
 
     /**
@@ -690,10 +684,10 @@ public final class Slice
      */
     public void getDoubles(int index, double[] destination, int destinationIndex, int length)
     {
-        checkFromIndexSize(index, length * Double.BYTES, length());
-        checkFromIndexSize(destinationIndex, length, destination.length);
-
-        copyFromBase(index, destination, ARRAY_DOUBLE_BASE_OFFSET + ((long) destinationIndex * Double.BYTES), length * Double.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(base), index,
+                MemorySegment.ofArray(destination), (long) destinationIndex * Double.BYTES,
+                (long) length * Double.BYTES);
     }
 
     /**
@@ -822,10 +816,10 @@ public final class Slice
      */
     public void setBytes(int index, Slice source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length());
-
-        System.arraycopy(source.base, source.baseOffset + sourceIndex, base, baseOffset + index, length);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source.base), source.baseOffset + sourceIndex,
+                MemorySegment.ofArray(base), baseOffset + index,
+                length);
     }
 
     /**
@@ -852,9 +846,10 @@ public final class Slice
      */
     public void setBytes(int index, byte[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        System.arraycopy(source, sourceIndex, base, baseOffset + index, length);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source), sourceIndex,
+                MemorySegment.ofArray(base), baseOffset + index,
+                length);
     }
 
     /**
@@ -904,9 +899,10 @@ public final class Slice
      */
     public void setShorts(int index, short[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_SHORT_BASE_OFFSET + ((long) sourceIndex * Short.BYTES), length * Short.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source), (long) sourceIndex * Short.BYTES,
+                MemorySegment.ofArray(base), index,
+                (long) length * Short.BYTES);
     }
 
     /**
@@ -933,9 +929,10 @@ public final class Slice
      */
     public void setInts(int index, int[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_INT_BASE_OFFSET + ((long) sourceIndex * Integer.BYTES), length * Integer.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source), (long) sourceIndex * Integer.BYTES,
+                MemorySegment.ofArray(base), index,
+                (long) length * Integer.BYTES);
     }
 
     /**
@@ -962,9 +959,10 @@ public final class Slice
      */
     public void setLongs(int index, long[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_LONG_BASE_OFFSET + ((long) sourceIndex * Long.BYTES), length * Long.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source), (long) sourceIndex * Long.BYTES,
+                MemorySegment.ofArray(base), index,
+                (long) length * Long.BYTES);
     }
 
     /**
@@ -991,9 +989,10 @@ public final class Slice
      */
     public void setFloats(int index, float[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_FLOAT_BASE_OFFSET + ((long) sourceIndex * Float.BYTES), length * Float.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source), (long) sourceIndex * Float.BYTES,
+                MemorySegment.ofArray(base), index,
+                (long) length * Float.BYTES);
     }
 
     /**
@@ -1020,9 +1019,10 @@ public final class Slice
      */
     public void setDoubles(int index, double[] source, int sourceIndex, int length)
     {
-        checkFromIndexSize(index, length, length());
-        checkFromIndexSize(sourceIndex, length, source.length);
-        copyToBase(index, source, ARRAY_DOUBLE_BASE_OFFSET + ((long) sourceIndex * Double.BYTES), length * Double.BYTES);
+        MemorySegment.copy(
+                MemorySegment.ofArray(source), (long) sourceIndex * Double.BYTES,
+                MemorySegment.ofArray(base), index,
+                (long) length * Double.BYTES);
     }
 
     /**
@@ -1401,27 +1401,5 @@ public final class Slice
             return null;
         }
         return o.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(o));
-    }
-
-    private void copyFromBase(int index, Object dest, long destAddress, int length)
-    {
-        int baseAddress = ARRAY_BYTE_BASE_OFFSET + baseOffset + index;
-        // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
-        // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
-        // todo the optimization only works if the baseOffset is is a multiple of 8 for both src and dest
-        int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(base, baseAddress, dest, destAddress, bytesToCopy);
-        unsafe.copyMemory(base, baseAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
-    }
-
-    private void copyToBase(int index, Object src, long srcAddress, int length)
-    {
-        int baseAddress = ARRAY_BYTE_BASE_OFFSET + baseOffset + index;
-        // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
-        // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
-        // todo the optimization only works if the baseOffset is is a multiple of 8 for both src and dest
-        int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(src, srcAddress, base, baseAddress, bytesToCopy);
-        unsafe.copyMemory(src, srcAddress + bytesToCopy, base, baseAddress + bytesToCopy, length - bytesToCopy);
     }
 }
