@@ -13,8 +13,6 @@
  */
 package io.airlift.slice;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -46,7 +44,7 @@ import static sun.misc.Unsafe.ARRAY_INT_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_LONG_BASE_OFFSET;
 import static sun.misc.Unsafe.ARRAY_SHORT_BASE_OFFSET;
 
-public final class Slice
+public record Slice(byte[] byteArray, int byteArrayOffset, int size, long retainedSize, StableValue<Integer> stableHashCode)
         implements Comparable<Slice>
 {
     private static final int INSTANCE_SIZE = instanceSize(Slice.class);
@@ -61,22 +59,6 @@ public final class Slice
     // Do not move this field above the constants used in the empty constructor
     static final Slice EMPTY_SLICE = new Slice();
 
-    private final byte[] base;
-
-    private final int baseOffset;
-
-    /**
-     * Size of the slice
-     */
-    private final int size;
-
-    /**
-     * Bytes retained by the slice
-     */
-    private final long retainedSize;
-
-    private int hash;
-
     /**
      * This is only used to create the EMPTY_SLICE constant.
      */
@@ -84,25 +66,24 @@ public final class Slice
     {
         // Since this is used to create a constant in this class, be careful to not use
         // other uninitialized constants.
-        this.base = new byte[0];
-        this.baseOffset = 0;
-        this.size = 0;
-        this.retainedSize = INSTANCE_SIZE;
+        this(new byte[0], 0, 0, INSTANCE_SIZE, StableValue.of());
     }
 
     /**
      * Creates a slice over the specified array.
      */
-    Slice(byte[] base)
+    Slice(byte[] byteArray, int baseOffset)
     {
-        requireNonNull(base, "base is null");
-        if (base.length == 0) {
+        this(byteArray, baseOffset, byteArray.length, INSTANCE_SIZE + sizeOf(byteArray), StableValue.of());
+        requireNonNull(byteArray, "base is null");
+        if (byteArray.length == 0) {
             throw new IllegalArgumentException("Empty array");
         }
-        this.base = base;
-        this.baseOffset = 0;
-        this.size = base.length;
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
+    }
+
+    Slice(byte[] byteArray)
+    {
+        this(byteArray, 0);
     }
 
     /**
@@ -113,34 +94,21 @@ public final class Slice
      */
     Slice(byte[] base, int offset, int length)
     {
+        this(base, offset, length, INSTANCE_SIZE + sizeOf(base), StableValue.of());
         requireNonNull(base, "base is null");
-        if (base.length == 0) {
-            throw new IllegalArgumentException("Empty array");
-        }
+        requireNonNull(stableHashCode, "stableHashCode is null");
         checkFromIndexSize(offset, length, base.length);
-
-        this.base = base;
-        this.baseOffset = offset;
-        this.size = length;
-        this.retainedSize = INSTANCE_SIZE + sizeOf(base);
     }
 
     /**
      * Creates a slice for directly accessing the base object.
      */
-    Slice(byte[] base, int baseOffset, int size, long retainedSize)
+    // INSTANCE_SIZE is not included, as the caller is responsible for including it.
+    public Slice
     {
-        requireNonNull(base, "base is null");
-        if (base.length == 0) {
-            throw new IllegalArgumentException("Empty array");
-        }
-        checkFromIndexSize(baseOffset, size, base.length);
-
-        this.base = requireNonNull(base, "base is null");
-        this.baseOffset = baseOffset;
-        this.size = size;
-        // INSTANCE_SIZE is not included, as the caller is responsible for including it.
-        this.retainedSize = retainedSize;
+        requireNonNull(byteArray, "byteArray is null");
+        checkFromIndexSize(byteArrayOffset, size, byteArray.length);
+        requireNonNull(byteArray, "base is null");
     }
 
     /**
@@ -165,25 +133,7 @@ public final class Slice
      */
     public boolean isCompact()
     {
-        return baseOffset == 0 && size == base.length;
-    }
-
-    /**
-     * Returns the byte array wrapped by this Slice. Callers should also take care to use {@link Slice#byteArrayOffset()}
-     * since the contents of this Slice may not start at array index 0.
-     */
-    @SuppressFBWarnings("EI_EXPOSE_REP")
-    public byte[] byteArray()
-    {
-        return base;
-    }
-
-    /**
-     * Returns the start index the content of this slice within the byte array wrapped by this slice.
-     */
-    public int byteArrayOffset()
-    {
-        return baseOffset;
+        return byteArrayOffset == 0 && size == byteArray.length;
     }
 
     /**
@@ -191,7 +141,15 @@ public final class Slice
      */
     public void fill(byte value)
     {
-        Arrays.fill(base, baseOffset, baseOffset + size, value);
+        fill(0, size, value);
+    }
+
+    /**
+     * Fill the slice with the specified value;
+     */
+    public void fill(int offset, int length, byte value)
+    {
+        Arrays.fill(byteArray, byteArrayOffset + offset, byteArrayOffset + offset + length, value);
     }
 
     /**
@@ -204,7 +162,7 @@ public final class Slice
 
     public void clear(int offset, int length)
     {
-        Arrays.fill(base, baseOffset, baseOffset + size, (byte) 0);
+        fill(offset, length, (byte) 0);
     }
 
     /**
@@ -221,7 +179,7 @@ public final class Slice
 
     public byte getByteUnchecked(int index)
     {
-        return base[baseOffset + index];
+        return byteArray[byteArrayOffset + index];
     }
 
     /**
@@ -251,7 +209,7 @@ public final class Slice
 
     public short getShortUnchecked(int index)
     {
-        return (short) SHORT_HANDLE.get(base, baseOffset + index);
+        return (short) SHORT_HANDLE.get(byteArray, byteArrayOffset + index);
     }
 
     /**
@@ -281,7 +239,7 @@ public final class Slice
 
     public int getIntUnchecked(int index)
     {
-        return (int) INT_HANDLE.get(base, baseOffset + index);
+        return (int) INT_HANDLE.get(byteArray, byteArrayOffset + index);
     }
 
     /**
@@ -311,7 +269,7 @@ public final class Slice
 
     public long getLongUnchecked(int index)
     {
-        return (long) LONG_HANDLE.get(base, baseOffset + index);
+        return (long) LONG_HANDLE.get(byteArray, byteArrayOffset + index);
     }
 
     /**
@@ -329,7 +287,7 @@ public final class Slice
 
     public float getFloatUnchecked(int index)
     {
-        return (float) FLOAT_HANDLE.get(base, baseOffset + index);
+        return (float) FLOAT_HANDLE.get(byteArray, byteArrayOffset + index);
     }
 
     /**
@@ -347,7 +305,7 @@ public final class Slice
 
     public double getDoubleUnchecked(int index)
     {
-        return (double) DOUBLE_HANDLE.get(base, baseOffset + index);
+        return (double) DOUBLE_HANDLE.get(byteArray, byteArrayOffset + index);
     }
 
     /**
@@ -380,7 +338,7 @@ public final class Slice
         checkFromIndexSize(destinationIndex, length, destination.length());
         checkFromIndexSize(index, length, length());
 
-        System.arraycopy(base, baseOffset + index, destination.base, destination.baseOffset + destinationIndex, length);
+        System.arraycopy(byteArray, byteArrayOffset + index, destination.byteArray, destination.byteArrayOffset + destinationIndex, length);
     }
 
     /**
@@ -413,7 +371,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(destinationIndex, length, destination.length);
 
-        System.arraycopy(base, baseOffset + index, destination, destinationIndex, length);
+        System.arraycopy(byteArray, byteArrayOffset + index, destination, destinationIndex, length);
     }
 
     /**
@@ -711,7 +669,7 @@ public final class Slice
 
     void setByteUnchecked(int index, int value)
     {
-        base[baseOffset + index] = (byte) (value & 0xFF);
+        byteArray[byteArrayOffset + index] = (byte) (value & 0xFF);
     }
 
     /**
@@ -730,7 +688,7 @@ public final class Slice
 
     void setShortUnchecked(int index, int value)
     {
-        SHORT_HANDLE.set(base, baseOffset + index, (short) (value & 0xFFFF));
+        SHORT_HANDLE.set(byteArray, byteArrayOffset + index, (short) (value & 0xFFFF));
     }
 
     /**
@@ -748,7 +706,7 @@ public final class Slice
 
     void setIntUnchecked(int index, int value)
     {
-        INT_HANDLE.set(base, baseOffset + index, value);
+        INT_HANDLE.set(byteArray, byteArrayOffset + index, value);
     }
 
     /**
@@ -766,7 +724,7 @@ public final class Slice
 
     void setLongUnchecked(int index, long value)
     {
-        LONG_HANDLE.set(base, baseOffset + index, value);
+        LONG_HANDLE.set(byteArray, byteArrayOffset + index, value);
     }
 
     /**
@@ -779,7 +737,7 @@ public final class Slice
     public void setFloat(int index, float value)
     {
         checkFromIndexSize(index, SIZE_OF_FLOAT, length());
-        FLOAT_HANDLE.set(base, baseOffset + index, value);
+        FLOAT_HANDLE.set(byteArray, byteArrayOffset + index, value);
     }
 
     /**
@@ -792,7 +750,7 @@ public final class Slice
     public void setDouble(int index, double value)
     {
         checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
-        DOUBLE_HANDLE.set(base, baseOffset + index, value);
+        DOUBLE_HANDLE.set(byteArray, byteArrayOffset + index, value);
     }
 
     /**
@@ -825,7 +783,7 @@ public final class Slice
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length());
 
-        System.arraycopy(source.base, source.baseOffset + sourceIndex, base, baseOffset + index, length);
+        System.arraycopy(source.byteArray, source.byteArrayOffset + sourceIndex, byteArray, byteArrayOffset + index, length);
     }
 
     /**
@@ -854,7 +812,7 @@ public final class Slice
     {
         checkFromIndexSize(index, length, length());
         checkFromIndexSize(sourceIndex, length, source.length);
-        System.arraycopy(source, sourceIndex, base, baseOffset + index, length);
+        System.arraycopy(source, sourceIndex, byteArray, byteArrayOffset + index, length);
     }
 
     /**
@@ -1039,7 +997,7 @@ public final class Slice
             return Slices.EMPTY_SLICE;
         }
 
-        return new Slice(base, baseOffset + index, length, retainedSize);
+        return new Slice(byteArray, byteArrayOffset + index, length, retainedSize, StableValue.of());
     }
 
     /**
@@ -1051,7 +1009,7 @@ public final class Slice
         if (size == 0) {
             return Slices.EMPTY_SLICE;
         }
-        return new Slice(Arrays.copyOfRange(base, baseOffset, baseOffset + size));
+        return new Slice(Arrays.copyOfRange(byteArray, byteArrayOffset, byteArrayOffset + size), 0);
     }
 
     /**
@@ -1064,7 +1022,7 @@ public final class Slice
         if (length == 0) {
             return Slices.EMPTY_SLICE;
         }
-        return new Slice(Arrays.copyOfRange(base, baseOffset + index, baseOffset + index + length));
+        return new Slice(Arrays.copyOfRange(byteArray, byteArrayOffset + index, byteArrayOffset + index + length), 0);
     }
 
     public int indexOfByte(int b)
@@ -1212,12 +1170,12 @@ public final class Slice
         checkFromIndexSize(otherOffset, otherLength, that.length());
 
         return Arrays.compareUnsigned(
-                base,
-                baseOffset + offset,
-                baseOffset + offset + length,
-                that.base,
-                that.baseOffset + otherOffset,
-                that.baseOffset + otherOffset + otherLength);
+                byteArray,
+                byteArrayOffset + offset,
+                byteArrayOffset + offset + length,
+                that.byteArray,
+                that.byteArrayOffset + otherOffset,
+                that.byteArrayOffset + otherOffset + otherLength);
     }
 
     /**
@@ -1249,12 +1207,7 @@ public final class Slice
     @Override
     public int hashCode()
     {
-        if (hash != 0) {
-            return hash;
-        }
-
-        hash = hashCode(0, size);
-        return hash;
+        return stableHashCode.orElseSet(() -> hashCode(0, size));
     }
 
     /**
@@ -1289,12 +1242,12 @@ public final class Slice
     boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
     {
         return Arrays.equals(
-                base,
-                baseOffset + offset,
-                baseOffset + offset + length,
-                that.base,
-                that.baseOffset + otherOffset,
-                that.baseOffset + otherOffset + length);
+                byteArray,
+                byteArrayOffset + offset,
+                byteArrayOffset + offset + length,
+                that.byteArray,
+                that.byteArrayOffset + otherOffset,
+                that.byteArrayOffset + otherOffset + length);
     }
 
     /**
@@ -1388,8 +1341,8 @@ public final class Slice
     public String toString()
     {
         StringBuilder builder = new StringBuilder("Slice{");
-        builder.append("base=").append(identityToString(base)).append(", ");
-        builder.append("baseOffset=").append(baseOffset);
+        builder.append("base=").append(identityToString(byteArray)).append(", ");
+        builder.append("baseOffset=").append(byteArrayOffset);
         builder.append(", length=").append(length());
         builder.append('}');
         return builder.toString();
@@ -1405,23 +1358,23 @@ public final class Slice
 
     private void copyFromBase(int index, Object dest, long destAddress, int length)
     {
-        int baseAddress = ARRAY_BYTE_BASE_OFFSET + baseOffset + index;
+        int baseAddress = ARRAY_BYTE_BASE_OFFSET + byteArrayOffset + index;
         // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
         // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
         // todo the optimization only works if the baseOffset is is a multiple of 8 for both src and dest
         int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(base, baseAddress, dest, destAddress, bytesToCopy);
-        unsafe.copyMemory(base, baseAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
+        unsafe.copyMemory(byteArray, baseAddress, dest, destAddress, bytesToCopy);
+        unsafe.copyMemory(byteArray, baseAddress + bytesToCopy, dest, destAddress + bytesToCopy, length - bytesToCopy);
     }
 
     private void copyToBase(int index, Object src, long srcAddress, int length)
     {
-        int baseAddress = ARRAY_BYTE_BASE_OFFSET + baseOffset + index;
+        int baseAddress = ARRAY_BYTE_BASE_OFFSET + byteArrayOffset + index;
         // The Unsafe Javadoc specifies that the transfer size is 8 iff length % 8 == 0
         // so ensure that we copy big chunks whenever possible, even at the expense of two separate copy operations
         // todo the optimization only works if the baseOffset is is a multiple of 8 for both src and dest
         int bytesToCopy = length - (length % 8);
-        unsafe.copyMemory(src, srcAddress, base, baseAddress, bytesToCopy);
-        unsafe.copyMemory(src, srcAddress + bytesToCopy, base, baseAddress + bytesToCopy, length - bytesToCopy);
+        unsafe.copyMemory(src, srcAddress, byteArray, baseAddress, bytesToCopy);
+        unsafe.copyMemory(src, srcAddress + bytesToCopy, byteArray, baseAddress + bytesToCopy, length - bytesToCopy);
     }
 }
