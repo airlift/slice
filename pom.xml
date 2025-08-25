@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>160</version>
+        <version>291</version>
     </parent>
 
     <artifactId>slice</artifactId>
@@ -28,8 +28,9 @@
     <properties>
         <air.javadoc.lint>-missing</air.javadoc.lint>
         <air.test.jvmsize>3584m</air.test.jvmsize>
-        <project.build.targetJdk>17</project.build.targetJdk>
-        <air.java.version>17</air.java.version>
+        <project.build.targetJdk>25</project.build.targetJdk>
+        <air.java.version>25</air.java.version>
+        <air.compiler.enable-preview>true</air.compiler.enable-preview>
         <air.modernizer.java-version>8</air.modernizer.java-version>
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
@@ -74,6 +75,12 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
 
