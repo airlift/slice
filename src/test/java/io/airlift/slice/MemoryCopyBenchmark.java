@@ -32,10 +32,6 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import static io.airlift.slice.JvmUtils.unsafe;
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
-
-@SuppressWarnings("restriction")
 @BenchmarkMode(Mode.Throughput)
 @Fork(1)
 @Warmup(iterations = 10, time = 500, timeUnit = TimeUnit.MILLISECONDS)
@@ -63,8 +59,6 @@ public class MemoryCopyBenchmark
         @Param({
                 "ARRAY_COPY",
                 "SLICE",
-                "CUSTOM_LOOP",
-                "UNSAFE",
         })
         public CopyStrategy copyStrategy;
 
@@ -112,44 +106,6 @@ public class MemoryCopyBenchmark
             public void doCopy(Slice data, long src, long dest, int length)
             {
                 data.setBytes((int) dest, data, (int) src, length);
-            }
-        },
-
-        CUSTOM_LOOP {
-            @Override
-            public void doCopy(Slice data, long src, long dest, int length)
-            {
-                byte[] base = data.byteArray();
-                long offset = data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET;
-                while (length >= SizeOf.SIZE_OF_LONG) {
-                    long srcLong = unsafe.getLong(base, src + offset);
-                    unsafe.putLong(base, dest + offset, srcLong);
-
-                    offset += SizeOf.SIZE_OF_LONG;
-                    length -= SizeOf.SIZE_OF_LONG;
-                }
-
-                while (length > 0) {
-                    byte srcByte = unsafe.getByte(base, src + offset);
-                    unsafe.putByte(base, dest + offset, srcByte);
-
-                    offset++;
-                    length--;
-                }
-            }
-        },
-
-        UNSAFE {
-            @Override
-            public void doCopy(Slice data, long srcOffset, long destOffset, int length)
-            {
-                byte[] base = data.byteArray();
-                long address = data.byteArrayOffset() + ARRAY_BYTE_BASE_OFFSET;
-                srcOffset += address;
-                destOffset += address;
-                int bytesToCopy = length - (length % 8);
-                unsafe.copyMemory(base, srcOffset, base, destOffset, bytesToCopy);
-                unsafe.copyMemory(base, srcOffset + bytesToCopy, base, destOffset + bytesToCopy, length - bytesToCopy);
             }
         };
 
