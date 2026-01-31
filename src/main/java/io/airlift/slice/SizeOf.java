@@ -13,13 +13,11 @@
  */
 package io.airlift.slice;
 
-import org.openjdk.jol.info.ClassData;
-import org.openjdk.jol.info.ClassLayout;
-import org.openjdk.jol.info.FieldData;
-import org.openjdk.jol.util.MathUtil;
-import org.openjdk.jol.vm.VM;
-import org.openjdk.jol.vm.VirtualMachine;
+import com.sun.management.HotSpotDiagnosticMXBean;
 
+import java.lang.management.ManagementFactory;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -33,33 +31,76 @@ import java.util.Set;
 import java.util.function.ToLongFunction;
 
 import static java.lang.Math.toIntExact;
-import static sun.misc.Unsafe.ARRAY_BOOLEAN_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_BOOLEAN_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_BYTE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_BYTE_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_CHAR_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_CHAR_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_DOUBLE_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_DOUBLE_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_FLOAT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_FLOAT_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_INT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_INT_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_LONG_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_LONG_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_OBJECT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_OBJECT_INDEX_SCALE;
-import static sun.misc.Unsafe.ARRAY_SHORT_BASE_OFFSET;
-import static sun.misc.Unsafe.ARRAY_SHORT_INDEX_SCALE;
 
 public final class SizeOf
 {
+    private SizeOf() {}
+
     public static final byte SIZE_OF_BYTE = 1;
     public static final byte SIZE_OF_SHORT = 2;
     public static final byte SIZE_OF_INT = 4;
     public static final byte SIZE_OF_LONG = 8;
     public static final byte SIZE_OF_FLOAT = 4;
     public static final byte SIZE_OF_DOUBLE = 8;
+
+    private static final int OBJECT_HEADER_SIZE;
+    private static final int ARRAY_HEADER_SIZE;
+    private static final int REFERENCE_SIZE;
+    private static final int OBJECT_ALIGNMENT;
+
+    static {
+        HotSpotDiagnosticMXBean hotSpotBean = ManagementFactory.getPlatformMXBean(HotSpotDiagnosticMXBean.class);
+
+        // Determine reference size based on UseCompressedOops
+        // Default is true for heaps < 32GB on 64-bit JVMs
+        boolean compressedOops = getBooleanVmOption(hotSpotBean, "UseCompressedOops", true);
+        REFERENCE_SIZE = compressedOops ? 4 : 8;
+
+        // Determine object alignment (default is 8 bytes)
+        OBJECT_ALIGNMENT = getIntVmOption(hotSpotBean, "ObjectAlignmentInBytes", 8);
+
+        // Determine object header size
+        // Check for compact object headers (Project Lilliput, JDK 24+)
+        boolean compactHeaders = getBooleanVmOption(hotSpotBean, "UseCompactObjectHeaders", false);
+        if (compactHeaders) {
+            // Compact headers: 8 bytes (or potentially 4 bytes in future)
+            OBJECT_HEADER_SIZE = 8;
+        }
+        else {
+            // Standard headers: mark word (8 bytes) + class pointer (4 or 8 bytes)
+            boolean compressedClassPointers = getBooleanVmOption(hotSpotBean, "UseCompressedClassPointers", true);
+            OBJECT_HEADER_SIZE = 8 + (compressedClassPointers ? 4 : 8);
+        }
+
+        // Array header: object header + 4 bytes for length field, aligned
+        // With compressed class pointers: 12 + 4 = 16 bytes
+        // Without compressed class pointers: 16 + 4 = 20 bytes, aligned to 24
+        // With compact headers: 8 + 4 = 12 bytes, potentially aligned to 16
+        int rawArrayHeader = OBJECT_HEADER_SIZE + 4;
+        ARRAY_HEADER_SIZE = (int) alignSize(rawArrayHeader);
+    }
+
+    private static boolean getBooleanVmOption(HotSpotDiagnosticMXBean bean, String option, boolean defaultValue)
+    {
+        try {
+            return Boolean.parseBoolean(bean.getVMOption(option).getValue());
+        }
+        catch (IllegalArgumentException e) {
+            // Option doesn't exist in this JVM version
+            return defaultValue;
+        }
+    }
+
+    private static int getIntVmOption(HotSpotDiagnosticMXBean bean, String option, int defaultValue)
+    {
+        try {
+            return Integer.parseInt(bean.getVMOption(option).getValue());
+        }
+        catch (IllegalArgumentException e) {
+            // Option doesn't exist in this JVM version
+            return defaultValue;
+        }
+    }
 
     public static final int BOOLEAN_INSTANCE_SIZE = instanceSize(Boolean.class);
     public static final int BYTE_INSTANCE_SIZE = instanceSize(Byte.class);
@@ -256,70 +297,89 @@ public final class SizeOf
 
     public static long sizeOfBooleanArray(int length)
     {
-        return ARRAY_BOOLEAN_BASE_OFFSET + (((long) ARRAY_BOOLEAN_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + (long) length);
     }
 
     public static long sizeOfByteArray(int length)
     {
-        return ARRAY_BYTE_BASE_OFFSET + (((long) ARRAY_BYTE_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + (long) length);
     }
 
     public static long sizeOfShortArray(int length)
     {
-        return ARRAY_SHORT_BASE_OFFSET + (((long) ARRAY_SHORT_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) Short.BYTES * length));
     }
 
     public static long sizeOfCharArray(int length)
     {
-        return ARRAY_CHAR_BASE_OFFSET + (((long) ARRAY_CHAR_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) Character.BYTES * length));
     }
 
     public static long sizeOfIntArray(int length)
     {
-        return ARRAY_INT_BASE_OFFSET + (((long) ARRAY_INT_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) Integer.BYTES * length));
     }
 
     public static long sizeOfLongArray(int length)
     {
-        return ARRAY_LONG_BASE_OFFSET + (((long) ARRAY_LONG_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) Long.BYTES * length));
     }
 
     public static long sizeOfFloatArray(int length)
     {
-        return ARRAY_FLOAT_BASE_OFFSET + (((long) ARRAY_FLOAT_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) Float.BYTES * length));
     }
 
     public static long sizeOfDoubleArray(int length)
     {
-        return ARRAY_DOUBLE_BASE_OFFSET + (((long) ARRAY_DOUBLE_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) Double.BYTES * length));
     }
 
     public static long sizeOfObjectArray(int length)
     {
-        return ARRAY_OBJECT_BASE_OFFSET + (((long) ARRAY_OBJECT_INDEX_SCALE) * length);
+        return alignSize(ARRAY_HEADER_SIZE + ((long) REFERENCE_SIZE * length));
     }
 
     /**
-     * The expected size of an instance of the specified class.
+     * Estimates the size of an instance of the specified class.
      */
     public static int instanceSize(Class<?> clazz)
     {
-        try {
-            return toIntExact(ClassLayout.parseClass(clazz).instanceSize());
-        }
-        catch (RuntimeException e) {
-            VirtualMachine vm = VM.current();
-            ClassData classData = ClassData.parseClass(clazz);
-            long instanceSize = vm.objectHeaderSize();
-            for (FieldData field : classData.fields()) {
-                instanceSize += vm.sizeOfField(field.typeClass());
+        long size = OBJECT_HEADER_SIZE;
+
+        // Sum up all instance field sizes, including inherited fields
+        for (Class<?> c = clazz; c != null; c = c.getSuperclass()) {
+            for (Field field : c.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())) {
+                    size += sizeOfField(field.getType());
+                }
             }
-            instanceSize = MathUtil.align(instanceSize, vm.objectAlignment());
-            return toIntExact(instanceSize);
         }
+
+        // Align to object alignment boundary
+        return toIntExact(alignSize(size));
     }
 
-    private SizeOf()
+    private static int sizeOfField(Class<?> type)
     {
+        if (type == boolean.class || type == byte.class) {
+            return 1;
+        }
+        if (type == short.class || type == char.class) {
+            return 2;
+        }
+        if (type == int.class || type == float.class) {
+            return 4;
+        }
+        if (type == long.class || type == double.class) {
+            return 8;
+        }
+        // Object reference
+        return REFERENCE_SIZE;
+    }
+
+    private static long alignSize(long size)
+    {
+        return Math.ceilDiv(size, OBJECT_ALIGNMENT) * OBJECT_ALIGNMENT;
     }
 }
