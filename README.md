@@ -19,13 +19,22 @@ fast single primitive access and bulk transfer methods as the Slice class.
 Slice provides a library for interacting UTF-8 data stored in byte arrays. The UTF-8 library provides
 functions to count code points, substring, trim, case change, and so on.
 
-## Unsafe Usage
+## Byte Order and Platform Compatibility
 
-The Slice Library uses `sun.misc.Unsafe` to bulk transfer data between byte arrays and other array types
-directly as there is no other way to do this in Java today. The proposed Memory Access API (JEP 370) may
-provide support for this feature, and assuming performance is good, this library will be updated to use
-once it is available. Due to the direct usage of Unsafe, this library can only be used on a little endian
-CPU.
+This library stores multi-byte values in little-endian byte order. This is distinct from
+the endianness of the CPU running the code.
+
+Previous versions used `sun.misc.Unsafe` to read and write multi-byte values directly
+to memory. This bypassed Java's abstractions and assumed the underlying CPU was
+little-endian. On a big-endian CPU, values would be silently corrupted.
+
+This version uses VarHandles and MemorySegment, which explicitly specify little-endian
+byte order. These APIs handle the conversion transparently—on a big-endian CPU, Java
+automatically swaps bytes when reading or writing. The data format remains little-endian
+for compatibility, but the library now works correctly on any CPU architecture.
+
+The hash functions (XxHash64, Murmur3) also use little-endian byte order, as required
+by their specifications.
 
 # Legacy Slice
                                                                                                    
