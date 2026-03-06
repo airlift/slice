@@ -499,7 +499,7 @@ public final class SliceUtf8
     public static Slice toUpperCase(byte[] utf8, int offset, int length)
     {
         checkFromIndexSize(offset, length, utf8.length);
-        return translateCodePoints(utf8, offset, length, UPPER_CODE_POINTS);
+        return toUpperCaseAsciiOrCodePoints(utf8, offset, length);
     }
 
     /**
@@ -562,6 +562,27 @@ public final class SliceUtf8
             }
         }
         return newUtf8.slice(0, upperPosition);
+    }
+
+    private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        Slice translated = Slices.allocate(utf8Length);
+        int position = 0;
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, UPPER_CODE_POINTS);
+            }
+
+            if (value >= 'a' && value <= 'z') {
+                translated.setByteUnchecked(position, value - ('a' - 'A'));
+            }
+            else {
+                translated.setByteUnchecked(position, value);
+            }
+            position++;
+        }
+        return translated;
     }
 
     private static void copyUtf8SequenceUnsafe(byte[] source, int sourceOffset, int sourcePosition, Slice destination, int destinationPosition, int length)
