@@ -192,6 +192,18 @@ public class TestSliceUtf8
         assertThat(countCodePoints(wrappedBuffer(CONTINUATION_BYTE))).isEqualTo(0);
     }
 
+    @Test
+    public void testCodePointCountRange()
+    {
+        Slice utf8 = utf8Slice("€é€😀😀😀");
+        for (int offset = 0; offset <= utf8.length(); offset++) {
+            for (int length = 0; length <= utf8.length() - offset; length++) {
+                assertThat(countCodePoints(utf8, offset, length))
+                        .isEqualTo(countCodePoints(utf8.slice(offset, length)));
+            }
+        }
+    }
+
     private static void assertCodePointCount(String string)
     {
         assertThat(countCodePoints(utf8Slice(string))).isEqualTo(string.codePoints().count());
