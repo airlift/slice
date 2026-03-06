@@ -199,7 +199,8 @@ public final class Slice
 
     public void clear(int offset, int length)
     {
-        Arrays.fill(base, baseOffset, baseOffset + size, (byte) 0);
+        checkFromIndexSize(offset, length, size);
+        Arrays.fill(base, baseOffset + offset, baseOffset + offset + length, (byte) 0);
     }
 
     /**

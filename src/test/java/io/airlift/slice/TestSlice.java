@@ -665,6 +665,20 @@ public class TestSlice
         }
     }
 
+    @Test
+    public void testClear()
+    {
+        byte[] bytes = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8};
+
+        Slice slice = Slices.wrappedBuffer(bytes);
+
+        assertThat(slice.getByte(1)).isEqualTo((byte) 1);
+        assertThat(slice.getByte(2)).isEqualTo((byte) 2);
+        slice.clear(1, 1);
+        assertThat(slice.getByte(1)).isEqualTo((byte) 0);
+        assertThat(slice.getByte(2)).isEqualTo((byte) 2);
+    }
+
     private void assertBytesSlice(Slice slice, int index)
     {
         // fill slice with FF
