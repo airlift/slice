@@ -97,7 +97,7 @@ public final class SliceUtf8
             }
         }
         // Enough bytes left for 32 bits?
-        if (offset + 4 < utf8Length) {
+        if (offset <= utf8Length - Integer.BYTES) {
             if (((int) INT_HANDLE.get(utf8, utf8Offset + offset) & TOP_MASK32) != 0) {
                 return false;
             }
@@ -252,12 +252,44 @@ public final class SliceUtf8
 
     private static Slice reverseRaw(byte[] utf8, int utf8Offset, int utf8Length)
     {
+        if (isAsciiRaw(utf8, utf8Offset, utf8Length)) {
+            Slice reverse = Slices.allocate(utf8Length);
+            int sourcePosition = utf8Length;
+            int destinationPosition = 0;
+
+            while (sourcePosition >= Long.BYTES) {
+                sourcePosition -= Long.BYTES;
+                long value = (long) LONG_HANDLE.get(utf8, utf8Offset + sourcePosition);
+                reverse.setLongUnchecked(destinationPosition, Long.reverseBytes(value));
+                destinationPosition += Long.BYTES;
+            }
+
+            if (sourcePosition >= Integer.BYTES) {
+                sourcePosition -= Integer.BYTES;
+                int value = (int) INT_HANDLE.get(utf8, utf8Offset + sourcePosition);
+                reverse.setIntUnchecked(destinationPosition, Integer.reverseBytes(value));
+                destinationPosition += Integer.BYTES;
+            }
+
+            if (sourcePosition >= Short.BYTES) {
+                sourcePosition -= Short.BYTES;
+                short value = (short) SHORT_HANDLE.get(utf8, utf8Offset + sourcePosition);
+                reverse.setShortUnchecked(destinationPosition, Short.reverseBytes(value));
+                destinationPosition += Short.BYTES;
+            }
+
+            if (sourcePosition == 1) {
+                reverse.setByteUnchecked(destinationPosition, utf8[utf8Offset]);
+            }
+            return reverse;
+        }
+
         Slice reverse = Slices.allocate(utf8Length);
 
         int forwardPosition = 0;
         int reversePosition = utf8Length;
         while (forwardPosition < utf8Length) {
-            int codePointLength = lengthOfCodePointSafe(utf8, utf8Offset, utf8Length, forwardPosition);
+            int codePointLength = lengthOfCodePointSafeRaw(utf8, utf8Offset, utf8Length, forwardPosition);
 
             // backup the reverse pointer
             reversePosition -= codePointLength;
