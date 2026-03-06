@@ -1096,11 +1096,14 @@ public final class Slice
 
     public int indexOfByte(byte b)
     {
-        int offset = 0;
+        return indexOfByte(b, 0, size);
+    }
+
+    private int indexOfByte(byte b, int offset, int size)
+    {
         long pattern = (b & 0xFFL) * 0x01010101_01010101L;
 
-        int length8 = size & ~7;
-        for (; offset < length8; offset += 8) {
+        for (; offset < size - 7; offset += 8) {
             long value = getLongUnchecked(offset);
             long xor = value ^ pattern;
             long hasZero = (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
@@ -1254,12 +1257,9 @@ public final class Slice
         byte firstByte = pattern.getByteUnchecked(0);
         int lastValidIndex = size - pattern.length();
         int index = offset;
-        while (true) {
-            // seek to first byte match
-            while (index < lastValidIndex && getByteUnchecked(index) != firstByte) {
-                index++;
-            }
-            if (index > lastValidIndex) {
+        while (index <= lastValidIndex) {
+            index = indexOfByte(firstByte, index, lastValidIndex + 1);
+            if (index < 0) {
                 break;
             }
 
