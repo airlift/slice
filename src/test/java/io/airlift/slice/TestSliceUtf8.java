@@ -44,6 +44,7 @@ import static io.airlift.slice.SliceUtf8.substring;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
 import static io.airlift.slice.SliceUtf8.trim;
+import static io.airlift.slice.SliceUtf8.tryGetCodePointAt;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.airlift.slice.Slices.wrappedBuffer;
@@ -202,6 +203,65 @@ public class TestSliceUtf8
                         .isEqualTo(countCodePoints(utf8.slice(offset, length)));
             }
         }
+    }
+
+    @Test
+    public void testByteArrayOverloadsMatchSlice()
+    {
+        Slice utf8 = utf8Slice(" \tAé😀Z\n ");
+        byte[] bytes = utf8.getBytes();
+
+        byte[] padded = concat(new byte[] {'#'}, bytes, new byte[] {'!'});
+        int offset = 1;
+        int length = bytes.length;
+        Slice view = wrappedBuffer(padded, offset, length);
+
+        assertThat(isAscii(padded, offset, length)).isEqualTo(isAscii(view));
+        assertThat(countCodePoints(padded, offset, length)).isEqualTo(countCodePoints(view));
+        assertThat(countCodePoints(padded, offset + 1, length - 2)).isEqualTo(countCodePoints(view, 1, length - 2));
+
+        assertThat(substring(padded, offset, length, 1, 3)).isEqualTo(substring(view, 1, 3));
+        assertThat(reverse(padded, offset, length)).isEqualTo(reverse(view));
+
+        Slice other = utf8Slice(" \tAé😀Y\n ");
+        assertThat(compareUtf16BE(padded, offset, length, other.byteArray(), other.byteArrayOffset(), other.length()))
+                .isEqualTo(compareUtf16BE(view, other));
+
+        assertThat(toLowerCase(padded, offset, length)).isEqualTo(toLowerCase(view));
+        assertThat(toUpperCase(padded, offset, length)).isEqualTo(toUpperCase(view));
+
+        int[] trimCodePoints = new int[] {' ', '\t', '\n'};
+        assertThat(leftTrim(padded, offset, length)).isEqualTo(leftTrim(view));
+        assertThat(leftTrim(padded, offset, length, trimCodePoints)).isEqualTo(leftTrim(view, trimCodePoints));
+        assertThat(rightTrim(padded, offset, length)).isEqualTo(rightTrim(view));
+        assertThat(rightTrim(padded, offset, length, trimCodePoints)).isEqualTo(rightTrim(view, trimCodePoints));
+        assertThat(trim(padded, offset, length)).isEqualTo(trim(view));
+        assertThat(trim(padded, offset, length, trimCodePoints)).isEqualTo(trim(view, trimCodePoints));
+
+        byte[] invalid = concat(new byte[] {'x'}, INVALID_UTF8_2, new byte[] {'y'});
+        assertThat(fixInvalidUtf8(invalid, 1, INVALID_UTF8_2.length)).isEqualTo(fixInvalidUtf8(wrappedBuffer(INVALID_UTF8_2)));
+        assertThat(fixInvalidUtf8(invalid, 1, INVALID_UTF8_2.length, java.util.OptionalInt.empty()))
+                .isEqualTo(fixInvalidUtf8(wrappedBuffer(INVALID_UTF8_2), java.util.OptionalInt.empty()));
+        assertThat(fixInvalidUtf8(invalid, 1, INVALID_UTF8_2.length, java.util.OptionalInt.of('?')))
+                .isEqualTo(fixInvalidUtf8(wrappedBuffer(INVALID_UTF8_2), java.util.OptionalInt.of('?')));
+
+        int position = offsetOfCodePoint(view, 3);
+        assertThat(tryGetCodePointAt(padded, offset, length, position)).isEqualTo(tryGetCodePointAt(view, position));
+        assertThat(offsetOfCodePoint(padded, offset, length, 3)).isEqualTo(offsetOfCodePoint(view, 3));
+        assertThat(offsetOfCodePoint(padded, offset, length, 2, 2)).isEqualTo(offsetOfCodePoint(view, 2, 2));
+        assertThat(lengthOfCodePoint(padded, offset, length, position)).isEqualTo(lengthOfCodePoint(view, position));
+        assertThat(lengthOfCodePointSafe(padded, offset, length, position)).isEqualTo(lengthOfCodePointSafe(view, position));
+        assertThat(getCodePointAt(padded, offset, length, position)).isEqualTo(getCodePointAt(view, position));
+
+        int nextPosition = position + lengthOfCodePoint(view, position);
+        assertThat(getCodePointBefore(padded, offset, length, nextPosition)).isEqualTo(getCodePointBefore(view, nextPosition));
+
+        Slice sliceTarget = Slices.allocate(8);
+        byte[] byteArrayTarget = new byte[8];
+        int sliceWritten = setCodePointAt(0x1F600, sliceTarget, 0);
+        int arrayWritten = setCodePointAt(0x1F600, byteArrayTarget, 0, byteArrayTarget.length, 0);
+        assertThat(arrayWritten).isEqualTo(sliceWritten);
+        assertThat(wrappedBuffer(byteArrayTarget, 0, arrayWritten)).isEqualTo(sliceTarget.slice(0, sliceWritten));
     }
 
     private static void assertCodePointCount(String string)
@@ -876,5 +936,13 @@ public class TestSliceUtf8
         assertThatThrownBy(() -> setCodePointAt(CONTINUATION_BYTE, Slices.allocate(8), 0))
                 .isInstanceOf(InvalidCodePointException.class)
                 .hasMessage("Invalid code point 0xFFFFFFBF");
+    }
+
+    @Test
+    public void testSetCodePointAtByteArrayInvalidRange()
+    {
+        byte[] utf8 = new byte[8];
+        assertThatThrownBy(() -> setCodePointAt('a', utf8, 7, 2, 0))
+                .isInstanceOf(IndexOutOfBoundsException.class);
     }
 }
