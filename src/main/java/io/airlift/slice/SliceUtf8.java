@@ -1667,6 +1667,64 @@ public final class SliceUtf8
     }
 
     /**
+     * Decodes UTF-8 and returns UTF-8 byte lengths ({@code 1..4}) for each code point.
+     * <p>
+     * Note: This method does not explicitly check for valid UTF-8, and may
+     * return incorrect results or throw an exception for invalid UTF-8.
+     */
+    public static byte[] codePointByteLengths(Slice utf8)
+    {
+        return codePointByteLengths(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Decodes UTF-8 byte array range and returns UTF-8 byte lengths ({@code 1..4}) for each code point.
+     * <p>
+     * Note: This method does not explicitly check for valid UTF-8, and may
+     * return incorrect results or throw an exception for invalid UTF-8.
+     */
+    public static byte[] codePointByteLengths(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return codePointByteLengthsRaw(utf8, offset, length);
+    }
+
+    private static byte[] codePointByteLengthsRaw(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        if (utf8Length == 0) {
+            return new byte[0];
+        }
+
+        if (isAsciiRaw(utf8, utf8Offset, utf8Length)) {
+            byte[] lengths = new byte[utf8Length];
+            Arrays.fill(lengths, (byte) 1);
+            return lengths;
+        }
+
+        byte[] lengths = new byte[Math.max(8, utf8Length >>> 1)];
+        int codePointCount = 0;
+        int position = 0;
+        while (position < utf8Length) {
+            int codePointLength = lengthOfCodePointFromStartByteSafe(utf8[utf8Offset + position]);
+            if (codePointLength < 0 || position + codePointLength > utf8Length) {
+                throw new InvalidUtf8Exception("Invalid UTF-8 sequence at position " + position);
+            }
+
+            if (codePointCount == lengths.length) {
+                lengths = Arrays.copyOf(lengths, lengths.length * 2);
+            }
+            lengths[codePointCount] = (byte) codePointLength;
+            codePointCount++;
+            position += codePointLength;
+        }
+
+        if (codePointCount == lengths.length) {
+            return lengths;
+        }
+        return Arrays.copyOf(lengths, codePointCount);
+    }
+
+    /**
      * Encodes Unicode code points into UTF-8.
      *
      * @throws InvalidCodePointException if any code point is invalid
