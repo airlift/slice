@@ -526,47 +526,74 @@ public final class SliceUtf8
     public static Slice toLowerCase(byte[] utf8, int offset, int length)
     {
         checkFromIndexSize(offset, length, utf8.length);
-        return translateCodePoints(utf8, offset, length, LOWER_CODE_POINTS);
+        return toLowerCaseAsciiOrCodePoints(utf8, offset, length);
     }
 
     private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int[] codePointTranslationMap)
     {
-        Slice newUtf8 = Slices.allocate(utf8Length);
+        return translateCodePoints(utf8, utf8Offset, utf8Length, 0, null, 0, codePointTranslationMap);
+    }
 
-        int position = 0;
-        int upperPosition = 0;
+    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[] codePointTranslationMap)
+    {
         while (position < utf8Length) {
-            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position);
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
             if (codePoint >= 0) {
-                int upperCodePoint = codePointTranslationMap[codePoint];
+                int translatedCodePoint = codePointTranslationMap[codePoint];
+                int codePointLength = lengthOfCodePoint(codePoint);
 
-                // grow slice if necessary
-                int nextUpperPosition = upperPosition + lengthOfCodePoint(upperCodePoint);
-                if (nextUpperPosition > utf8Length) {
-                    newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
+                if (translatedCodePoint == codePoint) {
+                    if (translatedUtf8 != null) {
+                        int nextTranslatedPosition = translatedPosition + codePointLength;
+                        if (nextTranslatedPosition > utf8Length) {
+                            translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+                        }
+
+                        copyUtf8SequenceUnsafe(utf8, utf8Offset, position, translatedUtf8, translatedPosition, codePointLength);
+                        translatedPosition = nextTranslatedPosition;
+                    }
+                    position += codePointLength;
+                    continue;
                 }
 
-                // write new byte
-                setCodePointAt(upperCodePoint, newUtf8, upperPosition);
+                if (translatedUtf8 == null) {
+                    translatedUtf8 = Slices.allocate(utf8Length);
+                    translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                    translatedPosition = position;
+                }
 
-                position += lengthOfCodePoint(codePoint);
-                upperPosition = nextUpperPosition;
+                // grow slice if necessary
+                int nextTranslatedPosition = translatedPosition + lengthOfCodePoint(translatedCodePoint);
+                if (nextTranslatedPosition > utf8Length) {
+                    translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+                }
+
+                // write translated code point
+                setCodePointAt(translatedCodePoint, translatedUtf8, translatedPosition);
+
+                position += codePointLength;
+                translatedPosition = nextTranslatedPosition;
             }
             else {
                 int skipLength = -codePoint;
 
-                // grow slice if necessary
-                int nextUpperPosition = upperPosition + skipLength;
-                if (nextUpperPosition > utf8Length) {
-                    newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
-                }
+                if (translatedUtf8 != null) {
+                    // grow slice if necessary
+                    int nextTranslatedPosition = translatedPosition + skipLength;
+                    if (nextTranslatedPosition > utf8Length) {
+                        translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+                    }
 
-                copyUtf8SequenceUnsafe(utf8, utf8Offset, position, newUtf8, upperPosition, skipLength);
+                    copyUtf8SequenceUnsafe(utf8, utf8Offset, position, translatedUtf8, translatedPosition, skipLength);
+                    translatedPosition = nextTranslatedPosition;
+                }
                 position += skipLength;
-                upperPosition = nextUpperPosition;
             }
         }
-        return newUtf8.slice(0, upperPosition);
+        if (translatedUtf8 == null) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+        return translatedUtf8.slice(0, translatedPosition);
     }
 
     private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
@@ -587,6 +614,50 @@ public final class SliceUtf8
             }
             position++;
         }
+        return translated;
+    }
+
+    private static Slice toLowerCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        int position = 0;
+
+        // Fast scan until the first ASCII byte that needs translation.
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, LOWER_CODE_POINTS);
+            }
+
+            if (value >= 'A' && value <= 'Z') {
+                break;
+            }
+            position++;
+        }
+
+        // Nothing to translate in the entire input.
+        if (position == utf8Length) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+
+        Slice translated = Slices.allocate(utf8Length);
+        translated.setBytes(0, utf8, utf8Offset, position);
+
+        // Continue with a single tight loop once output exists.
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, LOWER_CODE_POINTS);
+            }
+
+            if (value >= 'A' && value <= 'Z') {
+                translated.setByteUnchecked(position, value + ('a' - 'A'));
+            }
+            else {
+                translated.setByteUnchecked(position, value);
+            }
+            position++;
+        }
+
         return translated;
     }
 
