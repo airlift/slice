@@ -33,20 +33,24 @@ import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
+import static io.airlift.slice.SliceUtf8.codePointToUtf8;
+import static io.airlift.slice.SliceUtf8.compareUtf16BE;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
+import static io.airlift.slice.SliceUtf8.getCodePointAt;
 import static io.airlift.slice.SliceUtf8.leftTrim;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePoint;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePointFromStartByte;
+import static io.airlift.slice.SliceUtf8.lengthOfCodePointSafe;
 import static io.airlift.slice.SliceUtf8.offsetOfCodePoint;
 import static io.airlift.slice.SliceUtf8.reverse;
 import static io.airlift.slice.SliceUtf8.rightTrim;
+import static io.airlift.slice.SliceUtf8.setCodePointAt;
 import static io.airlift.slice.SliceUtf8.substring;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
 import static io.airlift.slice.SliceUtf8.trim;
 import static io.airlift.slice.SliceUtf8.tryGetCodePointAt;
-import static io.airlift.slice.Slices.utf8Slice;
 import static java.lang.Character.MAX_CODE_POINT;
 import static java.lang.Character.SURROGATE;
 import static java.lang.Character.getType;
@@ -67,11 +71,14 @@ public class SliceUtf8Benchmark
     @Benchmark
     public int benchmarkLengthOfCodePointFromStartByte(BenchmarkData data)
     {
-        Slice slice = data.getSlice();
+        byte[] utf8 = data.getUtf8();
+        int baseOffset = data.getOffset();
+        int byteLength = data.getByteLength();
+
         int i = 0;
         int codePoints = 0;
-        while (i < slice.length()) {
-            i += lengthOfCodePointFromStartByte(slice.getByte(i));
+        while (i < byteLength) {
+            i += lengthOfCodePointFromStartByte(utf8[baseOffset + i]);
             codePoints++;
         }
         if (codePoints != data.getLength()) {
@@ -83,7 +90,7 @@ public class SliceUtf8Benchmark
     @Benchmark
     public int benchmarkCountCodePoints(BenchmarkData data)
     {
-        int codePoints = countCodePoints(data.getSlice());
+        int codePoints = countCodePoints(data.getUtf8(), data.getOffset(), data.getByteLength());
         if (codePoints != data.getLength()) {
             throw new AssertionError();
         }
@@ -93,7 +100,7 @@ public class SliceUtf8Benchmark
     @Benchmark
     public int benchmarkCountCodePointsRange(RangeCountData data)
     {
-        int codePoints = countCodePoints(data.getSlice(), data.getOffset(), data.getRangeLength());
+        int codePoints = countCodePoints(data.getUtf8(), data.getOffset(), data.getRangeLength());
         if (codePoints != data.getExpectedCodePoints()) {
             throw new AssertionError();
         }
@@ -103,22 +110,24 @@ public class SliceUtf8Benchmark
     @Benchmark
     public int benchmarkOffsetByCodePoints(BenchmarkData data)
     {
-        Slice slice = data.getSlice();
-        int offset = offsetOfCodePoint(slice, data.getLength() - 1);
-        if (offset + lengthOfCodePoint(slice, offset) != slice.length()) {
+        int index = offsetOfCodePoint(data.getUtf8(), data.getOffset(), data.getByteLength(), data.getLength() - 1);
+        if (index + lengthOfCodePoint(data.getUtf8(), data.getOffset(), data.getByteLength(), index) != data.getByteLength()) {
             throw new AssertionError();
         }
-        return offset;
+        return index;
     }
 
     @Benchmark
     public int benchmarkTryGetCodePointAt(BenchmarkData data)
     {
-        Slice slice = data.getSlice();
+        byte[] utf8 = data.getUtf8();
+        int baseOffset = data.getOffset();
+        int byteLength = data.getByteLength();
+
         int offset = 0;
         int codePoints = 0;
-        while (offset < slice.length()) {
-            int codePoint = tryGetCodePointAt(slice, offset);
+        while (offset < byteLength) {
+            int codePoint = tryGetCodePointAt(utf8, baseOffset, byteLength, offset);
             if (codePoint < 0) {
                 throw new AssertionError();
             }
@@ -132,59 +141,248 @@ public class SliceUtf8Benchmark
     }
 
     @Benchmark
+    public int benchmarkGetCodePointAt(BenchmarkData data)
+    {
+        Slice utf8 = data.getSlice();
+        int offset = 0;
+        int checksum = 0;
+        while (offset < utf8.length()) {
+            checksum ^= getCodePointAt(utf8, offset);
+            offset += lengthOfCodePoint(utf8, offset);
+        }
+        return checksum;
+    }
+
+    @Benchmark
+    public int benchmarkLengthOfCodePointSafe(BenchmarkData data)
+    {
+        Slice utf8 = data.getSlice();
+        int offset = 0;
+        int consumed = 0;
+        while (offset < utf8.length()) {
+            int codePointLength = lengthOfCodePointSafe(utf8, offset);
+            offset += codePointLength;
+            consumed += codePointLength;
+        }
+        if (consumed != utf8.length()) {
+            throw new AssertionError();
+        }
+        return consumed;
+    }
+
+    @Benchmark
+    public int benchmarkTrinoToCodePoints(TrinoCodePointData data)
+    {
+        Slice utf8 = data.getSlice();
+        int offset = 0;
+        int checksum = 0;
+        while (offset < utf8.length()) {
+            int codePoint = getCodePointAt(utf8, offset);
+            offset += lengthOfCodePoint(utf8, offset);
+            checksum ^= codePoint;
+        }
+        return checksum;
+    }
+
+    @Benchmark
+    public int benchmarkTrinoToCodePointsLengthFromDecoded(TrinoCodePointData data)
+    {
+        Slice utf8 = data.getSlice();
+        int offset = 0;
+        int checksum = 0;
+        while (offset < utf8.length()) {
+            int codePoint = getCodePointAt(utf8, offset);
+            offset += lengthOfCodePoint(codePoint);
+            checksum ^= codePoint;
+        }
+        return checksum;
+    }
+
+    @Benchmark
+    public int benchmarkTrinoToCodePointsByteArray(TrinoCodePointData data)
+    {
+        byte[] utf8 = data.getUtf8();
+        int baseOffset = data.getOffset();
+        int byteLength = data.getByteLength();
+
+        int offset = 0;
+        int checksum = 0;
+        while (offset < byteLength) {
+            int codePoint = getCodePointAt(utf8, baseOffset, byteLength, offset);
+            offset += lengthOfCodePoint(codePoint);
+            checksum ^= codePoint;
+        }
+        return checksum;
+    }
+
+    @Benchmark
+    public int benchmarkTrinoPatternConstantPrefixBytes(LikePatternData data)
+    {
+        Slice pattern = data.getPattern();
+        int escapeChar = data.getEscapeChar();
+
+        boolean escaped = false;
+        int position = 0;
+        while (position < pattern.length()) {
+            int currentChar = getCodePointAt(pattern, position);
+            if (!escaped && (currentChar == escapeChar)) {
+                escaped = true;
+            }
+            else if (escaped) {
+                escaped = false;
+            }
+            else if ((currentChar == '%') || (currentChar == '_')) {
+                return position;
+            }
+            position += lengthOfCodePoint(currentChar);
+        }
+        if (escaped) {
+            throw new AssertionError();
+        }
+        return position;
+    }
+
+    @Benchmark
+    public int benchmarkTrinoPatternConstantPrefixBytesByteArray(LikePatternData data)
+    {
+        Slice pattern = data.getPattern();
+        byte[] utf8 = pattern.byteArray();
+        int baseOffset = pattern.byteArrayOffset();
+        int byteLength = pattern.length();
+        int escapeChar = data.getEscapeChar();
+
+        boolean escaped = false;
+        int position = 0;
+        while (position < byteLength) {
+            int currentChar = getCodePointAt(utf8, baseOffset, byteLength, position);
+            if (!escaped && (currentChar == escapeChar)) {
+                escaped = true;
+            }
+            else if (escaped) {
+                escaped = false;
+            }
+            else if ((currentChar == '%') || (currentChar == '_')) {
+                return position;
+            }
+            position += lengthOfCodePoint(currentChar);
+        }
+        if (escaped) {
+            throw new AssertionError();
+        }
+        return position;
+    }
+
+    @Benchmark
+    public int benchmarkCompareUtf16BE(CompareData data)
+    {
+        int result = compareUtf16BE(
+                data.getUtf8(), data.getOffset(), data.getByteLength(),
+                data.getRightUtf8(), data.getRightOffset(), data.getRightByteLength());
+        if (result != 0) {
+            throw new AssertionError();
+        }
+        return result;
+    }
+
+    @Benchmark
     public Slice benchmarkSubstring(BenchmarkData data)
     {
-        Slice slice = data.getSlice();
         int length = data.getLength();
-        return substring(slice, (length / 2) - 1, length / 2);
+        return substring(data.getUtf8(), data.getOffset(), data.getByteLength(), (length / 2) - 1, length / 2);
     }
 
     @Benchmark
     public Slice benchmarkReverse(BenchmarkData data)
     {
-        return reverse(data.getSlice());
+        return reverse(data.getUtf8(), data.getOffset(), data.getByteLength());
     }
 
     @Benchmark
     public Slice benchmarkToLowerCase(BenchmarkData data)
     {
-        return toLowerCase(data.getSlice());
+        return toLowerCase(data.getUtf8(), data.getOffset(), data.getByteLength());
     }
 
     @Benchmark
     public Slice benchmarkToUpperCase(BenchmarkData data)
     {
-        return toUpperCase(data.getSlice());
+        return toUpperCase(data.getUtf8(), data.getOffset(), data.getByteLength());
     }
 
     @Benchmark
     public Slice benchmarkLeftTrim(WhitespaceData data)
     {
-        return leftTrim(data.getLeftWhitespace());
+        return leftTrim(data.getLeftWhitespace(), 0, data.getLeftWhitespace().length);
+    }
+
+    @Benchmark
+    public Slice benchmarkLeftTrimCustom(WhitespaceData data)
+    {
+        return leftTrim(data.getLeftWhitespace(), 0, data.getLeftWhitespace().length, data.getTrimCodePoints());
     }
 
     @Benchmark
     public Slice benchmarkRightTrim(WhitespaceData data)
     {
-        return rightTrim(data.getRightWhitespace());
+        return rightTrim(data.getRightWhitespace(), 0, data.getRightWhitespace().length);
+    }
+
+    @Benchmark
+    public Slice benchmarkRightTrimCustom(WhitespaceData data)
+    {
+        return rightTrim(data.getRightWhitespace(), 0, data.getRightWhitespace().length, data.getTrimCodePoints());
     }
 
     @Benchmark
     public Slice benchmarkTrim(WhitespaceData data)
     {
-        return trim(data.getBothWhitespace());
+        return trim(data.getBothWhitespace(), 0, data.getBothWhitespace().length);
+    }
+
+    @Benchmark
+    public Slice benchmarkTrimCustom(WhitespaceData data)
+    {
+        return trim(data.getBothWhitespace(), 0, data.getBothWhitespace().length, data.getTrimCodePoints());
     }
 
     @Benchmark
     public Slice benchmarkFixInvalidUtf8WithReplacement(FixInvalidUtf8Data data)
     {
-        return fixInvalidUtf8(data.getSlice());
+        return fixInvalidUtf8(data.getUtf8(), data.getOffset(), data.getLength());
     }
 
     @Benchmark
     public Slice benchmarkFixInvalidUtf8WithoutReplacement(FixInvalidUtf8Data data)
     {
-        return fixInvalidUtf8(data.getSlice(), OptionalInt.empty());
+        return fixInvalidUtf8(data.getUtf8(), data.getOffset(), data.getLength(), OptionalInt.empty());
+    }
+
+    @Benchmark
+    public int benchmarkSetCodePointAt(CodePointWriteData data)
+    {
+        Slice output = data.getOutput();
+        int position = 0;
+        int[] codePoints = data.getCodePoints();
+        for (int codePoint : codePoints) {
+            position += setCodePointAt(codePoint, output, position);
+        }
+        if (position != data.getExpectedBytes()) {
+            throw new AssertionError();
+        }
+        return position;
+    }
+
+    @Benchmark
+    public int benchmarkCodePointToUtf8(CodePointWriteData data)
+    {
+        int totalBytes = 0;
+        for (int codePoint : data.getCodePoints()) {
+            totalBytes += codePointToUtf8(codePoint).length();
+        }
+        if (totalBytes != data.getExpectedBytes()) {
+            throw new AssertionError();
+        }
+        return totalBytes;
     }
 
     @State(Thread)
@@ -207,8 +405,10 @@ public class SliceUtf8Benchmark
         @Param({"true", "false"})
         private boolean ascii;
 
+        private byte[] utf8;
+        private int offset;
+        private int byteLength;
         private Slice slice;
-        private int[] codePoints;
 
         @Setup
         public void setup()
@@ -216,14 +416,33 @@ public class SliceUtf8Benchmark
             int[] codePointSet = ascii ? ASCII_CODE_POINTS : ALL_CODE_POINTS;
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
-            codePoints = new int[length];
             DynamicSliceOutput sliceOutput = new DynamicSliceOutput(length * 4);
-            for (int i = 0; i < codePoints.length; i++) {
+            for (int i = 0; i < length; i++) {
                 int codePoint = codePointSet[random.nextInt(codePointSet.length)];
-                codePoints[i] = codePoint;
                 sliceOutput.appendBytes(new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8));
             }
-            slice = sliceOutput.slice();
+
+            byte[] data = sliceOutput.slice().getBytes();
+            offset = 7;
+            utf8 = new byte[offset + data.length + 3];
+            System.arraycopy(data, 0, utf8, offset, data.length);
+            byteLength = data.length;
+            slice = Slices.wrappedBuffer(utf8, offset, byteLength);
+        }
+
+        public byte[] getUtf8()
+        {
+            return utf8;
+        }
+
+        public int getOffset()
+        {
+            return offset;
+        }
+
+        public int getByteLength()
+        {
+            return byteLength;
         }
 
         public Slice getSlice()
@@ -234,6 +453,41 @@ public class SliceUtf8Benchmark
         public int getLength()
         {
             return length;
+        }
+    }
+
+    @State(Thread)
+    public static class CompareData
+            extends BenchmarkData
+    {
+        private byte[] rightUtf8;
+        private int rightOffset;
+        private int rightByteLength;
+
+        @Override
+        @Setup
+        public void setup()
+        {
+            super.setup();
+            rightOffset = 11;
+            rightByteLength = getByteLength();
+            rightUtf8 = new byte[rightOffset + rightByteLength + 5];
+            System.arraycopy(getUtf8(), getOffset(), rightUtf8, rightOffset, rightByteLength);
+        }
+
+        public byte[] getRightUtf8()
+        {
+            return rightUtf8;
+        }
+
+        public int getRightOffset()
+        {
+            return rightOffset;
+        }
+
+        public int getRightByteLength()
+        {
+            return rightByteLength;
         }
     }
 
@@ -258,23 +512,28 @@ public class SliceUtf8Benchmark
         @Param({"true", "false"})
         private boolean ascii;
 
-        private Slice leftWhitespace;
-        private Slice rightWhitespace;
-        private Slice bothWhitespace;
+        private byte[] leftWhitespace;
+        private byte[] rightWhitespace;
+        private byte[] bothWhitespace;
+        private int[] trimCodePoints;
 
         @Setup
         public void setup()
         {
-            Slice whitespace = createRandomUtf8Slice(ascii ? ASCII_WHITESPACE : ALL_WHITESPACE, length + 1);
-            leftWhitespace = whitespace.copy();
-            leftWhitespace.setByte(leftWhitespace.length() - 1, 'X');
-            rightWhitespace = whitespace.copy();
-            rightWhitespace.setByte(0, 'X');
-            bothWhitespace = whitespace.copy();
-            bothWhitespace.setByte(length / 2, 'X');
+            trimCodePoints = ascii ? ASCII_WHITESPACE : ALL_WHITESPACE;
+            byte[] whitespace = createRandomUtf8Bytes(trimCodePoints, length + 1);
+
+            leftWhitespace = whitespace.clone();
+            leftWhitespace[leftWhitespace.length - 1] = 'X';
+
+            rightWhitespace = whitespace.clone();
+            rightWhitespace[0] = 'X';
+
+            bothWhitespace = whitespace.clone();
+            bothWhitespace[bothWhitespace.length / 2] = 'X';
         }
 
-        private static Slice createRandomUtf8Slice(int[] codePointSet, int length)
+        private static byte[] createRandomUtf8Bytes(int[] codePointSet, int length)
         {
             int[] codePoints = new int[length];
             ThreadLocalRandom random = ThreadLocalRandom.current();
@@ -282,27 +541,27 @@ public class SliceUtf8Benchmark
                 int codePoint = codePointSet[random.nextInt(codePointSet.length)];
                 codePoints[i] = codePoint;
             }
-            return utf8Slice(new String(codePoints, 0, codePoints.length));
+            return new String(codePoints, 0, codePoints.length).getBytes(StandardCharsets.UTF_8);
         }
 
-        public int getLength()
-        {
-            return length;
-        }
-
-        public Slice getLeftWhitespace()
+        public byte[] getLeftWhitespace()
         {
             return leftWhitespace;
         }
 
-        public Slice getRightWhitespace()
+        public byte[] getRightWhitespace()
         {
             return rightWhitespace;
         }
 
-        public Slice getBothWhitespace()
+        public byte[] getBothWhitespace()
         {
             return bothWhitespace;
+        }
+
+        public int[] getTrimCodePoints()
+        {
+            return trimCodePoints;
         }
     }
 
@@ -318,7 +577,7 @@ public class SliceUtf8Benchmark
         @Param({"1", "7", "31"})
         private int offsetBytes;
 
-        private Slice slice;
+        private byte[] utf8;
         private int offset;
         private int rangeLength;
         private int expectedCodePoints;
@@ -343,14 +602,14 @@ public class SliceUtf8Benchmark
                 sliceOutput.appendBytes(new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8));
             }
 
-            slice = sliceOutput.slice();
-            rangeLength = slice.length() - offset;
+            utf8 = sliceOutput.slice().getBytes();
+            rangeLength = utf8.length - offset;
             expectedCodePoints = rangeLengthCodePoints;
         }
 
-        public Slice getSlice()
+        public byte[] getUtf8()
         {
-            return slice;
+            return utf8;
         }
 
         public int getOffset()
@@ -378,7 +637,9 @@ public class SliceUtf8Benchmark
         @Param("1024")
         private int inputLength;
 
-        private Slice slice;
+        private byte[] utf8;
+        private int offset;
+        private int length;
 
         @Setup
         public void setup()
@@ -390,7 +651,7 @@ public class SliceUtf8Benchmark
                 for (int i = 0; i < codePoints.length; i++) {
                     codePoints[i] = asciiCodePoints[random.nextInt(asciiCodePoints.length)];
                 }
-                slice = utf8Slice(new String(codePoints, 0, codePoints.length));
+                setPaddedInput(new String(codePoints, 0, codePoints.length).getBytes(StandardCharsets.UTF_8));
                 return;
             }
 
@@ -400,19 +661,136 @@ public class SliceUtf8Benchmark
                 int codePoint = allCodePoints[random.nextInt(allCodePoints.length)];
                 out.appendBytes(new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8));
             }
-            slice = out.slice();
+            byte[] input = out.slice().getBytes();
 
-            if (inputKind.equals("invalid_non_ascii") && slice.length() > 8) {
-                Slice mutable = slice.copy();
+            if (inputKind.equals("invalid_non_ascii") && input.length > 8) {
                 // Insert an illegal byte to force invalid UTF-8 handling.
-                mutable.setByte(mutable.length() / 2, 0xFF);
-                slice = mutable;
+                input[input.length / 2] = (byte) 0xFF;
             }
+
+            setPaddedInput(input);
         }
 
-        public Slice getSlice()
+        private void setPaddedInput(byte[] input)
         {
-            return slice;
+            offset = 5;
+            utf8 = new byte[offset + input.length + 3];
+            System.arraycopy(input, 0, utf8, offset, input.length);
+            length = input.length;
+        }
+
+        public byte[] getUtf8()
+        {
+            return utf8;
+        }
+
+        public int getOffset()
+        {
+            return offset;
+        }
+
+        public int getLength()
+        {
+            return length;
+        }
+    }
+
+    @State(Thread)
+    public static class TrinoCodePointData
+            extends BenchmarkData
+    {
+        // Uses BenchmarkData setup and exposes the Slice-based access pattern used in Trino loops.
+    }
+
+    @State(Thread)
+    public static class LikePatternData
+    {
+        @Param("1000")
+        private int length;
+
+        @Param({"true", "false"})
+        private boolean ascii;
+
+        private Slice pattern;
+
+        @Setup
+        public void setup()
+        {
+            int[] codePointSet = ascii ? BenchmarkData.ASCII_CODE_POINTS : BenchmarkData.ALL_CODE_POINTS;
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            DynamicSliceOutput out = new DynamicSliceOutput((length * 4) + 1);
+
+            for (int i = 0; i < length - 1; i++) {
+                int codePoint;
+                do {
+                    codePoint = codePointSet[random.nextInt(codePointSet.length)];
+                }
+                while (codePoint == '%' || codePoint == '_' || codePoint == '\\');
+                out.appendBytes(new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8));
+            }
+            out.appendByte('%');
+
+            byte[] encoded = out.slice().getBytes();
+            byte[] padded = new byte[3 + encoded.length + 2];
+            System.arraycopy(encoded, 0, padded, 3, encoded.length);
+            pattern = Slices.wrappedBuffer(padded, 3, encoded.length);
+        }
+
+        public Slice getPattern()
+        {
+            return pattern;
+        }
+
+        public int getEscapeChar()
+        {
+            return -1;
+        }
+    }
+
+    @State(Thread)
+    public static class CodePointWriteData
+    {
+        @Param("1000")
+        private int length;
+
+        @Param({"true", "false"})
+        private boolean ascii;
+
+        private int[] codePoints;
+        private Slice output;
+        private int expectedBytes;
+
+        @Setup
+        public void setup()
+        {
+            int[] codePointSet = ascii ? BenchmarkData.ASCII_CODE_POINTS : BenchmarkData.ALL_CODE_POINTS;
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+
+            codePoints = new int[length];
+            expectedBytes = 0;
+            for (int i = 0; i < codePoints.length; i++) {
+                int codePoint = codePointSet[random.nextInt(codePointSet.length)];
+                codePoints[i] = codePoint;
+                expectedBytes += lengthOfCodePoint(codePoint);
+            }
+
+            byte[] buffer = new byte[11 + expectedBytes + 5];
+            output = Slices.wrappedBuffer(buffer, 11, expectedBytes);
+        }
+
+        public int[] getCodePoints()
+        {
+            return codePoints;
+        }
+
+        public Slice getOutput()
+        {
+            return output;
+        }
+
+        public int getExpectedBytes()
+        {
+            return expectedBytes;
         }
     }
 
