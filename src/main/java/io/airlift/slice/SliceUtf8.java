@@ -1638,8 +1638,38 @@ public final class SliceUtf8
         checkFromIndexSize(offset, length, utf8.length);
         checkIndex(position, length);
         int codePointLength = lengthOfCodePoint(codePoint);
+        if (codePointLength == 3 && MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE) {
+            throw new InvalidCodePointException(codePoint);
+        }
         checkFromIndexSize(position, codePointLength, length);
-        return setCodePointAtUnchecked(codePoint, utf8, offset + position);
+        int start = offset + position;
+
+        switch (codePointLength) {
+            case 1 -> {
+                // 0xxx_xxxx
+                utf8[start] = (byte) codePoint;
+            }
+            case 2 -> {
+                // 110x_xxxx 10xx_xxxx
+                utf8[start] = (byte) (0b1100_0000 | (codePoint >>> 6));
+                utf8[start + 1] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
+            }
+            case 3 -> {
+                // 1110_xxxx 10xx_xxxx 10xx_xxxx
+                utf8[start] = (byte) (0b1110_0000 | ((codePoint >>> 12) & 0b0000_1111));
+                utf8[start + 1] = (byte) (0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+                utf8[start + 2] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
+            }
+            case 4 -> {
+                // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
+                utf8[start] = (byte) (0b1111_0000 | ((codePoint >>> 18) & 0b0000_0111));
+                utf8[start + 1] = (byte) (0b1000_0000 | ((codePoint >>> 12) & 0b0011_1111));
+                utf8[start + 2] = (byte) (0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+                utf8[start + 3] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
+            }
+            default -> throw new InvalidCodePointException(codePoint);
+        }
+        return codePointLength;
     }
 
     private static int setCodePointAtUnchecked(int codePoint, byte[] utf8, int position)
