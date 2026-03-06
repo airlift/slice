@@ -744,28 +744,28 @@ public final class SliceUtf8
     // This function is an exact duplicate of firstNonWhitespacePosition(Slice) except for one line.
     private static int firstNonMatchPosition(byte[] utf8, int utf8Offset, int utf8Length, int[] codePointsToMatch)
     {
+        long asciiMatchMaskLow = asciiMatchMaskLow(codePointsToMatch);
+        long asciiMatchMaskHigh = asciiMatchMaskHigh(codePointsToMatch);
+
         int position = 0;
         while (position < utf8Length) {
-            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position);
-            if (codePoint < 0) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value < 0x80) {
+                if (!matches(value, codePointsToMatch, asciiMatchMaskLow, asciiMatchMaskHigh)) {
+                    break;
+                }
+                position++;
+                continue;
+            }
+
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+            if (codePoint < 0 || !matches(codePoint, codePointsToMatch, asciiMatchMaskLow, asciiMatchMaskHigh)) {
                 break;
             }
-            if (!matches(codePoint, codePointsToMatch)) {
-                break;
-            }
+
             position += lengthOfCodePoint(codePoint);
         }
         return position;
-    }
-
-    private static boolean matches(int codePoint, int[] codePoints)
-    {
-        for (int codePointToTrim : codePoints) {
-            if (codePoint == codePointToTrim) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -806,6 +806,45 @@ public final class SliceUtf8
         checkFromIndexSize(offset, length, utf8.length);
         int position = lastNonMatchPosition(utf8, offset, length, 0, whiteSpaceCodePoints);
         return Slices.wrappedBuffer(utf8, offset, position);
+    }
+
+    private static boolean matches(int codePoint, int[] codePoints, long asciiMatchMaskLow, long asciiMatchMaskHigh)
+    {
+        if (codePoint < Long.SIZE) {
+            return ((asciiMatchMaskLow >>> codePoint) & 1) == 1;
+        }
+        if (codePoint < (Long.SIZE * 2)) {
+            return ((asciiMatchMaskHigh >>> (codePoint - Long.SIZE)) & 1) == 1;
+        }
+
+        for (int codePointToTrim : codePoints) {
+            if (codePoint == codePointToTrim) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static long asciiMatchMaskLow(int[] codePoints)
+    {
+        long asciiMatchMaskLow = 0;
+        for (int codePoint : codePoints) {
+            if (codePoint < Long.SIZE) {
+                asciiMatchMaskLow |= (1L << codePoint);
+            }
+        }
+        return asciiMatchMaskLow;
+    }
+
+    private static long asciiMatchMaskHigh(int[] codePoints)
+    {
+        long asciiMatchMaskHigh = 0;
+        for (int codePoint : codePoints) {
+            if (codePoint >= Long.SIZE && codePoint < (Long.SIZE * 2)) {
+                asciiMatchMaskHigh |= (1L << (codePoint - Long.SIZE));
+            }
+        }
+        return asciiMatchMaskHigh;
     }
 
     private static int lastNonWhitespacePosition(byte[] utf8, int utf8Offset, int utf8Length, int minPosition)
@@ -853,26 +892,33 @@ public final class SliceUtf8
     // This function is an exact duplicate of lastNonWhitespacePosition(Slice, int) except for one line.
     private static int lastNonMatchPosition(byte[] utf8, int utf8Offset, int utf8Length, int minPosition, int[] codePointsToMatch)
     {
+        long asciiMatchMaskLow = asciiMatchMaskLow(codePointsToMatch);
+        long asciiMatchMaskHigh = asciiMatchMaskHigh(codePointsToMatch);
+
         int position = utf8Length;
         while (position > minPosition) {
+            int value = utf8[utf8Offset + position - 1] & 0xFF;
+            if (value < 0x80) {
+                if (!matches(value, codePointsToMatch, asciiMatchMaskLow, asciiMatchMaskHigh)) {
+                    break;
+                }
+                position--;
+                continue;
+            }
+
             // decode the code point before position if possible
             int codePoint;
             int codePointLength;
-            byte unsignedByte = utf8[utf8Offset + position - 1];
-            if (!isContinuationByte(unsignedByte)) {
-                codePoint = unsignedByte & 0xFF;
-                codePointLength = 1;
-            }
-            else if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
-                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 2);
+            if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
                 codePointLength = 2;
             }
             else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
-                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 3);
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
                 codePointLength = 3;
             }
             else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
-                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 4);
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
                 codePointLength = 4;
             }
             else {
@@ -881,7 +927,7 @@ public final class SliceUtf8
             if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
                 break;
             }
-            if (!matches(codePoint, codePointsToMatch)) {
+            if (!matches(codePoint, codePointsToMatch, asciiMatchMaskLow, asciiMatchMaskHigh)) {
                 break;
             }
             position -= codePointLength;
