@@ -120,22 +120,22 @@ public final class SliceUtf8
             return 0;
         }
 
+        int end = offset + length;
         int continuationBytesCount = 0;
-        // Length rounded to 8 bytes
-        int length8 = length & 0x7FFF_FFF8;
-        for (; offset < length8; offset += 8) {
+        int lastLongStart = end - 8;
+        for (; offset <= lastLongStart; offset += 8) {
             // Count bytes which are NOT the start of a code point
             continuationBytesCount += countContinuationBytes(utf8.getLongUnchecked(offset));
         }
         // Enough bytes left for 32 bits?
-        if (offset + 4 < length) {
+        if (offset <= end - 4) {
             // Count bytes which are NOT the start of a code point
             continuationBytesCount += countContinuationBytes(utf8.getIntUnchecked(offset));
 
             offset += 4;
         }
         // Do the rest one by one
-        for (; offset < length; offset++) {
+        for (; offset < end; offset++) {
             // Count bytes which are NOT the start of a code point
             continuationBytesCount += countContinuationBytes(utf8.getByteUnchecked(offset));
         }
