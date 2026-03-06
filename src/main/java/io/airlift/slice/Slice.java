@@ -1185,6 +1185,63 @@ public final class Slice
         return -1;
     }
 
+    /**
+     * Returns the index of the last occurrence of the pattern within this slice.
+     * If the pattern is not found -1 is returned. If pattern is empty, the
+     * length of this slice is returned.
+     */
+    public int lastIndexOf(Slice slice)
+    {
+        return lastIndexOf(slice, size);
+    }
+
+    /**
+     * Returns the index of the last occurrence of the pattern within this slice,
+     * searching backward starting at the given offset.
+     * If the pattern is not found -1 is returned. If pattern is empty, the
+     * offset is returned.
+     */
+    public int lastIndexOf(Slice pattern, int offset)
+    {
+        if (size == 0 && pattern.size == 0) {
+            return 0;
+        }
+
+        if (size == 0 || offset < 0) {
+            return -1;
+        }
+
+        if (pattern.length() == 0) {
+            return Math.min(offset, size);
+        }
+
+        // Clamp offset to the last valid position
+        int lastValidIndex = size - pattern.length();
+        int index = Math.min(offset, lastValidIndex);
+        if (index < 0) {
+            return -1;
+        }
+
+        byte firstByte = pattern.getByteUnchecked(0);
+        while (index >= 0) {
+            // seek to first byte match
+            while (index > 0 && getByteUnchecked(index) != firstByte) {
+                index--;
+            }
+            if (getByteUnchecked(index) != firstByte) {
+                break;
+            }
+
+            if (equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
+                return index;
+            }
+
+            index--;
+        }
+
+        return -1;
+    }
+
     int indexOfBruteForce(Slice pattern, int offset)
     {
         if (size == 0 || offset >= size || offset < 0) {
