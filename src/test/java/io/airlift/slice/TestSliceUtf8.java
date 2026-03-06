@@ -41,6 +41,7 @@ import static io.airlift.slice.SliceUtf8.reverse;
 import static io.airlift.slice.SliceUtf8.rightTrim;
 import static io.airlift.slice.SliceUtf8.setCodePointAt;
 import static io.airlift.slice.SliceUtf8.substring;
+import static io.airlift.slice.SliceUtf8.toCodePoints;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
 import static io.airlift.slice.SliceUtf8.trim;
@@ -262,6 +263,36 @@ public class TestSliceUtf8
         int arrayWritten = setCodePointAt(0x1F600, byteArrayTarget, 0, byteArrayTarget.length, 0);
         assertThat(arrayWritten).isEqualTo(sliceWritten);
         assertThat(wrappedBuffer(byteArrayTarget, 0, arrayWritten)).isEqualTo(sliceTarget.slice(0, sliceWritten));
+
+        assertThat(toCodePoints(padded, offset, length)).isEqualTo(toCodePoints(view));
+    }
+
+    @Test
+    public void testToCodePoints()
+    {
+        assertToCodePoints(STRING_EMPTY);
+        assertToCodePoints(STRING_HELLO);
+        assertToCodePoints(STRING_OESTERREICH);
+        assertToCodePoints(STRING_DULIOE_DULIOE);
+        assertToCodePoints(STRING_FAITH_HOPE_LOVE);
+        assertToCodePoints(STRING_OO);
+        assertToCodePoints(STRING_ASCII_CODE_POINTS);
+        assertToCodePoints(STRING_ALL_CODE_POINTS_RANDOM);
+    }
+
+    private static void assertToCodePoints(String value)
+    {
+        Slice utf8 = utf8Slice(value);
+        int[] expectedCodePoints = value.codePoints().toArray();
+        assertThat(toCodePoints(utf8)).isEqualTo(expectedCodePoints);
+    }
+
+    @Test
+    public void testToCodePointsInvalidUtf8()
+    {
+        assertThatThrownBy(() -> toCodePoints(wrappedBuffer(INVALID_UTF8_2)))
+                .isInstanceOf(InvalidUtf8Exception.class)
+                .hasMessageContaining("Invalid UTF-8 sequence at position");
     }
 
     private static void assertCodePointCount(String string)

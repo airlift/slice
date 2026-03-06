@@ -47,6 +47,7 @@ import static io.airlift.slice.SliceUtf8.reverse;
 import static io.airlift.slice.SliceUtf8.rightTrim;
 import static io.airlift.slice.SliceUtf8.setCodePointAt;
 import static io.airlift.slice.SliceUtf8.substring;
+import static io.airlift.slice.SliceUtf8.toCodePoints;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
 import static io.airlift.slice.SliceUtf8.trim;
@@ -168,6 +169,40 @@ public class SliceUtf8Benchmark
             throw new AssertionError();
         }
         return consumed;
+    }
+
+    @Benchmark
+    public int[] benchmarkToCodePointsApi(BenchmarkData data)
+    {
+        int[] codePoints = toCodePoints(data.getUtf8(), data.getOffset(), data.getByteLength());
+        if (codePoints.length != data.getLength()) {
+            throw new AssertionError();
+        }
+        return codePoints;
+    }
+
+    @Benchmark
+    public int[] benchmarkTrinoCastToCodePointsTwoPass(BenchmarkData data)
+    {
+        Slice utf8 = data.getSlice();
+
+        int codePointCount = 0;
+        for (int position = 0; position < utf8.length(); ) {
+            int codePoint = tryGetCodePointAt(utf8, position);
+            if (codePoint < 0) {
+                throw new AssertionError();
+            }
+            position += lengthOfCodePoint(codePoint);
+            codePointCount++;
+        }
+
+        int[] codePoints = new int[codePointCount];
+        int position = 0;
+        for (int index = 0; index < codePoints.length; index++) {
+            codePoints[index] = getCodePointAt(utf8, position);
+            position += lengthOfCodePoint(utf8, position);
+        }
+        return codePoints;
     }
 
     @Benchmark
