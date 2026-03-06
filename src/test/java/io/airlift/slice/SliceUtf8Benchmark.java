@@ -33,6 +33,7 @@ import java.util.OptionalInt;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
+import static io.airlift.slice.SliceUtf8.codePointByteLengths;
 import static io.airlift.slice.SliceUtf8.codePointToUtf8;
 import static io.airlift.slice.SliceUtf8.compareUtf16BE;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
@@ -340,6 +341,125 @@ public class SliceUtf8Benchmark
     }
 
     @Benchmark
+    public int benchmarkTrinoPadStringCodePointLengths(TrinoPadData data)
+    {
+        Slice padString = data.getPadString();
+        int padStringLength = countCodePoints(padString);
+        int[] padStringCounts = new int[padStringLength];
+        for (int index = 0; index < padStringLength; index++) {
+            padStringCounts[index] = lengthOfCodePointSafe(padString, offsetOfCodePoint(padString, index));
+        }
+        return checksum(padStringCounts);
+    }
+
+    @Benchmark
+    public int benchmarkTrinoPadStringCodePointLengthsSinglePass(TrinoPadData data)
+    {
+        Slice padString = data.getPadString();
+        int[] padStringCounts = new int[countCodePoints(padString)];
+        int position = 0;
+        int index = 0;
+        while (position < padString.length()) {
+            int codePoint = getCodePointAt(padString, position);
+            int codePointLength = lengthOfCodePoint(codePoint);
+            padStringCounts[index] = codePointLength;
+            index++;
+            position += codePointLength;
+        }
+        if (index != padStringCounts.length) {
+            throw new AssertionError();
+        }
+        return checksum(padStringCounts);
+    }
+
+    @Benchmark
+    public int benchmarkTrinoPadStringCodePointLengthsByteArray(TrinoPadData data)
+    {
+        byte[] utf8 = data.getUtf8();
+        int baseOffset = data.getOffset();
+        int byteLength = data.getByteLength();
+        int[] padStringCounts = new int[countCodePoints(utf8, baseOffset, byteLength)];
+        int position = 0;
+        int index = 0;
+        while (position < byteLength) {
+            int codePoint = getCodePointAt(utf8, baseOffset, byteLength, position);
+            int codePointLength = lengthOfCodePoint(codePoint);
+            padStringCounts[index] = codePointLength;
+            index++;
+            position += codePointLength;
+        }
+        if (index != padStringCounts.length) {
+            throw new AssertionError();
+        }
+        return checksum(padStringCounts);
+    }
+
+    @Benchmark
+    public int benchmarkTrinoPadStringCodePointLengthsSliceUtf8Helper(TrinoPadData data)
+    {
+        return checksum(codePointByteLengths(data.getPadString()));
+    }
+
+    @Benchmark
+    public int benchmarkTrinoPadStringCodePointLengthsSliceUtf8HelperByteArray(TrinoPadData data)
+    {
+        return checksum(codePointByteLengths(data.getUtf8(), data.getOffset(), data.getByteLength()));
+    }
+
+    @Benchmark
+    public Slice benchmarkTrinoDomainTranslatorPrefixRange(TrinoPrefixRangeData data)
+    {
+        Slice constantPrefix = data.getConstantPrefix();
+
+        int lastIncrementable = -1;
+        for (int position = 0; position < constantPrefix.length(); position += lengthOfCodePoint(constantPrefix, position)) {
+            if (getCodePointAt(constantPrefix, position) < 127) {
+                lastIncrementable = position;
+            }
+        }
+
+        if (lastIncrementable == -1) {
+            return Slices.EMPTY_SLICE;
+        }
+
+        Slice upperBound = constantPrefix.slice(0, lastIncrementable + lengthOfCodePoint(constantPrefix, lastIncrementable)).copy();
+        setCodePointAt(getCodePointAt(constantPrefix, lastIncrementable) + 1, upperBound, lastIncrementable);
+        return upperBound;
+    }
+
+    @Benchmark
+    public Slice benchmarkTrinoDomainTranslatorPrefixRangeSingleDecode(TrinoPrefixRangeData data)
+    {
+        byte[] utf8 = data.getUtf8();
+        int baseOffset = data.getOffset();
+        int byteLength = data.getByteLength();
+        Slice constantPrefix = data.getConstantPrefix();
+
+        int lastIncrementableOffset = -1;
+        int lastIncrementableCodePoint = -1;
+        int lastIncrementableLength = 0;
+        int position = 0;
+        while (position < byteLength) {
+            int codePoint = getCodePointAt(utf8, baseOffset, byteLength, position);
+            int codePointLength = lengthOfCodePoint(codePoint);
+            if (codePoint < 127) {
+                lastIncrementableOffset = position;
+                lastIncrementableCodePoint = codePoint;
+                lastIncrementableLength = codePointLength;
+            }
+            position += codePointLength;
+        }
+
+        if (lastIncrementableOffset == -1) {
+            return Slices.EMPTY_SLICE;
+        }
+
+        Slice upperBound = constantPrefix.slice(0, lastIncrementableOffset + lastIncrementableLength).copy();
+        setCodePointAt(lastIncrementableCodePoint + 1, upperBound, lastIncrementableOffset);
+        return upperBound;
+    }
+
+    @Benchmark
     public int benchmarkCompareUtf16BE(CompareData data)
     {
         int result = compareUtf16BE(
@@ -450,6 +570,24 @@ public class SliceUtf8Benchmark
             throw new AssertionError();
         }
         return totalBytes;
+    }
+
+    private static int checksum(int[] values)
+    {
+        int checksum = 1;
+        for (int value : values) {
+            checksum = (31 * checksum) ^ value;
+        }
+        return checksum;
+    }
+
+    private static int checksum(byte[] values)
+    {
+        int checksum = 1;
+        for (byte value : values) {
+            checksum = (31 * checksum) ^ value;
+        }
+        return checksum;
     }
 
     @State(Thread)
@@ -811,6 +949,120 @@ public class SliceUtf8Benchmark
         public int getEscapeChar()
         {
             return -1;
+        }
+    }
+
+    @State(Thread)
+    public static class TrinoPadData
+    {
+        @Param("128")
+        private int length;
+
+        @Param({"true", "false"})
+        private boolean ascii;
+
+        private byte[] utf8;
+        private int offset;
+        private int byteLength;
+        private Slice padString;
+
+        @Setup
+        public void setup()
+        {
+            int[] codePointSet = ascii ? BenchmarkData.ASCII_CODE_POINTS : BenchmarkData.ALL_CODE_POINTS;
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            DynamicSliceOutput out = new DynamicSliceOutput(length * 4);
+            for (int index = 0; index < length; index++) {
+                int codePoint = codePointSet[random.nextInt(codePointSet.length)];
+                out.appendBytes(new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8));
+            }
+
+            byte[] encoded = out.slice().getBytes();
+            offset = 9;
+            utf8 = new byte[offset + encoded.length + 3];
+            System.arraycopy(encoded, 0, utf8, offset, encoded.length);
+            byteLength = encoded.length;
+            padString = Slices.wrappedBuffer(utf8, offset, byteLength);
+        }
+
+        public byte[] getUtf8()
+        {
+            return utf8;
+        }
+
+        public int getOffset()
+        {
+            return offset;
+        }
+
+        public int getByteLength()
+        {
+            return byteLength;
+        }
+
+        public Slice getPadString()
+        {
+            return padString;
+        }
+    }
+
+    @State(Thread)
+    public static class TrinoPrefixRangeData
+    {
+        @Param("256")
+        private int length;
+
+        @Param({"true", "false"})
+        private boolean ascii;
+
+        private byte[] utf8;
+        private int offset;
+        private int byteLength;
+        private Slice constantPrefix;
+
+        @Setup
+        public void setup()
+        {
+            int[] codePointSet = ascii ? BenchmarkData.ASCII_CODE_POINTS : BenchmarkData.ALL_CODE_POINTS;
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+
+            int[] codePoints = new int[length];
+            codePoints[0] = 'a';
+            for (int index = 1; index < codePoints.length; index++) {
+                codePoints[index] = codePointSet[random.nextInt(codePointSet.length)];
+            }
+
+            DynamicSliceOutput out = new DynamicSliceOutput(length * 4);
+            for (int codePoint : codePoints) {
+                out.appendBytes(new String(Character.toChars(codePoint)).getBytes(StandardCharsets.UTF_8));
+            }
+
+            byte[] encoded = out.slice().getBytes();
+            offset = 13;
+            utf8 = new byte[offset + encoded.length + 5];
+            System.arraycopy(encoded, 0, utf8, offset, encoded.length);
+            byteLength = encoded.length;
+            constantPrefix = Slices.wrappedBuffer(utf8, offset, byteLength);
+        }
+
+        public byte[] getUtf8()
+        {
+            return utf8;
+        }
+
+        public int getOffset()
+        {
+            return offset;
+        }
+
+        public int getByteLength()
+        {
+            return byteLength;
+        }
+
+        public Slice getConstantPrefix()
+        {
+            return constantPrefix;
         }
     }
 
