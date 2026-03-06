@@ -780,6 +780,11 @@ public final class Slice
     public void setFloat(int index, float value)
     {
         checkFromIndexSize(index, SIZE_OF_FLOAT, length());
+        setFloatUnchecked(index, value);
+    }
+
+    void setFloatUnchecked(int index, float value)
+    {
         FLOAT_HANDLE.set(base, baseOffset + index, value);
     }
 
@@ -793,6 +798,11 @@ public final class Slice
     public void setDouble(int index, double value)
     {
         checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
+        setDoubleUnchecked(index, value);
+    }
+
+    void setDoubleUnchecked(int index, double value)
+    {
         DOUBLE_HANDLE.set(base, baseOffset + index, value);
     }
 

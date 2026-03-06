@@ -83,7 +83,7 @@ public class DynamicSliceOutput
     public void writeByte(int value)
     {
         slice = Slices.ensureSize(slice, size + SIZE_OF_BYTE);
-        slice.setByte(size, value);
+        slice.setByteUnchecked(size, value);
         size += SIZE_OF_BYTE;
     }
 
@@ -91,7 +91,7 @@ public class DynamicSliceOutput
     public void writeShort(int value)
     {
         slice = Slices.ensureSize(slice, size + SIZE_OF_SHORT);
-        slice.setShort(size, value);
+        slice.setShortUnchecked(size, value);
         size += SIZE_OF_SHORT;
     }
 
@@ -99,7 +99,7 @@ public class DynamicSliceOutput
     public void writeInt(int value)
     {
         slice = Slices.ensureSize(slice, size + SIZE_OF_INT);
-        slice.setInt(size, value);
+        slice.setIntUnchecked(size, value);
         size += SIZE_OF_INT;
     }
 
@@ -107,7 +107,7 @@ public class DynamicSliceOutput
     public void writeLong(long value)
     {
         slice = Slices.ensureSize(slice, size + SIZE_OF_LONG);
-        slice.setLong(size, value);
+        slice.setLongUnchecked(size, value);
         size += SIZE_OF_LONG;
     }
 
@@ -115,7 +115,7 @@ public class DynamicSliceOutput
     public void writeFloat(float value)
     {
         slice = Slices.ensureSize(slice, size + SIZE_OF_FLOAT);
-        slice.setFloat(size, value);
+        slice.setFloatUnchecked(size, value);
         size += SIZE_OF_FLOAT;
     }
 
@@ -123,7 +123,7 @@ public class DynamicSliceOutput
     public void writeDouble(double value)
     {
         slice = Slices.ensureSize(slice, size + SIZE_OF_DOUBLE);
-        slice.setDouble(size, value);
+        slice.setDoubleUnchecked(size, value);
         size += SIZE_OF_DOUBLE;
     }
 
