@@ -1068,8 +1068,9 @@ public final class SliceUtf8
         }
         if (codePoint < 0x800) {
             // 110x_xxxx 10xx_xxxx
-            utf8.setByte(position, 0b1100_0000 | (codePoint >>> 6));
-            utf8.setByte(position + 1, 0b1000_0000 | (codePoint & 0b0011_1111));
+            checkFromIndexSize(position, 1, utf8.length());
+            utf8.setByteUnchecked(position, 0b1100_0000 | (codePoint >>> 6));
+            utf8.setByteUnchecked(position + 1, 0b1000_0000 | (codePoint & 0b0011_1111));
             return 2;
         }
         if (MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE) {
@@ -1077,17 +1078,19 @@ public final class SliceUtf8
         }
         if (codePoint < 0x1_0000) {
             // 1110_xxxx 10xx_xxxx 10xx_xxxx
-            utf8.setByte(position, 0b1110_0000 | ((codePoint >>> 12) & 0b0000_1111));
-            utf8.setByte(position + 1, 0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
-            utf8.setByte(position + 2, 0b1000_0000 | (codePoint & 0b0011_1111));
+            checkFromIndexSize(position, 2, utf8.length());
+            utf8.setByteUnchecked(position, 0b1110_0000 | ((codePoint >>> 12) & 0b0000_1111));
+            utf8.setByteUnchecked(position + 1, 0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+            utf8.setByteUnchecked(position + 2, 0b1000_0000 | (codePoint & 0b0011_1111));
             return 3;
         }
         if (codePoint < 0x11_0000) {
+            checkFromIndexSize(position, 3, utf8.length());
             // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
-            utf8.setByte(position, 0b1111_0000 | ((codePoint >>> 18) & 0b0000_0111));
-            utf8.setByte(position + 1, 0b1000_0000 | ((codePoint >>> 12) & 0b0011_1111));
-            utf8.setByte(position + 2, 0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
-            utf8.setByte(position + 3, 0b1000_0000 | (codePoint & 0b0011_1111));
+            utf8.setByteUnchecked(position, 0b1111_0000 | ((codePoint >>> 18) & 0b0000_0111));
+            utf8.setByteUnchecked(position + 1, 0b1000_0000 | ((codePoint >>> 12) & 0b0011_1111));
+            utf8.setByteUnchecked(position + 2, 0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+            utf8.setByteUnchecked(position + 3, 0b1000_0000 | (codePoint & 0b0011_1111));
             return 4;
         }
         // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
