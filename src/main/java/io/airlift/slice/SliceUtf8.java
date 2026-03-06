@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import java.lang.invoke.VarHandle;
 import java.util.OptionalInt;
 
 import static io.airlift.slice.Preconditions.checkArgument;
@@ -22,6 +23,8 @@ import static java.lang.Character.MAX_SURROGATE;
 import static java.lang.Character.MIN_SUPPLEMENTARY_CODE_POINT;
 import static java.lang.Character.MIN_SURROGATE;
 import static java.lang.Integer.toHexString;
+import static java.lang.invoke.MethodHandles.byteArrayViewVarHandle;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.checkIndex;
 
@@ -34,6 +37,10 @@ public final class SliceUtf8
 
     private static final int MIN_HIGH_SURROGATE_CODE_POINT = 0xD800;
     private static final int REPLACEMENT_CODE_POINT = 0xFFFD;
+
+    private static final VarHandle SHORT_HANDLE = byteArrayViewVarHandle(short[].class, LITTLE_ENDIAN);
+    private static final VarHandle INT_HANDLE = byteArrayViewVarHandle(int[].class, LITTLE_ENDIAN);
+    private static final VarHandle LONG_HANDLE = byteArrayViewVarHandle(long[].class, LITTLE_ENDIAN);
 
     private static final int TOP_MASK32 = 0x8080_8080;
     private static final long TOP_MASK64 = 0x8080_8080_8080_8080L;
@@ -66,27 +73,40 @@ public final class SliceUtf8
      */
     public static boolean isAscii(Slice utf8)
     {
-        int length = utf8.length();
+        return isAscii(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Does the byte array range contain only 7-bit ASCII characters.
+     */
+    public static boolean isAscii(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return isAsciiRaw(utf8, offset, length);
+    }
+
+    private static boolean isAsciiRaw(byte[] utf8, int utf8Offset, int utf8Length)
+    {
         int offset = 0;
 
         // Length rounded to 8 bytes
-        int length8 = length & 0x7FFF_FFF8;
+        int length8 = utf8Length & 0x7FFF_FFF8;
         for (; offset < length8; offset += 8) {
-            if ((utf8.getLongUnchecked(offset) & TOP_MASK64) != 0) {
+            if (((long) LONG_HANDLE.get(utf8, utf8Offset + offset) & TOP_MASK64) != 0) {
                 return false;
             }
         }
         // Enough bytes left for 32 bits?
-        if (offset + 4 < length) {
-            if ((utf8.getIntUnchecked(offset) & TOP_MASK32) != 0) {
+        if (offset + 4 < utf8Length) {
+            if (((int) INT_HANDLE.get(utf8, utf8Offset + offset) & TOP_MASK32) != 0) {
                 return false;
             }
 
             offset += 4;
         }
         // Do the rest one by one
-        for (; offset < length; offset++) {
-            if ((utf8.getByteUnchecked(offset) & 0x80) != 0) {
+        for (; offset < utf8Length; offset++) {
+            if ((utf8[utf8Offset + offset] & 0x80) != 0) {
                 return false;
             }
         }
@@ -102,7 +122,19 @@ public final class SliceUtf8
      */
     public static int countCodePoints(Slice utf8)
     {
-        return countCodePoints(utf8, 0, utf8.length());
+        return countCodePoints(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Counts the code points within UTF-8 encoded byte array range.
+     * <p>
+     * Note: This method does not explicitly check for valid UTF-8, and may
+     * return incorrect results or throw an exception for invalid UTF-8.
+     */
+    public static int countCodePoints(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return countCodePoints(utf8, offset, length, 0, length);
     }
 
     /**
@@ -113,7 +145,12 @@ public final class SliceUtf8
      */
     public static int countCodePoints(Slice utf8, int offset, int length)
     {
-        checkFromIndexSize(offset, length, utf8.length());
+        return countCodePoints(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), offset, length);
+    }
+
+    private static int countCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8Length);
 
         // Quick exit if empty string
         if (length == 0) {
@@ -125,19 +162,19 @@ public final class SliceUtf8
         int lastLongStart = end - 8;
         for (; offset <= lastLongStart; offset += 8) {
             // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes(utf8.getLongUnchecked(offset));
+            continuationBytesCount += countContinuationBytes((long) LONG_HANDLE.get(utf8, utf8Offset + offset));
         }
         // Enough bytes left for 32 bits?
         if (offset <= end - 4) {
             // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes(utf8.getIntUnchecked(offset));
+            continuationBytesCount += countContinuationBytes((int) INT_HANDLE.get(utf8, utf8Offset + offset));
 
             offset += 4;
         }
         // Do the rest one by one
         for (; offset < end; offset++) {
             // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes(utf8.getByteUnchecked(offset));
+            continuationBytesCount += countContinuationBytes(utf8[utf8Offset + offset]);
         }
 
         verify(continuationBytesCount <= length);
@@ -153,25 +190,43 @@ public final class SliceUtf8
      */
     public static Slice substring(Slice utf8, int codePointStart, int codePointLength)
     {
+        return substring(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), codePointStart, codePointLength);
+    }
+
+    /**
+     * Gets the substring within byte array range starting at {@code codePointStart}
+     * and extending for {@code codePointLength} code points.
+     * <p>
+     * Note: This method does not explicitly check for valid UTF-8, and may
+     * return incorrect results or throw an exception for invalid UTF-8.
+     */
+    public static Slice substring(byte[] utf8, int offset, int length, int codePointStart, int codePointLength)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return substringRaw(utf8, offset, length, codePointStart, codePointLength);
+    }
+
+    private static Slice substringRaw(byte[] utf8, int utf8Offset, int utf8Length, int codePointStart, int codePointLength)
+    {
         checkArgument(codePointStart >= 0, "codePointStart is negative");
         checkArgument(codePointLength >= 0, "codePointLength is negative");
 
-        int indexStart = offsetOfCodePoint(utf8, codePointStart);
+        int indexStart = offsetOfCodePoint(utf8, utf8Offset, utf8Length, codePointStart);
         if (indexStart < 0) {
             throw new IllegalArgumentException("UTF-8 does not contain " + codePointStart + " code points");
         }
         if (codePointLength == 0) {
             return Slices.EMPTY_SLICE;
         }
-        int indexEnd = offsetOfCodePoint(utf8, indexStart, codePointLength - 1);
+        int indexEnd = offsetOfCodePoint(utf8, utf8Offset, utf8Length, indexStart, codePointLength - 1);
         if (indexEnd < 0) {
             throw new IllegalArgumentException("UTF-8 does not contain " + (codePointStart + codePointLength) + " code points");
         }
-        indexEnd += lengthOfCodePoint(utf8, indexEnd);
-        if (indexEnd > utf8.length()) {
+        indexEnd += lengthOfCodePoint(utf8, utf8Offset, utf8Length, indexEnd);
+        if (indexEnd > utf8Length) {
             throw new InvalidUtf8Exception("UTF-8 is not well formed");
         }
-        return utf8.slice(indexStart, indexEnd - indexStart);
+        return Slices.wrappedBuffer(utf8, utf8Offset + indexStart, indexEnd - indexStart);
     }
 
     /**
@@ -181,13 +236,28 @@ public final class SliceUtf8
      */
     public static Slice reverse(Slice utf8)
     {
-        int length = utf8.length();
-        Slice reverse = Slices.allocate(length);
+        return reverse(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Reverses a UTF-8 byte array range code point by code point.
+     * <p>
+     * Note: Invalid UTF-8 sequences are copied directly to the output.
+     */
+    public static Slice reverse(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return reverseRaw(utf8, offset, length);
+    }
+
+    private static Slice reverseRaw(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        Slice reverse = Slices.allocate(utf8Length);
 
         int forwardPosition = 0;
-        int reversePosition = length;
-        while (forwardPosition < length) {
-            int codePointLength = lengthOfCodePointSafe(utf8, forwardPosition);
+        int reversePosition = utf8Length;
+        while (forwardPosition < utf8Length) {
+            int codePointLength = lengthOfCodePointSafe(utf8, utf8Offset, utf8Length, forwardPosition);
 
             // backup the reverse pointer
             reversePosition -= codePointLength;
@@ -196,7 +266,7 @@ public final class SliceUtf8
                 throw new InvalidUtf8Exception("UTF-8 is not well formed");
             }
             // copy the character
-            copyUtf8SequenceUnsafe(utf8, forwardPosition, reverse, reversePosition, codePointLength);
+            copyUtf8SequenceUnsafe(utf8, utf8Offset, forwardPosition, reverse, reversePosition, codePointLength);
 
             forwardPosition += codePointLength;
         }
@@ -208,13 +278,35 @@ public final class SliceUtf8
      * equivalent to the {@link java.lang.String#compareTo(String)}.
      * {@code java.lang.String}.
      *
-     * @throws InvalidUtf8Exception if the UTF-8 are invalid
+     * Note: this method validates UTF-8 only for byte regions it decodes during
+     * comparison. Invalid UTF-8 in unvisited suffix regions may not be detected.
+     *
+     * @throws InvalidUtf8Exception if invalid UTF-8 is encountered while decoding
      */
     public static int compareUtf16BE(Slice utf8Left, Slice utf8Right)
     {
-        int leftLength = utf8Left.length();
-        int rightLength = utf8Right.length();
+        return compareUtf16BE(
+                utf8Left.byteArray(), utf8Left.byteArrayOffset(), utf8Left.length(),
+                utf8Right.byteArray(), utf8Right.byteArrayOffset(), utf8Right.length());
+    }
 
+    /**
+     * Compares two UTF-8 byte array ranges using UTF-16 big endian semantics.
+     *
+     * Note: this method validates UTF-8 only for byte regions it decodes during
+     * comparison. Invalid UTF-8 in unvisited suffix regions may not be detected.
+     *
+     * @throws InvalidUtf8Exception if invalid UTF-8 is encountered while decoding
+     */
+    public static int compareUtf16BE(byte[] utf8Left, int leftOffset, int leftLength, byte[] utf8Right, int rightOffset, int rightLength)
+    {
+        checkFromIndexSize(leftOffset, leftLength, utf8Left.length);
+        checkFromIndexSize(rightOffset, rightLength, utf8Right.length);
+        return compareUtf16BERaw(utf8Left, leftOffset, leftLength, utf8Right, rightOffset, rightLength);
+    }
+
+    private static int compareUtf16BERaw(byte[] utf8Left, int leftOffset, int leftLength, byte[] utf8Right, int rightOffset, int rightLength)
+    {
         int offset = 0;
         while (offset < leftLength) {
             // if there are no more right code points, right is less
@@ -222,12 +314,12 @@ public final class SliceUtf8
                 return 1; // left.compare(right) > 0
             }
 
-            int leftCodePoint = tryGetCodePointAt(utf8Left, offset);
+            int leftCodePoint = tryGetCodePointAt(utf8Left, leftOffset, leftLength, offset);
             if (leftCodePoint < 0) {
                 throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Left at " + offset);
             }
 
-            int rightCodePoint = tryGetCodePointAt(utf8Right, offset);
+            int rightCodePoint = tryGetCodePointAt(utf8Right, rightOffset, rightLength, offset);
             if (rightCodePoint < 0) {
                 throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Right at " + offset);
             }
@@ -275,7 +367,7 @@ public final class SliceUtf8
 
     /**
      * Converts slice to upper case code point by code point.  This method does
-     * not perform perform locale-sensitive, context-sensitive, or one-to-many
+     * not perform locale-sensitive, context-sensitive, or one-to-many
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
      * <p>
@@ -283,12 +375,21 @@ public final class SliceUtf8
      */
     public static Slice toUpperCase(Slice utf8)
     {
-        return translateCodePoints(utf8, UPPER_CODE_POINTS);
+        return toUpperCase(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Converts byte array range to upper case code point by code point.
+     */
+    public static Slice toUpperCase(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return translateCodePoints(utf8, offset, length, UPPER_CODE_POINTS);
     }
 
     /**
      * Converts slice to lower case code point by code point.  This method does
-     * not perform perform locale-sensitive, context-sensitive, or one-to-many
+     * not perform locale-sensitive, context-sensitive, or one-to-many
      * mappings required for some languages.  Specifically, this will return
      * incorrect results for Lithuanian, Turkish, and Azeri.
      * <p>
@@ -296,24 +397,32 @@ public final class SliceUtf8
      */
     public static Slice toLowerCase(Slice utf8)
     {
-        return translateCodePoints(utf8, LOWER_CODE_POINTS);
+        return toLowerCase(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
     }
 
-    private static Slice translateCodePoints(Slice utf8, int[] codePointTranslationMap)
+    /**
+     * Converts byte array range to lower case code point by code point.
+     */
+    public static Slice toLowerCase(byte[] utf8, int offset, int length)
     {
-        int length = utf8.length();
-        Slice newUtf8 = Slices.allocate(length);
+        checkFromIndexSize(offset, length, utf8.length);
+        return translateCodePoints(utf8, offset, length, LOWER_CODE_POINTS);
+    }
+
+    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int[] codePointTranslationMap)
+    {
+        Slice newUtf8 = Slices.allocate(utf8Length);
 
         int position = 0;
         int upperPosition = 0;
-        while (position < length) {
-            int codePoint = tryGetCodePointAt(utf8, position);
+        while (position < utf8Length) {
+            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position);
             if (codePoint >= 0) {
                 int upperCodePoint = codePointTranslationMap[codePoint];
 
                 // grow slice if necessary
                 int nextUpperPosition = upperPosition + lengthOfCodePoint(upperCodePoint);
-                if (nextUpperPosition > length) {
+                if (nextUpperPosition > utf8Length) {
                     newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
                 }
 
@@ -328,11 +437,11 @@ public final class SliceUtf8
 
                 // grow slice if necessary
                 int nextUpperPosition = upperPosition + skipLength;
-                if (nextUpperPosition > length) {
+                if (nextUpperPosition > utf8Length) {
                     newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
                 }
 
-                copyUtf8SequenceUnsafe(utf8, position, newUtf8, upperPosition, skipLength);
+                copyUtf8SequenceUnsafe(utf8, utf8Offset, position, newUtf8, upperPosition, skipLength);
                 position += skipLength;
                 upperPosition = nextUpperPosition;
             }
@@ -340,23 +449,23 @@ public final class SliceUtf8
         return newUtf8.slice(0, upperPosition);
     }
 
-    private static void copyUtf8SequenceUnsafe(Slice source, int sourcePosition, Slice destination, int destinationPosition, int length)
+    private static void copyUtf8SequenceUnsafe(byte[] source, int sourceOffset, int sourcePosition, Slice destination, int destinationPosition, int length)
     {
         switch (length) {
-            case 1 -> destination.setByteUnchecked(destinationPosition, source.getByteUnchecked(sourcePosition));
-            case 2 -> destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
+            case 1 -> destination.setByteUnchecked(destinationPosition, source[sourceOffset + sourcePosition]);
+            case 2 -> destination.setShortUnchecked(destinationPosition, (short) SHORT_HANDLE.get(source, sourceOffset + sourcePosition));
             case 3 -> {
-                destination.setShortUnchecked(destinationPosition, source.getShortUnchecked(sourcePosition));
-                destination.setByteUnchecked(destinationPosition + 2, source.getByteUnchecked(sourcePosition + 2));
+                destination.setShortUnchecked(destinationPosition, (short) SHORT_HANDLE.get(source, sourceOffset + sourcePosition));
+                destination.setByteUnchecked(destinationPosition + 2, source[sourceOffset + sourcePosition + 2]);
             }
-            case 4 -> destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
+            case 4 -> destination.setIntUnchecked(destinationPosition, (int) INT_HANDLE.get(source, sourceOffset + sourcePosition));
             case 5 -> {
-                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
-                destination.setByteUnchecked(destinationPosition + 4, source.getByteUnchecked(sourcePosition + 4));
+                destination.setIntUnchecked(destinationPosition, (int) INT_HANDLE.get(source, sourceOffset + sourcePosition));
+                destination.setByteUnchecked(destinationPosition + 4, source[sourceOffset + sourcePosition + 4]);
             }
             case 6 -> {
-                destination.setIntUnchecked(destinationPosition, source.getIntUnchecked(sourcePosition));
-                destination.setShortUnchecked(destinationPosition + 4, source.getShortUnchecked(sourcePosition + 4));
+                destination.setIntUnchecked(destinationPosition, (int) INT_HANDLE.get(source, sourceOffset + sourcePosition));
+                destination.setShortUnchecked(destinationPosition + 4, (short) SHORT_HANDLE.get(source, sourceOffset + sourcePosition + 4));
             }
             default -> throw new IllegalStateException("Invalid code point length " + length);
         }
@@ -369,10 +478,17 @@ public final class SliceUtf8
      */
     public static Slice leftTrim(Slice utf8)
     {
-        int length = utf8.length();
+        return leftTrim(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
 
-        int position = firstNonWhitespacePosition(utf8);
-        return utf8.slice(position, length - position);
+    /**
+     * Removes all white space characters from the left side of a byte array range.
+     */
+    public static Slice leftTrim(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        int position = firstNonWhitespacePosition(utf8, offset, length);
+        return Slices.wrappedBuffer(utf8, offset + position, length - position);
     }
 
     /**
@@ -382,19 +498,24 @@ public final class SliceUtf8
      */
     public static Slice leftTrim(Slice utf8, int[] whiteSpaceCodePoints)
     {
-        int length = utf8.length();
-
-        int position = firstNonMatchPosition(utf8, whiteSpaceCodePoints);
-        return utf8.slice(position, length - position);
+        return leftTrim(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), whiteSpaceCodePoints);
     }
 
-    private static int firstNonWhitespacePosition(Slice utf8)
+    /**
+     * Removes all {@code whiteSpaceCodePoints} from the left side of a byte array range.
+     */
+    public static Slice leftTrim(byte[] utf8, int offset, int length, int[] whiteSpaceCodePoints)
     {
-        int length = utf8.length();
+        checkFromIndexSize(offset, length, utf8.length);
+        int position = firstNonMatchPosition(utf8, offset, length, whiteSpaceCodePoints);
+        return Slices.wrappedBuffer(utf8, offset + position, length - position);
+    }
 
+    private static int firstNonWhitespacePosition(byte[] utf8, int utf8Offset, int utf8Length)
+    {
         int position = 0;
-        while (position < length) {
-            int codePoint = tryGetCodePointAt(utf8, position);
+        while (position < utf8Length) {
+            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position);
             if (codePoint < 0) {
                 break;
             }
@@ -406,14 +527,12 @@ public final class SliceUtf8
         return position;
     }
 
-    // This function is an exact duplicate of firstNonWhitespacePosition(Slice) except for one line.
-    private static int firstNonMatchPosition(Slice utf8, int[] codePointsToMatch)
+    // This function mirrors firstNonWhitespacePosition but uses a caller-provided match set.
+    private static int firstNonMatchPosition(byte[] utf8, int utf8Offset, int utf8Length, int[] codePointsToMatch)
     {
-        int length = utf8.length();
-
         int position = 0;
-        while (position < length) {
-            int codePoint = tryGetCodePointAt(utf8, position);
+        while (position < utf8Length) {
+            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position);
             if (codePoint < 0) {
                 break;
             }
@@ -442,8 +561,17 @@ public final class SliceUtf8
      */
     public static Slice rightTrim(Slice utf8)
     {
-        int position = lastNonWhitespacePosition(utf8, 0);
-        return utf8.slice(0, position);
+        return rightTrim(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Removes all white space characters from the right side of a byte array range.
+     */
+    public static Slice rightTrim(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        int position = lastNonWhitespacePosition(utf8, offset, length, 0);
+        return Slices.wrappedBuffer(utf8, offset, position);
     }
 
     /**
@@ -453,32 +581,41 @@ public final class SliceUtf8
      */
     public static Slice rightTrim(Slice utf8, int[] whiteSpaceCodePoints)
     {
-        int position = lastNonMatchPosition(utf8, 0, whiteSpaceCodePoints);
-        return utf8.slice(0, position);
+        return rightTrim(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), whiteSpaceCodePoints);
     }
 
-    private static int lastNonWhitespacePosition(Slice utf8, int minPosition)
+    /**
+     * Removes all {@code whiteSpaceCodePoints} from the right side of a byte array range.
+     */
+    public static Slice rightTrim(byte[] utf8, int offset, int length, int[] whiteSpaceCodePoints)
     {
-        int position = utf8.length();
+        checkFromIndexSize(offset, length, utf8.length);
+        int position = lastNonMatchPosition(utf8, offset, length, 0, whiteSpaceCodePoints);
+        return Slices.wrappedBuffer(utf8, offset, position);
+    }
+
+    private static int lastNonWhitespacePosition(byte[] utf8, int utf8Offset, int utf8Length, int minPosition)
+    {
+        int position = utf8Length;
         while (minPosition < position) {
             // decode the code point before position if possible
             int codePoint;
             int codePointLength;
-            byte unsignedByte = utf8.getByte(position - 1);
+            byte unsignedByte = utf8[utf8Offset + position - 1];
             if (!isContinuationByte(unsignedByte)) {
                 codePoint = unsignedByte & 0xFF;
                 codePointLength = 1;
             }
-            else if (minPosition <= position - 2 && !isContinuationByte(utf8.getByte(position - 2))) {
-                codePoint = tryGetCodePointAt(utf8, position - 2);
+            else if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
+                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 2);
                 codePointLength = 2;
             }
-            else if (minPosition <= position - 3 && !isContinuationByte(utf8.getByte(position - 3))) {
-                codePoint = tryGetCodePointAt(utf8, position - 3);
+            else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
+                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 3);
                 codePointLength = 3;
             }
-            else if (minPosition <= position - 4 && !isContinuationByte(utf8.getByte(position - 4))) {
-                codePoint = tryGetCodePointAt(utf8, position - 4);
+            else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
+                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 4);
                 codePointLength = 4;
             }
             else {
@@ -495,29 +632,29 @@ public final class SliceUtf8
         return position;
     }
 
-    // This function is an exact duplicate of lastNonWhitespacePosition(Slice, int) except for one line.
-    private static int lastNonMatchPosition(Slice utf8, int minPosition, int[] codePointsToMatch)
+    // This function mirrors lastNonWhitespacePosition but uses a caller-provided match set.
+    private static int lastNonMatchPosition(byte[] utf8, int utf8Offset, int utf8Length, int minPosition, int[] codePointsToMatch)
     {
-        int position = utf8.length();
+        int position = utf8Length;
         while (position > minPosition) {
             // decode the code point before position if possible
             int codePoint;
             int codePointLength;
-            byte unsignedByte = utf8.getByte(position - 1);
+            byte unsignedByte = utf8[utf8Offset + position - 1];
             if (!isContinuationByte(unsignedByte)) {
                 codePoint = unsignedByte & 0xFF;
                 codePointLength = 1;
             }
-            else if (minPosition <= position - 2 && !isContinuationByte(utf8.getByte(position - 2))) {
-                codePoint = tryGetCodePointAt(utf8, position - 2);
+            else if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
+                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 2);
                 codePointLength = 2;
             }
-            else if (minPosition <= position - 3 && !isContinuationByte(utf8.getByte(position - 3))) {
-                codePoint = tryGetCodePointAt(utf8, position - 3);
+            else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
+                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 3);
                 codePointLength = 3;
             }
-            else if (minPosition <= position - 4 && !isContinuationByte(utf8.getByte(position - 4))) {
-                codePoint = tryGetCodePointAt(utf8, position - 4);
+            else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
+                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 4);
                 codePointLength = 4;
             }
             else {
@@ -541,9 +678,18 @@ public final class SliceUtf8
      */
     public static Slice trim(Slice utf8)
     {
-        int start = firstNonWhitespacePosition(utf8);
-        int end = lastNonWhitespacePosition(utf8, start);
-        return utf8.slice(start, end - start);
+        return trim(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Removes all white space characters from the left and right side of a byte array range.
+     */
+    public static Slice trim(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        int start = firstNonWhitespacePosition(utf8, offset, length);
+        int end = lastNonWhitespacePosition(utf8, offset, length, start);
+        return Slices.wrappedBuffer(utf8, offset + start, end - start);
     }
 
     /**
@@ -553,9 +699,18 @@ public final class SliceUtf8
      */
     public static Slice trim(Slice utf8, int[] whiteSpaceCodePoints)
     {
-        int start = firstNonMatchPosition(utf8, whiteSpaceCodePoints);
-        int end = lastNonMatchPosition(utf8, start, whiteSpaceCodePoints);
-        return utf8.slice(start, end - start);
+        return trim(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), whiteSpaceCodePoints);
+    }
+
+    /**
+     * Removes all {@code whiteSpaceCodePoints} from the left and right side of a byte array range.
+     */
+    public static Slice trim(byte[] utf8, int offset, int length, int[] whiteSpaceCodePoints)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        int start = firstNonMatchPosition(utf8, offset, length, whiteSpaceCodePoints);
+        int end = lastNonMatchPosition(utf8, offset, length, start, whiteSpaceCodePoints);
+        return Slices.wrappedBuffer(utf8, offset + start, end - start);
     }
 
     public static Slice fixInvalidUtf8(Slice slice)
@@ -563,10 +718,29 @@ public final class SliceUtf8
         return fixInvalidUtf8(slice, OptionalInt.of(REPLACEMENT_CODE_POINT));
     }
 
+    public static Slice fixInvalidUtf8(byte[] utf8, int offset, int length)
+    {
+        return fixInvalidUtf8(utf8, offset, length, OptionalInt.of(REPLACEMENT_CODE_POINT));
+    }
+
     public static Slice fixInvalidUtf8(Slice slice, OptionalInt replacementCodePoint)
     {
         if (isAscii(slice)) {
             return slice;
+        }
+        return fixInvalidUtf8(slice.byteArray(), slice.byteArrayOffset(), slice.length(), replacementCodePoint);
+    }
+
+    public static Slice fixInvalidUtf8(byte[] utf8, int offset, int length, OptionalInt replacementCodePoint)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return fixInvalidUtf8Raw(utf8, offset, length, replacementCodePoint);
+    }
+
+    private static Slice fixInvalidUtf8Raw(byte[] utf8, int utf8Offset, int utf8Length, OptionalInt replacementCodePoint)
+    {
+        if (isAsciiRaw(utf8, utf8Offset, utf8Length)) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
         }
 
         int replacementCodePointValue = -1;
@@ -576,13 +750,12 @@ public final class SliceUtf8
             replacementCodePointLength = lengthOfCodePoint(replacementCodePointValue);
         }
 
-        int length = slice.length();
-        Slice utf8 = Slices.allocate(length);
+        Slice output = Slices.allocate(utf8Length);
 
         int dataPosition = 0;
         int utf8Position = 0;
-        while (dataPosition < length) {
-            int codePoint = tryGetCodePointAt(slice, dataPosition);
+        while (dataPosition < utf8Length) {
+            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, dataPosition);
             int codePointLength;
             if (codePoint >= 0) {
                 codePointLength = lengthOfCodePoint(codePoint);
@@ -597,10 +770,10 @@ public final class SliceUtf8
                 codePoint = replacementCodePointValue;
                 codePointLength = replacementCodePointLength;
             }
-            utf8 = Slices.ensureSize(utf8, utf8Position + codePointLength);
-            utf8Position += setCodePointAt(codePoint, utf8, utf8Position);
+            output = Slices.ensureSize(output, utf8Position + codePointLength);
+            utf8Position += setCodePointAt(codePoint, output, utf8Position);
         }
-        return utf8.slice(0, utf8Position);
+        return output.slice(0, utf8Position);
     }
 
     /**
@@ -614,9 +787,26 @@ public final class SliceUtf8
      */
     public static int tryGetCodePointAt(Slice utf8, int position)
     {
+        return tryGetCodePointAt(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position);
+    }
+
+    /**
+     * Tries to get the UTF-8 encoded code point at {@code position} in the byte array range.
+     *
+     * @return the code point or negative the number of bytes in the invalid UTF-8 sequence.
+     */
+    public static int tryGetCodePointAt(byte[] utf8, int offset, int length, int position)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        checkIndex(position, length);
+        return tryGetCodePointAtRaw(utf8, offset, length, position);
+    }
+
+    private static int tryGetCodePointAtRaw(byte[] utf8, int utf8Offset, int utf8Length, int position)
+    {
         //
         // Process first byte
-        byte firstByte = utf8.getByte(position);
+        byte firstByte = utf8[utf8Offset + position];
 
         int length = lengthOfCodePointFromStartByteSafe(firstByte);
         if (length < 0) {
@@ -631,11 +821,11 @@ public final class SliceUtf8
 
         //
         // Process second byte
-        if (position + 1 >= utf8.length()) {
+        if (position + 1 >= utf8Length) {
             return -1;
         }
 
-        byte secondByte = utf8.getByteUnchecked(position + 1);
+        byte secondByte = utf8[utf8Offset + position + 1];
         if (!isContinuationByte(secondByte)) {
             return -1;
         }
@@ -650,11 +840,11 @@ public final class SliceUtf8
 
         //
         // Process third byte
-        if (position + 2 >= utf8.length()) {
+        if (position + 2 >= utf8Length) {
             return -2;
         }
 
-        byte thirdByte = utf8.getByteUnchecked(position + 2);
+        byte thirdByte = utf8[utf8Offset + position + 2];
         if (!isContinuationByte(thirdByte)) {
             return -2;
         }
@@ -675,11 +865,11 @@ public final class SliceUtf8
 
         //
         // Process forth byte
-        if (position + 3 >= utf8.length()) {
+        if (position + 3 >= utf8Length) {
             return -3;
         }
 
-        byte forthByte = utf8.getByteUnchecked(position + 3);
+        byte forthByte = utf8[utf8Offset + position + 3];
         if (!isContinuationByte(forthByte)) {
             return -3;
         }
@@ -699,11 +889,11 @@ public final class SliceUtf8
 
         //
         // Process fifth byte
-        if (position + 4 >= utf8.length()) {
+        if (position + 4 >= utf8Length) {
             return -4;
         }
 
-        byte fifthByte = utf8.getByteUnchecked(position + 4);
+        byte fifthByte = utf8[utf8Offset + position + 4];
         if (!isContinuationByte(fifthByte)) {
             return -4;
         }
@@ -715,11 +905,11 @@ public final class SliceUtf8
 
         //
         // Process sixth byte
-        if (position + 5 >= utf8.length()) {
+        if (position + 5 >= utf8Length) {
             return -5;
         }
 
-        byte sixthByte = utf8.getByteUnchecked(position + 5);
+        byte sixthByte = utf8[utf8Offset + position + 5];
         if (!isContinuationByte(sixthByte)) {
             return -5;
         }
@@ -733,7 +923,7 @@ public final class SliceUtf8
         return -1;
     }
 
-    static int lengthOfCodePointFromStartByteSafe(byte startByte)
+    private static int lengthOfCodePointFromStartByteSafe(byte startByte)
     {
         int unsignedStartByte = startByte & 0xFF;
         if (unsignedStartByte < 0b1000_0000) {
@@ -778,7 +968,17 @@ public final class SliceUtf8
      */
     public static int offsetOfCodePoint(Slice utf8, int codePointCount)
     {
-        return offsetOfCodePoint(utf8, 0, codePointCount);
+        return offsetOfCodePoint(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), 0, codePointCount);
+    }
+
+    /**
+     * Finds the index of the first byte of the code point at a position within
+     * a UTF-8 byte array range, or {@code -1} if the position is not within the range.
+     */
+    public static int offsetOfCodePoint(byte[] utf8, int offset, int length, int codePointCount)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return offsetOfCodePointRaw(utf8, offset, length, 0, codePointCount);
     }
 
     /**
@@ -793,11 +993,27 @@ public final class SliceUtf8
      */
     public static int offsetOfCodePoint(Slice utf8, int position, int codePointCount)
     {
+        return offsetOfCodePoint(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position, codePointCount);
+    }
+
+    /**
+     * Starting from {@code position} bytes in a UTF-8 byte array range, finds the
+     * index of the first byte of the code point {@code codePointCount} in the range.
+     * Returned position is relative to the provided range.
+     */
+    public static int offsetOfCodePoint(byte[] utf8, int offset, int length, int position, int codePointCount)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return offsetOfCodePointRaw(utf8, offset, length, position, codePointCount);
+    }
+
+    private static int offsetOfCodePointRaw(byte[] utf8, int utf8Offset, int utf8Length, int position, int codePointCount)
+    {
         // allow position to be at the end of the slice
-        checkIndex(position, utf8.length() + 1);
+        checkIndex(position, utf8Length + 1);
 
         // Quick exit if we are sure that the position is after the end
-        if (utf8.length() - position <= codePointCount) {
+        if (utf8Length - position <= codePointCount) {
             return -1;
         }
         if (codePointCount == 0) {
@@ -806,29 +1022,29 @@ public final class SliceUtf8
 
         int correctIndex = codePointCount + position;
         // Length rounded to 8 bytes
-        int length8 = (utf8.length() & 0x7FFF_FFF8) - 8;
+        int length8 = (utf8Length & 0x7FFF_FFF8) - 8;
         // process 8 bytes at a time
         // at most this can find 8 code points (if they are all US_ASCII), so this
         // is only called if there are at least 8 more code points needed
         while (position < length8 && correctIndex >= position + 8) {
             // Count bytes which are NOT the start of a code point
-            correctIndex += countContinuationBytes(utf8.getLongUnchecked(position));
+            correctIndex += countContinuationBytes((long) LONG_HANDLE.get(utf8, utf8Offset + position));
 
             position += 8;
         }
         // Length rounded to 4 bytes
-        int length4 = (utf8.length() & 0x7FFF_FFFC) - 4;
-        // While we have enough bytes left and we need at least 4 characters process 4 bytes at once
+        int length4 = (utf8Length & 0x7FFF_FFFC) - 4;
+        // While we have enough bytes left, and we need at least 4 characters process 4 bytes at once
         while (position < length4 && correctIndex >= position + 4) {
             // Count bytes which are NOT the start of a code point
-            correctIndex += countContinuationBytes(utf8.getIntUnchecked(position));
+            correctIndex += countContinuationBytes((int) INT_HANDLE.get(utf8, utf8Offset + position));
 
             position += 4;
         }
         // Do the rest one by one, always check the last byte to find the end of the code point
-        while (position < utf8.length()) {
+        while (position < utf8Length) {
             // Count bytes which are NOT the start of a code point
-            correctIndex += countContinuationBytes(utf8.getByteUnchecked(position));
+            correctIndex += countContinuationBytes(utf8[utf8Offset + position]);
             if (position == correctIndex) {
                 break;
             }
@@ -836,7 +1052,7 @@ public final class SliceUtf8
             position++;
         }
 
-        if (position == correctIndex && correctIndex < utf8.length()) {
+        if (position == correctIndex && correctIndex < utf8Length) {
             return correctIndex;
         }
         return -1;
@@ -850,7 +1066,23 @@ public final class SliceUtf8
      */
     public static int lengthOfCodePoint(Slice utf8, int position)
     {
-        return lengthOfCodePointFromStartByte(utf8.getByte(position));
+        return lengthOfCodePoint(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position);
+    }
+
+    /**
+     * Gets the UTF-8 sequence length of the code point at {@code position}
+     * within a UTF-8 byte array range.
+     */
+    public static int lengthOfCodePoint(byte[] utf8, int offset, int length, int position)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        checkIndex(position, length);
+        return lengthOfCodePointRaw(utf8, offset, length, position);
+    }
+
+    private static int lengthOfCodePointRaw(byte[] utf8, int utf8Offset, int utf8Length, int position)
+    {
+        return lengthOfCodePointFromStartByte(utf8[utf8Offset + position]);
     }
 
     /**
@@ -861,28 +1093,44 @@ public final class SliceUtf8
      */
     public static int lengthOfCodePointSafe(Slice utf8, int position)
     {
-        int length = lengthOfCodePointFromStartByteSafe(utf8.getByte(position));
+        return lengthOfCodePointSafe(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position);
+    }
+
+    /**
+     * Gets the UTF-8 sequence length of the code point at {@code position}
+     * within a UTF-8 byte array range. Invalid encodings are handled safely.
+     */
+    public static int lengthOfCodePointSafe(byte[] utf8, int offset, int length, int position)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        checkIndex(position, length);
+        return lengthOfCodePointSafeRaw(utf8, offset, length, position);
+    }
+
+    private static int lengthOfCodePointSafeRaw(byte[] utf8, int utf8Offset, int utf8Length, int position)
+    {
+        int length = lengthOfCodePointFromStartByteSafe(utf8[utf8Offset + position]);
         if (length < 0) {
             return -length;
         }
 
-        if (length == 1 || position + 1 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 1))) {
+        if (length == 1 || position + 1 >= utf8Length || !isContinuationByte(utf8[utf8Offset + position + 1])) {
             return 1;
         }
 
-        if (length == 2 || position + 2 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 2))) {
+        if (length == 2 || position + 2 >= utf8Length || !isContinuationByte(utf8[utf8Offset + position + 2])) {
             return 2;
         }
 
-        if (length == 3 || position + 3 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 3))) {
+        if (length == 3 || position + 3 >= utf8Length || !isContinuationByte(utf8[utf8Offset + position + 3])) {
             return 3;
         }
 
-        if (length == 4 || position + 4 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 4))) {
+        if (length == 4 || position + 4 >= utf8Length || !isContinuationByte(utf8[utf8Offset + position + 4])) {
             return 4;
         }
 
-        if (length == 5 || position + 5 >= utf8.length() || !isContinuationByte(utf8.getByteUnchecked(position + 5))) {
+        if (length == 5 || position + 5 >= utf8Length || !isContinuationByte(utf8[utf8Offset + position + 5])) {
             return 5;
         }
 
@@ -964,7 +1212,22 @@ public final class SliceUtf8
      */
     public static int getCodePointAt(Slice utf8, int position)
     {
-        int unsignedStartByte = utf8.getByte(position) & 0xFF;
+        return getCodePointAt(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position);
+    }
+
+    /**
+     * Gets the UTF-8 encoded code point at {@code position} within a UTF-8 byte array range.
+     */
+    public static int getCodePointAt(byte[] utf8, int offset, int length, int position)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        checkIndex(position, length);
+        return getCodePointAtRaw(utf8, offset, length, position);
+    }
+
+    private static int getCodePointAtRaw(byte[] utf8, int utf8Offset, int utf8Length, int position)
+    {
+        int unsignedStartByte = utf8[utf8Offset + position] & 0xFF;
         if (unsignedStartByte < 0x80) {
             // normal ASCII
             // 0xxx_xxxx
@@ -977,30 +1240,30 @@ public final class SliceUtf8
         }
         if (unsignedStartByte < 0xe0) {
             // 110x_xxxx 10xx_xxxx
-            if (position + 1 >= utf8.length()) {
+            if (position + 1 >= utf8Length) {
                 throw new InvalidUtf8Exception("UTF-8 sequence truncated");
             }
             return ((unsignedStartByte & 0b0001_1111) << 6) |
-                    (utf8.getByte(position + 1) & 0b0011_1111);
+                    (utf8[utf8Offset + position + 1] & 0b0011_1111);
         }
         if (unsignedStartByte < 0xf0) {
             // 1110_xxxx 10xx_xxxx 10xx_xxxx
-            if (position + 2 >= utf8.length()) {
+            if (position + 2 >= utf8Length) {
                 throw new InvalidUtf8Exception("UTF-8 sequence truncated");
             }
             return ((unsignedStartByte & 0b0000_1111) << 12) |
-                    ((utf8.getByteUnchecked(position + 1) & 0b0011_1111) << 6) |
-                    (utf8.getByteUnchecked(position + 2) & 0b0011_1111);
+                    ((utf8[utf8Offset + position + 1] & 0b0011_1111) << 6) |
+                    (utf8[utf8Offset + position + 2] & 0b0011_1111);
         }
         if (unsignedStartByte < 0xf8) {
             // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
-            if (position + 3 >= utf8.length()) {
+            if (position + 3 >= utf8Length) {
                 throw new InvalidUtf8Exception("UTF-8 sequence truncated");
             }
             return ((unsignedStartByte & 0b0000_0111) << 18) |
-                    ((utf8.getByteUnchecked(position + 1) & 0b0011_1111) << 12) |
-                    ((utf8.getByteUnchecked(position + 2) & 0b0011_1111) << 6) |
-                    (utf8.getByteUnchecked(position + 3) & 0b0011_1111);
+                    ((utf8[utf8Offset + position + 1] & 0b0011_1111) << 12) |
+                    ((utf8[utf8Offset + position + 2] & 0b0011_1111) << 6) |
+                    (utf8[utf8Offset + position + 3] & 0b0011_1111);
         }
         // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
         throw new InvalidUtf8Exception("Illegal start 0x" + toHexString(unsignedStartByte).toUpperCase() + " of code point");
@@ -1014,18 +1277,42 @@ public final class SliceUtf8
      */
     public static int getCodePointBefore(Slice utf8, int position)
     {
-        byte unsignedByte = utf8.getByte(position - 1);
+        return getCodePointBefore(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position);
+    }
+
+    /**
+     * Gets the UTF-8 encoded code point before {@code position} within a UTF-8 byte array range.
+     */
+    public static int getCodePointBefore(byte[] utf8, int offset, int length, int position)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        checkFromIndexSize(position - 1, 1, length);
+        return getCodePointBeforeRaw(utf8, offset, length, position);
+    }
+
+    private static int getCodePointBeforeRaw(byte[] utf8, int utf8Offset, int utf8Length, int position)
+    {
+        byte unsignedByte = utf8[utf8Offset + position - 1];
         if (!isContinuationByte(unsignedByte)) {
             return unsignedByte & 0xFF;
         }
-        if (!isContinuationByte(utf8.getByte(position - 2))) {
-            return getCodePointAt(utf8, position - 2);
+        if (position < 2) {
+            throw new InvalidUtf8Exception("UTF-8 is not well formed");
         }
-        if (!isContinuationByte(utf8.getByte(position - 3))) {
-            return getCodePointAt(utf8, position - 3);
+        if (!isContinuationByte(utf8[utf8Offset + position - 2])) {
+            return getCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
         }
-        if (!isContinuationByte(utf8.getByte(position - 4))) {
-            return getCodePointAt(utf8, position - 4);
+        if (position < 3) {
+            throw new InvalidUtf8Exception("UTF-8 is not well formed");
+        }
+        if (!isContinuationByte(utf8[utf8Offset + position - 3])) {
+            return getCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
+        }
+        if (position < 4) {
+            throw new InvalidUtf8Exception("UTF-8 is not well formed");
+        }
+        if (!isContinuationByte(utf8[utf8Offset + position - 4])) {
+            return getCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
         }
 
         // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
@@ -1057,20 +1344,38 @@ public final class SliceUtf8
      */
     public static int setCodePointAt(int codePoint, Slice utf8, int position)
     {
+        return setCodePointAt(codePoint, utf8.byteArray(), utf8.byteArrayOffset(), utf8.length(), position);
+    }
+
+    /**
+     * Sets the UTF-8 sequence for code point at {@code position} within a UTF-8 byte array range.
+     *
+     * @throws InvalidCodePointException if code point is not within a valid range
+     */
+    public static int setCodePointAt(int codePoint, byte[] utf8, int offset, int length, int position)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        checkIndex(position, length);
+        int codePointLength = lengthOfCodePoint(codePoint);
+        checkFromIndexSize(position, codePointLength, length);
+        return setCodePointAtUnchecked(codePoint, utf8, offset + position);
+    }
+
+    private static int setCodePointAtUnchecked(int codePoint, byte[] utf8, int position)
+    {
         if (codePoint < 0) {
             throw new InvalidCodePointException(codePoint);
         }
         if (codePoint < 0x80) {
             // normal ASCII
             // 0xxx_xxxx
-            utf8.setByte(position, codePoint);
+            utf8[position] = (byte) codePoint;
             return 1;
         }
         if (codePoint < 0x800) {
             // 110x_xxxx 10xx_xxxx
-            checkFromIndexSize(position, 1, utf8.length());
-            utf8.setByteUnchecked(position, 0b1100_0000 | (codePoint >>> 6));
-            utf8.setByteUnchecked(position + 1, 0b1000_0000 | (codePoint & 0b0011_1111));
+            utf8[position] = (byte) (0b1100_0000 | (codePoint >>> 6));
+            utf8[position + 1] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
             return 2;
         }
         if (MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE) {
@@ -1078,19 +1383,17 @@ public final class SliceUtf8
         }
         if (codePoint < 0x1_0000) {
             // 1110_xxxx 10xx_xxxx 10xx_xxxx
-            checkFromIndexSize(position, 2, utf8.length());
-            utf8.setByteUnchecked(position, 0b1110_0000 | ((codePoint >>> 12) & 0b0000_1111));
-            utf8.setByteUnchecked(position + 1, 0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
-            utf8.setByteUnchecked(position + 2, 0b1000_0000 | (codePoint & 0b0011_1111));
+            utf8[position] = (byte) (0b1110_0000 | ((codePoint >>> 12) & 0b0000_1111));
+            utf8[position + 1] = (byte) (0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+            utf8[position + 2] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
             return 3;
         }
         if (codePoint < 0x11_0000) {
-            checkFromIndexSize(position, 3, utf8.length());
             // 1111_0xxx 10xx_xxxx 10xx_xxxx 10xx_xxxx
-            utf8.setByteUnchecked(position, 0b1111_0000 | ((codePoint >>> 18) & 0b0000_0111));
-            utf8.setByteUnchecked(position + 1, 0b1000_0000 | ((codePoint >>> 12) & 0b0011_1111));
-            utf8.setByteUnchecked(position + 2, 0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
-            utf8.setByteUnchecked(position + 3, 0b1000_0000 | (codePoint & 0b0011_1111));
+            utf8[position] = (byte) (0b1111_0000 | ((codePoint >>> 18) & 0b0000_0111));
+            utf8[position + 1] = (byte) (0b1000_0000 | ((codePoint >>> 12) & 0b0011_1111));
+            utf8[position + 2] = (byte) (0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+            utf8[position + 3] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
             return 4;
         }
         // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
