@@ -817,24 +817,28 @@ public final class SliceUtf8
     {
         int position = utf8Length;
         while (minPosition < position) {
+            int value = utf8[utf8Offset + position - 1] & 0xFF;
+            if (value < 0x80) {
+                if (!WHITESPACE_CODE_POINTS[value]) {
+                    break;
+                }
+                position--;
+                continue;
+            }
+
             // decode the code point before position if possible
             int codePoint;
             int codePointLength;
-            byte unsignedByte = utf8[utf8Offset + position - 1];
-            if (!isContinuationByte(unsignedByte)) {
-                codePoint = unsignedByte & 0xFF;
-                codePointLength = 1;
-            }
-            else if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
-                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 2);
+            if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
                 codePointLength = 2;
             }
             else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
-                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 3);
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
                 codePointLength = 3;
             }
             else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
-                codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position - 4);
+                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
                 codePointLength = 4;
             }
             else {
