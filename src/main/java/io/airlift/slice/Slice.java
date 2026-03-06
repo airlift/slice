@@ -1150,7 +1150,7 @@ public final class Slice
             }
 
             // Try fast match of head and the rest
-            if (value == head && equalsUnchecked(index, pattern, 0, pattern.length())) {
+            if (value == head && equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
                 return index;
             }
 
@@ -1182,7 +1182,7 @@ public final class Slice
                 break;
             }
 
-            if (equalsUnchecked(index, pattern, 0, pattern.length())) {
+            if (equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
                 return index;
             }
 
@@ -1248,7 +1248,7 @@ public final class Slice
             return false;
         }
 
-        return equalsUnchecked(0, that, 0, length());
+        return equalsUnchecked(0, that.byteArray(), that.byteArrayOffset(), length());
     }
 
     /**
@@ -1293,18 +1293,30 @@ public final class Slice
         checkFromIndexSize(offset, length, length());
         checkFromIndexSize(otherOffset, otherLength, that.length());
 
+        return equalsUnchecked(offset, that.byteArray(), that.byteArrayOffset() + otherOffset, length);
+    }
+
+    public boolean equals(int offset, int length, byte[] that, int otherOffset, int otherLength)
+    {
+        if (length != otherLength) {
+            return false;
+        }
+
+        checkFromIndexSize(offset, length, length());
+        checkFromIndexSize(otherOffset, otherLength, that.length);
+
         return equalsUnchecked(offset, that, otherOffset, length);
     }
 
-    boolean equalsUnchecked(int offset, Slice that, int otherOffset, int length)
+    boolean equalsUnchecked(int offset, byte[] that, int otherOffset, int length)
     {
         return Arrays.equals(
                 base,
                 baseOffset + offset,
                 baseOffset + offset + length,
-                that.base,
-                that.baseOffset + otherOffset,
-                that.baseOffset + otherOffset + length);
+                that,
+                otherOffset,
+                otherOffset + length);
     }
 
     /**

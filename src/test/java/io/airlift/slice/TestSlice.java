@@ -163,6 +163,7 @@ public class TestSlice
         assertThat(slice.compareTo(0, size, other, 0, size)).isEqualTo(0);
         for (int i = 0; i < slice.length(); i++) {
             assertThat(slice.equals(i, size - i, other, i, size - i)).isTrue();
+            assertThat(slice.equals(i, size - i, other.byteArray(), other.byteArrayOffset() + i, size - i)).isTrue();
             assertThat(slice.hashCode(i, size - i)).isEqualTo(other.hashCode(i, size - i));
             assertThat(slice.compareTo(i, size - i, other, i, size - i)).isEqualTo(0);
         }
