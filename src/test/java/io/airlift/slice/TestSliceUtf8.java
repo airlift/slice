@@ -25,6 +25,7 @@ import java.util.Random;
 import java.util.stream.IntStream;
 
 import static com.google.common.primitives.Bytes.concat;
+import static io.airlift.slice.SliceUtf8.codePointByteLengths;
 import static io.airlift.slice.SliceUtf8.codePointToUtf8;
 import static io.airlift.slice.SliceUtf8.compareUtf16BE;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
@@ -266,6 +267,7 @@ public class TestSliceUtf8
         assertThat(wrappedBuffer(byteArrayTarget, 0, arrayWritten)).isEqualTo(sliceTarget.slice(0, sliceWritten));
 
         assertThat(toCodePoints(padded, offset, length)).isEqualTo(toCodePoints(view));
+        assertThat(codePointByteLengths(padded, offset, length)).isEqualTo(codePointByteLengths(view));
         assertThat(fromCodePoints(toCodePoints(view))).isEqualTo(view);
     }
 
@@ -335,6 +337,30 @@ public class TestSliceUtf8
         assertThatThrownBy(() -> toCodePoints(wrappedBuffer(INVALID_UTF8_2)))
                 .isInstanceOf(InvalidUtf8Exception.class)
                 .hasMessageContaining("Invalid UTF-8 sequence at position");
+    }
+
+    @Test
+    public void testCodePointByteLengths()
+    {
+        assertCodePointByteLengths(STRING_EMPTY);
+        assertCodePointByteLengths(STRING_HELLO);
+        assertCodePointByteLengths(STRING_OESTERREICH);
+        assertCodePointByteLengths(STRING_DULIOE_DULIOE);
+        assertCodePointByteLengths(STRING_FAITH_HOPE_LOVE);
+        assertCodePointByteLengths(STRING_OO);
+        assertCodePointByteLengths(STRING_ASCII_CODE_POINTS);
+        assertCodePointByteLengths(STRING_ALL_CODE_POINTS_RANDOM);
+    }
+
+    private static void assertCodePointByteLengths(String value)
+    {
+        Slice utf8 = utf8Slice(value);
+        int[] codePoints = value.codePoints().toArray();
+        byte[] expectedLengths = new byte[codePoints.length];
+        for (int index = 0; index < codePoints.length; index++) {
+            expectedLengths[index] = (byte) lengthOfCodePoint(codePoints[index]);
+        }
+        assertThat(codePointByteLengths(utf8)).isEqualTo(expectedLengths);
     }
 
     @Test
