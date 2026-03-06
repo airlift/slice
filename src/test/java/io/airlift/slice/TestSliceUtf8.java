@@ -29,6 +29,7 @@ import static io.airlift.slice.SliceUtf8.codePointToUtf8;
 import static io.airlift.slice.SliceUtf8.compareUtf16BE;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
+import static io.airlift.slice.SliceUtf8.fromCodePoints;
 import static io.airlift.slice.SliceUtf8.getCodePointAt;
 import static io.airlift.slice.SliceUtf8.getCodePointBefore;
 import static io.airlift.slice.SliceUtf8.isAscii;
@@ -265,6 +266,7 @@ public class TestSliceUtf8
         assertThat(wrappedBuffer(byteArrayTarget, 0, arrayWritten)).isEqualTo(sliceTarget.slice(0, sliceWritten));
 
         assertThat(toCodePoints(padded, offset, length)).isEqualTo(toCodePoints(view));
+        assertThat(fromCodePoints(toCodePoints(view))).isEqualTo(view);
     }
 
     @Test
@@ -288,11 +290,62 @@ public class TestSliceUtf8
     }
 
     @Test
+    public void testFromCodePoints()
+    {
+        assertFromCodePoints(STRING_EMPTY);
+        assertFromCodePoints(STRING_HELLO);
+        assertFromCodePoints(STRING_OESTERREICH);
+        assertFromCodePoints(STRING_DULIOE_DULIOE);
+        assertFromCodePoints(STRING_FAITH_HOPE_LOVE);
+        assertFromCodePoints(STRING_OO);
+        assertFromCodePoints(STRING_ASCII_CODE_POINTS);
+        assertFromCodePoints(STRING_ALL_CODE_POINTS_RANDOM);
+    }
+
+    @Test
+    public void testFromCodePointsEncodesUtf8ByteWidths()
+    {
+        int[] codePoints = new int[] {
+                0x0024,   // $
+                0x00A2,   // ¢
+                0x20AC,   // €
+                0x10348,  // 𐍈
+        };
+
+        byte[] expectedUtf8 = new byte[] {
+                0x24,
+                (byte) 0xC2, (byte) 0xA2,
+                (byte) 0xE2, (byte) 0x82, (byte) 0xAC,
+                (byte) 0xF0, (byte) 0x90, (byte) 0x8D, (byte) 0x88,
+        };
+
+        assertThat(fromCodePoints(codePoints)).isEqualTo(wrappedBuffer(expectedUtf8));
+    }
+
+    private static void assertFromCodePoints(String value)
+    {
+        Slice utf8 = utf8Slice(value);
+        int[] codePoints = value.codePoints().toArray();
+        assertThat(fromCodePoints(codePoints)).isEqualTo(utf8);
+    }
+
+    @Test
     public void testToCodePointsInvalidUtf8()
     {
         assertThatThrownBy(() -> toCodePoints(wrappedBuffer(INVALID_UTF8_2)))
                 .isInstanceOf(InvalidUtf8Exception.class)
                 .hasMessageContaining("Invalid UTF-8 sequence at position");
+    }
+
+    @Test
+    public void testFromCodePointsInvalid()
+    {
+        assertThatThrownBy(() -> fromCodePoints(new int[] {-1}))
+                .isInstanceOf(InvalidCodePointException.class);
+        assertThatThrownBy(() -> fromCodePoints(new int[] {MIN_SURROGATE}))
+                .isInstanceOf(InvalidCodePointException.class);
+        assertThatThrownBy(() -> fromCodePoints(new int[] {MAX_CODE_POINT + 1}))
+                .isInstanceOf(InvalidCodePointException.class);
     }
 
     private static void assertCodePointCount(String string)

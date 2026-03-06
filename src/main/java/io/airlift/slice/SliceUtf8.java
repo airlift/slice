@@ -1671,6 +1671,82 @@ public final class SliceUtf8
         return Arrays.copyOf(codePoints, codePointCount);
     }
 
+    /**
+     * Encodes Unicode code points into UTF-8.
+     *
+     * @throws InvalidCodePointException if any code point is invalid
+     */
+    public static Slice fromCodePoints(int[] codePoints)
+    {
+        return fromCodePoints(codePoints, 0, codePoints.length);
+    }
+
+    /**
+     * Encodes a range of Unicode code points into UTF-8.
+     *
+     * @throws InvalidCodePointException if any code point is invalid
+     */
+    public static Slice fromCodePoints(int[] codePoints, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, codePoints.length);
+        if (length == 0) {
+            return Slices.EMPTY_SLICE;
+        }
+        return fromCodePointsRaw(codePoints, offset, length);
+    }
+
+    private static Slice fromCodePointsRaw(int[] codePoints, int codePointsOffset, int codePointsLength)
+    {
+        int utf8Length = 0;
+        boolean ascii = true;
+        for (int index = 0; index < codePointsLength; index++) {
+            int codePoint = codePoints[codePointsOffset + index];
+            int codePointLength = lengthOfCodePoint(codePoint);
+            if (codePointLength == 3 && MIN_SURROGATE <= codePoint && codePoint <= MAX_SURROGATE) {
+                throw new InvalidCodePointException(codePoint);
+            }
+            utf8Length += codePointLength;
+            ascii = ascii && (codePointLength == 1);
+        }
+
+        byte[] utf8 = new byte[utf8Length];
+        if (ascii) {
+            for (int index = 0; index < codePointsLength; index++) {
+                utf8[index] = (byte) codePoints[codePointsOffset + index];
+            }
+            return Slices.wrappedBuffer(utf8);
+        }
+
+        int position = 0;
+        for (int index = 0; index < codePointsLength; index++) {
+            int codePoint = codePoints[codePointsOffset + index];
+            if (codePoint < 0x80) {
+                utf8[position] = (byte) codePoint;
+                position++;
+            }
+            else if (codePoint < 0x800) {
+                utf8[position] = (byte) (0b1100_0000 | (codePoint >>> 6));
+                utf8[position + 1] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
+                position += 2;
+            }
+            else if (codePoint < 0x1_0000) {
+                utf8[position] = (byte) (0b1110_0000 | ((codePoint >>> 12) & 0b0000_1111));
+                utf8[position + 1] = (byte) (0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+                utf8[position + 2] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
+                position += 3;
+            }
+            else {
+                utf8[position] = (byte) (0b1111_0000 | ((codePoint >>> 18) & 0b0000_0111));
+                utf8[position + 1] = (byte) (0b1000_0000 | ((codePoint >>> 12) & 0b0011_1111));
+                utf8[position + 2] = (byte) (0b1000_0000 | ((codePoint >>> 6) & 0b0011_1111));
+                utf8[position + 3] = (byte) (0b1000_0000 | (codePoint & 0b0011_1111));
+                position += 4;
+            }
+        }
+
+        return Slices.wrappedBuffer(utf8);
+    }
+
     private static boolean isContinuationByte(byte b)
     {
         return (b & 0b1100_0000) == 0b1000_0000;

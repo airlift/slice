@@ -37,6 +37,7 @@ import static io.airlift.slice.SliceUtf8.codePointToUtf8;
 import static io.airlift.slice.SliceUtf8.compareUtf16BE;
 import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
+import static io.airlift.slice.SliceUtf8.fromCodePoints;
 import static io.airlift.slice.SliceUtf8.getCodePointAt;
 import static io.airlift.slice.SliceUtf8.leftTrim;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePoint;
@@ -248,6 +249,37 @@ public class SliceUtf8Benchmark
             checksum ^= codePoint;
         }
         return checksum;
+    }
+
+    @Benchmark
+    public Slice benchmarkFromCodePointsApi(CodePointWriteData data)
+    {
+        Slice result = fromCodePoints(data.getCodePoints());
+        if (result.length() != data.getExpectedBytes()) {
+            throw new AssertionError();
+        }
+        return result;
+    }
+
+    @Benchmark
+    public Slice benchmarkTrinoCodePointsToSliceUtf8Baseline(CodePointWriteData data)
+    {
+        int[] codePoints = data.getCodePoints();
+
+        int bufferLength = 0;
+        for (int codePoint : codePoints) {
+            bufferLength += lengthOfCodePoint(codePoint);
+        }
+
+        Slice result = Slices.wrappedBuffer(new byte[bufferLength]);
+        int offset = 0;
+        for (int codePoint : codePoints) {
+            offset += setCodePointAt(codePoint, result, offset);
+        }
+        if (offset != bufferLength) {
+            throw new AssertionError();
+        }
+        return result;
     }
 
     @Benchmark
