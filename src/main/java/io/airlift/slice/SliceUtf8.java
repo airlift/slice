@@ -962,28 +962,40 @@ public final class SliceUtf8
             replacementCodePointLength = lengthOfCodePoint(replacementCodePointValue);
         }
 
-        Slice output = Slices.allocate(utf8Length);
-
         int dataPosition = 0;
         int utf8Position = 0;
+        Slice output = null;
         while (dataPosition < utf8Length) {
-            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, dataPosition);
-            int codePointLength;
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, dataPosition);
             if (codePoint >= 0) {
-                codePointLength = lengthOfCodePoint(codePoint);
+                int codePointLength = lengthOfCodePoint(codePoint);
+                if (output != null) {
+                    int nextUtf8Position = utf8Position + codePointLength;
+                    output = Slices.ensureSize(output, nextUtf8Position);
+                    copyUtf8SequenceUnsafe(utf8, utf8Offset, dataPosition, output, utf8Position, codePointLength);
+                    utf8Position = nextUtf8Position;
+                }
                 dataPosition += codePointLength;
             }
             else {
+                if (output == null) {
+                    output = Slices.allocate(utf8Length);
+                    output.setBytes(0, utf8, utf8Offset, dataPosition);
+                    utf8Position = dataPosition;
+                }
+
                 // negative number carries the number of invalid bytes
                 dataPosition += (-codePoint);
                 if (replacementCodePointValue < 0) {
                     continue;
                 }
-                codePoint = replacementCodePointValue;
-                codePointLength = replacementCodePointLength;
+                output = Slices.ensureSize(output, utf8Position + replacementCodePointLength);
+                utf8Position += setCodePointAt(replacementCodePointValue, output, utf8Position);
             }
-            output = Slices.ensureSize(output, utf8Position + codePointLength);
-            utf8Position += setCodePointAt(codePoint, output, utf8Position);
+        }
+
+        if (output == null) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
         }
         return output.slice(0, utf8Position);
     }
