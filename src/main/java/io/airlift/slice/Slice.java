@@ -200,7 +200,6 @@ public final class Slice
 
     public void clear(int offset, int length)
     {
-        checkFromIndexSize(offset, length, size);
         Arrays.fill(base, baseOffset + offset, baseOffset + offset + length, (byte) 0);
     }
 
@@ -1299,10 +1298,6 @@ public final class Slice
         if ((this == that) && (offset == otherOffset) && (length == otherLength)) {
             return 0;
         }
-
-        checkFromIndexSize(offset, length, length());
-        checkFromIndexSize(otherOffset, otherLength, that.length());
-
         return Arrays.compareUnsigned(
                 base,
                 baseOffset + offset,
@@ -1371,10 +1366,6 @@ public final class Slice
         if ((this == that) && (offset == otherOffset)) {
             return true;
         }
-
-        checkFromIndexSize(offset, length, length());
-        checkFromIndexSize(otherOffset, otherLength, that.length());
-
         return equalsUnchecked(offset, that.byteArray(), that.byteArrayOffset() + otherOffset, length);
     }
 
@@ -1383,10 +1374,6 @@ public final class Slice
         if (length != otherLength) {
             return false;
         }
-
-        checkFromIndexSize(offset, length, length());
-        checkFromIndexSize(otherOffset, otherLength, that.length);
-
         return equalsUnchecked(offset, that, otherOffset, length);
     }
 
