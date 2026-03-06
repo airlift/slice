@@ -845,6 +845,21 @@ public class TestSlice
         assertThat(data.indexOfBruteForce(pattern, offset)).isEqualTo(expected);
     }
 
+    private static void assertLastIndexOf(Slice data, Slice pattern, int expected)
+    {
+        assertLastIndexOf(data, pattern, data.length(), expected);
+    }
+
+    private static void assertLastIndexOf(Slice data, Slice pattern, int offset, int expected)
+    {
+        assertThat(data.lastIndexOf(pattern, offset))
+                .describedAs("Slice '%s'.lastIndexOf('%s', %d)".formatted(data.toStringUtf8(), pattern.toStringUtf8(), offset))
+                .isEqualTo(expected);
+        assertThat(data.toStringUtf8().lastIndexOf(pattern.toStringUtf8(), offset))
+                .describedAs("String '%s'.lastIndexOf('%s', %d)".formatted(data.toStringUtf8(), pattern.toStringUtf8(), offset))
+                .isEqualTo(expected);
+    }
+
     public static void assertIndexOf(Slice data, Slice pattern)
     {
         int index;
@@ -870,6 +885,49 @@ public class TestSlice
         }
 
         assertThat(bruteForce).isEqualTo(indexOf);
+    }
+
+    @Test
+    public void testLastIndexOf()
+    {
+        // no match
+        assertLastIndexOf(utf8Slice("no-match-bigger"), utf8Slice("test"), -1);
+        assertLastIndexOf(utf8Slice("no"), utf8Slice("test"), -1);
+
+        // exact match
+        assertLastIndexOf(utf8Slice("test"), utf8Slice("test"), 0);
+
+        // match at start
+        assertLastIndexOf(utf8Slice("test-start"), utf8Slice("test"), 0);
+
+        // match at end
+        assertLastIndexOf(utf8Slice("end-test"), utf8Slice("test"), 4);
+
+        // match in middle
+        assertLastIndexOf(utf8Slice("a-test-middle"), utf8Slice("test"), 2);
+
+        // multiple matches - should return last
+        assertLastIndexOf(utf8Slice("this-test-is-a-test"), utf8Slice("test"), 15);
+
+        // empty pattern
+        assertLastIndexOf(utf8Slice("test"), EMPTY_SLICE, 4);
+
+        // empty data
+        assertLastIndexOf(EMPTY_SLICE, EMPTY_SLICE, 0);
+        assertLastIndexOf(EMPTY_SLICE, utf8Slice("test"), -1);
+
+        // pattern larger than data
+        assertLastIndexOf(utf8Slice("ab"), utf8Slice("abc"), -1);
+
+        // with offset
+        assertLastIndexOf(utf8Slice("this-test-is-a-test"), utf8Slice("test"), 14, 5);
+        assertLastIndexOf(utf8Slice("this-test-is-a-test"), utf8Slice("test"), 5, 5);
+        assertLastIndexOf(utf8Slice("this-test-is-a-test"), utf8Slice("test"), 4, -1);
+        assertLastIndexOf(utf8Slice("test"), utf8Slice("no"), -1, -1);
+
+        // empty pattern with offset
+        assertLastIndexOf(utf8Slice("test"), EMPTY_SLICE, 2, 2);
+        assertLastIndexOf(utf8Slice("test"), EMPTY_SLICE, 10, 4);
     }
 
     @Test
