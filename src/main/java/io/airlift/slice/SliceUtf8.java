@@ -722,13 +722,20 @@ public final class SliceUtf8
     {
         int position = 0;
         while (position < utf8Length) {
-            int codePoint = tryGetCodePointAt(utf8, utf8Offset, utf8Length, position);
-            if (codePoint < 0) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value < 0x80) {
+                if (!WHITESPACE_CODE_POINTS[value]) {
+                    break;
+                }
+                position++;
+                continue;
+            }
+
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+            if (codePoint < 0 || !WHITESPACE_CODE_POINTS[codePoint]) {
                 break;
             }
-            if (!WHITESPACE_CODE_POINTS[codePoint]) {
-                break;
-            }
+
             position += lengthOfCodePoint(codePoint);
         }
         return position;
