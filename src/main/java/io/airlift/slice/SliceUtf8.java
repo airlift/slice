@@ -308,18 +308,81 @@ public final class SliceUtf8
     private static int compareUtf16BERaw(byte[] utf8Left, int leftOffset, int leftLength, byte[] utf8Right, int rightOffset, int rightLength)
     {
         int offset = 0;
+        int equalPrefixLength = Math.min(leftLength, rightLength);
+        int ascii64Limit = equalPrefixLength - Long.BYTES;
+        int ascii32Limit = equalPrefixLength - Integer.BYTES;
+
         while (offset < leftLength) {
+            while (offset <= ascii64Limit) {
+                long leftLong = (long) LONG_HANDLE.get(utf8Left, leftOffset + offset);
+                long rightLong = (long) LONG_HANDLE.get(utf8Right, rightOffset + offset);
+                if ((((leftLong | rightLong) & TOP_MASK64) != 0) || leftLong != rightLong) {
+                    break;
+                }
+                offset += Long.BYTES;
+            }
+
+            while (offset <= ascii32Limit) {
+                int leftInt = (int) INT_HANDLE.get(utf8Left, leftOffset + offset);
+                int rightInt = (int) INT_HANDLE.get(utf8Right, rightOffset + offset);
+                if ((((leftInt | rightInt) & TOP_MASK32) != 0) || leftInt != rightInt) {
+                    break;
+                }
+                offset += Integer.BYTES;
+            }
+
+            // chunk skipping can consume the full left range
+            if (offset >= leftLength) {
+                break;
+            }
+
             // if there are no more right code points, right is less
             if (offset >= rightLength) {
                 return 1; // left.compare(right) > 0
             }
 
-            int leftCodePoint = tryGetCodePointAt(utf8Left, leftOffset, leftLength, offset);
+            int leftByte = utf8Left[leftOffset + offset] & 0xFF;
+            int rightByte = utf8Right[rightOffset + offset] & 0xFF;
+            if ((leftByte | rightByte) < 0x80) {
+                if (leftByte != rightByte) {
+                    return Integer.compare(leftByte, rightByte);
+                }
+                offset++;
+                continue;
+            }
+
+            if (leftByte == rightByte) {
+                int leftCodePoint = tryGetCodePointAtRaw(utf8Left, leftOffset, leftLength, offset);
+                if (leftCodePoint < 0) {
+                    throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Left at " + offset);
+                }
+
+                int leftCodePointLength = lengthOfCodePoint(leftCodePoint);
+                if (offset + leftCodePointLength <= rightLength && utf8SequencesEqual(utf8Left, leftOffset + offset, utf8Right, rightOffset + offset, leftCodePointLength)) {
+                    offset += leftCodePointLength;
+                    continue;
+                }
+
+                int rightCodePoint = tryGetCodePointAtRaw(utf8Right, rightOffset, rightLength, offset);
+                if (rightCodePoint < 0) {
+                    throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Right at " + offset);
+                }
+
+                int result = compareUtf16BE(leftCodePoint, rightCodePoint);
+                if (result != 0) {
+                    return result;
+                }
+
+                offset += leftCodePointLength;
+                continue;
+            }
+
+            int leftCodePoint = tryGetCodePointAtRaw(utf8Left, leftOffset, leftLength, offset);
             if (leftCodePoint < 0) {
                 throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Left at " + offset);
             }
 
-            int rightCodePoint = tryGetCodePointAt(utf8Right, rightOffset, rightLength, offset);
+            int rightCodePoint = tryGetCodePointAtRaw(utf8Right, rightOffset, rightLength, offset);
             if (rightCodePoint < 0) {
                 throw new InvalidUtf8Exception("Invalid UTF-8 sequence in utf8Right at " + offset);
             }
@@ -341,6 +404,26 @@ public final class SliceUtf8
         }
 
         return 0;
+    }
+
+    private static boolean utf8SequencesEqual(byte[] left, int leftStart, byte[] right, int rightStart, int length)
+    {
+        switch (length) {
+            case 1 -> {
+                return left[leftStart] == right[rightStart];
+            }
+            case 2 -> {
+                return (short) SHORT_HANDLE.get(left, leftStart) == (short) SHORT_HANDLE.get(right, rightStart);
+            }
+            case 3 -> {
+                return (short) SHORT_HANDLE.get(left, leftStart) == (short) SHORT_HANDLE.get(right, rightStart) &&
+                        left[leftStart + 2] == right[rightStart + 2];
+            }
+            case 4 -> {
+                return (int) INT_HANDLE.get(left, leftStart) == (int) INT_HANDLE.get(right, rightStart);
+            }
+            default -> throw new IllegalArgumentException("Invalid UTF-8 sequence length: " + length);
+        }
     }
 
     static int compareUtf16BE(int leftCodePoint, int rightCodePoint)
