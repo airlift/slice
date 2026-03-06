@@ -14,6 +14,7 @@
 package io.airlift.slice;
 
 import java.lang.invoke.VarHandle;
+import java.util.Arrays;
 import java.util.OptionalInt;
 
 import static io.airlift.slice.Preconditions.checkArgument;
@@ -1598,6 +1599,76 @@ public final class SliceUtf8
 
         // Per RFC3629, UTF-8 is limited to 4 bytes, so more bytes are illegal
         throw new InvalidUtf8Exception("UTF-8 is not well formed");
+    }
+
+    /**
+     * Decodes a UTF-8 slice into Unicode code points.
+     *
+     * @throws InvalidUtf8Exception if the input contains invalid UTF-8
+     */
+    public static int[] toCodePoints(Slice utf8)
+    {
+        return toCodePoints(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Decodes a UTF-8 byte array range into Unicode code points.
+     *
+     * @throws InvalidUtf8Exception if the input contains invalid UTF-8
+     */
+    public static int[] toCodePoints(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return toCodePointsRaw(utf8, offset, length);
+    }
+
+    private static int[] toCodePointsRaw(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        if (utf8Length == 0) {
+            return new int[0];
+        }
+
+        if (isAsciiRaw(utf8, utf8Offset, utf8Length)) {
+            int[] codePoints = new int[utf8Length];
+            for (int index = 0; index < utf8Length; index++) {
+                codePoints[index] = utf8[utf8Offset + index] & 0x7F;
+            }
+            return codePoints;
+        }
+
+        int[] codePoints = new int[Math.max(8, utf8Length >>> 1)];
+        int codePointCount = 0;
+        int position = 0;
+        while (position < utf8Length) {
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+            if (codePoint < 0) {
+                throw new InvalidUtf8Exception("Invalid UTF-8 sequence at position " + position);
+            }
+
+            if (codePointCount == codePoints.length) {
+                codePoints = Arrays.copyOf(codePoints, codePoints.length * 2);
+            }
+            codePoints[codePointCount] = codePoint;
+            codePointCount++;
+
+            if (codePoint < 0x80) {
+                position++;
+            }
+            else if (codePoint < 0x800) {
+                position += 2;
+            }
+            else if (codePoint < 0x1_0000) {
+                position += 3;
+            }
+            else {
+                position += 4;
+            }
+        }
+
+        if (codePointCount == codePoints.length) {
+            return codePoints;
+        }
+        return Arrays.copyOf(codePoints, codePointCount);
     }
 
     private static boolean isContinuationByte(byte b)
