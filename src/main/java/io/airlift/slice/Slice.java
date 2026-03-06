@@ -35,6 +35,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static java.lang.Long.numberOfTrailingZeros;
 import static java.lang.invoke.MethodHandles.byteArrayViewVarHandle;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -1096,9 +1097,22 @@ public final class Slice
 
     public int indexOfByte(byte b)
     {
-        for (int i = 0; i < size; i++) {
-            if (getByteUnchecked(i) == b) {
-                return i;
+        int offset = 0;
+        long pattern = (b & 0xFFL) * 0x01010101_01010101L;
+
+        int length8 = size & ~7;
+        for (; offset < length8; offset += 8) {
+            long value = getLongUnchecked(offset);
+            long xor = value ^ pattern;
+            long hasZero = (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
+            if (hasZero != 0) {
+                return offset + (numberOfTrailingZeros(hasZero) >>> 3);
+            }
+        }
+
+        for (; offset < size; offset++) {
+            if (getByteUnchecked(offset) == b) {
+                return offset;
             }
         }
         return -1;

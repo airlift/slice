@@ -875,7 +875,7 @@ public class TestSlice
     @Test
     public void testIndexOfByte()
     {
-        Slice slice = utf8Slice("apple");
+        Slice slice = utf8Slice("appleappleappleappleappleappleappleappleappleappleappleappleappleappleapple!");
 
         assertThat(slice.indexOfByte((byte) 'a')).isEqualTo(0);
         assertThat(slice.indexOfByte((byte) 'p')).isEqualTo(1);
@@ -886,6 +886,7 @@ public class TestSlice
         assertThat(slice.indexOfByte('p')).isEqualTo(1);
         assertThat(slice.indexOfByte('e')).isEqualTo(4);
         assertThat(slice.indexOfByte('x')).isEqualTo(-1);
+        assertThat(slice.indexOfByte('!')).isEqualTo(slice.length() - 1);
 
         assertThatThrownBy(() -> slice.indexOfByte(-1)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> slice.indexOfByte(-123)).isInstanceOf(IllegalArgumentException.class);
