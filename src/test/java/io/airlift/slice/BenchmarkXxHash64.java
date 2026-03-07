@@ -49,7 +49,7 @@ public class BenchmarkXxHash64
         return XxHash64.hash(data.getValue());
     }
 
-    public static void main(String[] args)
+    static void main()
             throws RunnerException
     {
         Options options = new OptionsBuilder()

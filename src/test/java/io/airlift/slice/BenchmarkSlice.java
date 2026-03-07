@@ -83,7 +83,7 @@ public class BenchmarkSlice
         }
     }
 
-    public static void main(String[] args)
+    static void main()
             throws Throwable
     {
         // assure the benchmarks are valid before running
