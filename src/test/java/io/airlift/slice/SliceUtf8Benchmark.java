@@ -261,7 +261,7 @@ public class SliceUtf8Benchmark
         }
     }
 
-    public static void main(String[] args)
+    static void main()
             throws RunnerException
     {
         Options options = new OptionsBuilder()

@@ -78,7 +78,7 @@ public class BenchmarkMurmur3Hash32
         return Murmur3Hash32.hash(data.getSlice(), 0, 8);
     }
 
-    public static void main(String[] args)
+    static void main()
             throws RunnerException
     {
         Options options = new OptionsBuilder()

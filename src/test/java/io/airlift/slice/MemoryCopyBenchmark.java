@@ -112,7 +112,7 @@ public class MemoryCopyBenchmark
         public abstract void doCopy(Slice data, long src, long dest, int length);
     }
 
-    public static void main(String[] args)
+    static void main()
             throws RunnerException
     {
         Options options = new OptionsBuilder()

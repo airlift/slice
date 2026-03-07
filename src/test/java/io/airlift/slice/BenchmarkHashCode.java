@@ -42,7 +42,7 @@ public class BenchmarkHashCode
         return data.getSlice().hashCode(0, data.getSlice().length());
     }
 
-    public static void main(String[] args)
+    static void main()
             throws RunnerException
     {
         Options options = new OptionsBuilder()
