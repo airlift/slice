@@ -953,6 +953,64 @@ public class TestSlice
     }
 
     @Test
+    public void testLastIndexOfByte()
+    {
+        Slice slice = utf8Slice("appleappleappleappleappleappleappleappleappleappleappleappleappleappleapple!");
+
+        assertThat(slice.lastIndexOfByte((byte) 'a', slice.length() - 1)).isEqualTo(70);
+        assertThat(slice.lastIndexOfByte((byte) 'p', slice.length() - 1)).isEqualTo(72);
+        assertThat(slice.lastIndexOfByte((byte) 'e', slice.length() - 1)).isEqualTo(74);
+        assertThat(slice.lastIndexOfByte((byte) '!', slice.length() - 1)).isEqualTo(slice.length() - 1);
+        assertThat(slice.lastIndexOfByte((byte) 'x', slice.length() - 1)).isEqualTo(-1);
+
+        assertThat(slice.lastIndexOfByte((byte) 'a', 0)).isEqualTo(0);
+        assertThat(slice.lastIndexOfByte((byte) 'a', 4)).isEqualTo(0);
+        assertThat(slice.lastIndexOfByte((byte) 'a', 5)).isEqualTo(5);
+        assertThat(slice.lastIndexOfByte((byte) 'a', 10)).isEqualTo(10);
+
+        assertThat(slice.lastIndexOfByte((byte) 'e', 3)).isEqualTo(-1);
+        assertThat(slice.lastIndexOfByte((byte) 'e', 4)).isEqualTo(4);
+
+        assertThat(slice.lastIndexOfByte((byte) 'a', -1)).isEqualTo(-1);
+
+        Slice single = utf8Slice("x");
+        assertThat(single.lastIndexOfByte((byte) 'x', 0)).isEqualTo(0);
+        assertThat(single.lastIndexOfByte((byte) 'y', 0)).isEqualTo(-1);
+
+        assertThat(EMPTY_SLICE.lastIndexOfByte((byte) 'a', 0)).isEqualTo(-1);
+
+        Slice shortSlice = utf8Slice("abcdefg");
+        assertThat(shortSlice.lastIndexOfByte((byte) 'a', 6)).isEqualTo(0);
+        assertThat(shortSlice.lastIndexOfByte((byte) 'g', 6)).isEqualTo(6);
+        assertThat(shortSlice.lastIndexOfByte((byte) 'd', 6)).isEqualTo(3);
+
+        Slice eightBytes = utf8Slice("abcdefgh");
+        assertThat(eightBytes.lastIndexOfByte((byte) 'a', 7)).isEqualTo(0);
+        assertThat(eightBytes.lastIndexOfByte((byte) 'h', 7)).isEqualTo(7);
+        assertThat(eightBytes.lastIndexOfByte((byte) 'd', 7)).isEqualTo(3);
+        assertThat(eightBytes.lastIndexOfByte((byte) 'a', 3)).isEqualTo(0);
+
+        Slice nineBytes = utf8Slice("abcdefghi");
+        assertThat(nineBytes.lastIndexOfByte((byte) 'a', 8)).isEqualTo(0);
+        assertThat(nineBytes.lastIndexOfByte((byte) 'i', 8)).isEqualTo(8);
+        assertThat(nineBytes.lastIndexOfByte((byte) 'b', 8)).isEqualTo(1);
+
+        Slice sixteenBytes = utf8Slice("abcdefghijklmnop");
+        assertThat(sixteenBytes.lastIndexOfByte((byte) 'a', 15)).isEqualTo(0);
+        assertThat(sixteenBytes.lastIndexOfByte((byte) 'p', 15)).isEqualTo(15);
+        assertThat(sixteenBytes.lastIndexOfByte((byte) 'i', 15)).isEqualTo(8);
+        assertThat(sixteenBytes.lastIndexOfByte((byte) 'i', 7)).isEqualTo(-1);
+
+        Slice repeated = utf8Slice("aaaaaaaabbbbbbbbaaaaaaaa");
+        assertThat(repeated.lastIndexOfByte((byte) 'a', 22)).isEqualTo(22);
+        assertThat(repeated.lastIndexOfByte((byte) 'a', 15)).isEqualTo(7);
+        assertThat(repeated.lastIndexOfByte((byte) 'a', 10)).isEqualTo(7);
+        assertThat(repeated.lastIndexOfByte((byte) 'a', 8)).isEqualTo(7);
+        assertThat(repeated.lastIndexOfByte((byte) 'b', 15)).isEqualTo(15);
+        assertThat(repeated.lastIndexOfByte((byte) 'b', 7)).isEqualTo(-1);
+    }
+
+    @Test
     public void testToByteBuffer()
     {
         byte[] original = "hello world".getBytes(UTF_8);

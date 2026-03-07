@@ -35,6 +35,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOf;
+import static java.lang.Long.numberOfLeadingZeros;
 import static java.lang.Long.numberOfTrailingZeros;
 import static java.lang.invoke.MethodHandles.byteArrayViewVarHandle;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
@@ -1187,6 +1188,37 @@ public final class Slice
         return -1;
     }
 
+    public int lastIndexOfByte(byte b, int fromIndex)
+    {
+        if (size == 0) {
+            return -1;
+        }
+        long pattern = (b & 0xFFL) * 0x01010101_01010101L;
+        int offset = fromIndex;
+
+        for (; offset >= 7; offset -= 8) {
+            long value = getLongUnchecked(offset - 7);
+            long xor = value ^ pattern;
+            long hasZero = (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
+            while (hasZero != 0) {
+                int byteIndex = 7 - (numberOfLeadingZeros(hasZero) >>> 3);
+                int candidateIndex = (offset - 7) + byteIndex;
+                if (getByteUnchecked(candidateIndex) == b) {
+                    return candidateIndex;
+                }
+                hasZero &= ~(0x80L << (byteIndex * 8));
+            }
+        }
+
+        for (; offset >= 0; offset--) {
+            if (getByteUnchecked(offset) == b) {
+                return offset;
+            }
+        }
+
+        return -1;
+    }
+
     /**
      * Returns the index of the last occurrence of the pattern within this slice.
      * If the pattern is not found -1 is returned. If pattern is empty, the
@@ -1226,11 +1258,8 @@ public final class Slice
 
         byte firstByte = pattern.getByteUnchecked(0);
         while (index >= 0) {
-            // seek to first byte match
-            while (index > 0 && getByteUnchecked(index) != firstByte) {
-                index--;
-            }
-            if (getByteUnchecked(index) != firstByte) {
+            index = lastIndexOfByte(firstByte, index);
+            if (index < 0) {
                 break;
             }
 
