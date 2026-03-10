@@ -299,6 +299,56 @@ public final class SliceUtf8
         return translateCodePoints(utf8, LOWER_CODE_POINTS);
     }
 
+    public static Slice toTitleCase(Slice utf8)
+    {
+        int length = utf8.length();
+        Slice newUtf8 = Slices.allocate(length);
+
+        int position = 0;
+        int upperPosition = 0;
+        boolean upperNext = true;
+        while (position < length) {
+            int codePoint = tryGetCodePointAt(utf8, position);
+            if (codePoint >= 0) {
+                int upperCodePoint = LOWER_CODE_POINTS[codePoint];
+                if (upperNext) {
+                    upperCodePoint = UPPER_CODE_POINTS[codePoint];
+                    upperNext = false;
+                }
+
+                if (WHITESPACE_CODE_POINTS[codePoint]) {
+                    upperNext = true;
+                }
+
+                // grow slice if necessary
+                int nextUpperPosition = upperPosition + lengthOfCodePoint(upperCodePoint);
+                if (nextUpperPosition > length) {
+                    newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
+                }
+
+                // write new byte
+                setCodePointAt(upperCodePoint, newUtf8, upperPosition);
+
+                position += lengthOfCodePoint(codePoint);
+                upperPosition = nextUpperPosition;
+            }
+            else {
+                int skipLength = -codePoint;
+
+                // grow slice if necessary
+                int nextUpperPosition = upperPosition + skipLength;
+                if (nextUpperPosition > length) {
+                    newUtf8 = Slices.ensureSize(newUtf8, nextUpperPosition);
+                }
+
+                copyUtf8SequenceUnsafe(utf8, position, newUtf8, upperPosition, skipLength);
+                position += skipLength;
+                upperPosition = nextUpperPosition;
+            }
+        }
+        return newUtf8.slice(0, upperPosition);
+    }
+
     private static Slice translateCodePoints(Slice utf8, int[] codePointTranslationMap)
     {
         int length = utf8.length();
