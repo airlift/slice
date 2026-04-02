@@ -732,6 +732,20 @@ public class TestSliceUtf8
         assertThat(upper.toStringUtf8()).isEqualTo("YELLO");
     }
 
+    @Test
+    public void testCaseChangeNoOpWrapsInputRangeForNonAscii()
+    {
+        byte[] upperBytes = "Ö".getBytes(UTF_8);
+        Slice upper = toUpperCase(upperBytes, 0, upperBytes.length);
+        upperBytes[1] = (byte) 0x98;
+        assertThat(upper.toStringUtf8()).isEqualTo("Ø");
+
+        byte[] lowerBytes = "ö".getBytes(UTF_8);
+        Slice lower = toLowerCase(lowerBytes, 0, lowerBytes.length);
+        lowerBytes[1] = (byte) 0xB8;
+        assertThat(lower.toStringUtf8()).isEqualTo("ø");
+    }
+
     private static void assertCaseChangeWithInvalidSequence(byte[] invalidSequence)
     {
         assertThat(toLowerCase(wrappedBuffer(invalidSequence)))

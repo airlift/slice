@@ -538,6 +538,54 @@ public final class SliceUtf8
     private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[] codePointTranslationMap)
     {
         while (position < utf8Length) {
+            int asciiStart = position;
+            while (position < utf8Length) {
+                int value = utf8[utf8Offset + position] & 0xFF;
+                if (value >= 0x80 || codePointTranslationMap[value] != value) {
+                    break;
+                }
+                position++;
+            }
+
+            if (position > asciiStart) {
+                if (translatedUtf8 != null) {
+                    int nextTranslatedPosition = translatedPosition + (position - asciiStart);
+                    if (nextTranslatedPosition > utf8Length) {
+                        translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+                    }
+
+                    translatedUtf8.setBytes(translatedPosition, utf8, utf8Offset + asciiStart, position - asciiStart);
+                    translatedPosition = nextTranslatedPosition;
+                }
+                else if (position == utf8Length) {
+                    return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+                }
+            }
+
+            if (position == utf8Length) {
+                break;
+            }
+
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value < 0x80) {
+                if (translatedUtf8 == null) {
+                    translatedUtf8 = Slices.allocate(utf8Length);
+                    translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                    translatedPosition = position;
+                }
+
+                int translatedCodePoint = codePointTranslationMap[value];
+                int nextTranslatedPosition = translatedPosition + lengthOfCodePoint(translatedCodePoint);
+                if (nextTranslatedPosition > utf8Length) {
+                    translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
+                }
+
+                setCodePointAt(translatedCodePoint, translatedUtf8, translatedPosition);
+                position++;
+                translatedPosition = nextTranslatedPosition;
+                continue;
+            }
+
             int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
             if (codePoint >= 0) {
                 int translatedCodePoint = codePointTranslationMap[codePoint];
@@ -563,15 +611,12 @@ public final class SliceUtf8
                     translatedPosition = position;
                 }
 
-                // grow slice if necessary
                 int nextTranslatedPosition = translatedPosition + lengthOfCodePoint(translatedCodePoint);
                 if (nextTranslatedPosition > utf8Length) {
                     translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
                 }
 
-                // write translated code point
                 setCodePointAt(translatedCodePoint, translatedUtf8, translatedPosition);
-
                 position += codePointLength;
                 translatedPosition = nextTranslatedPosition;
             }
