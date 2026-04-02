@@ -491,7 +491,19 @@ public class SliceUtf8Benchmark
     }
 
     @Benchmark
+    public Slice benchmarkToLowerCaseTargeted(LowerCaseData data)
+    {
+        return toLowerCase(data.getUtf8(), data.getOffset(), data.getByteLength());
+    }
+
+    @Benchmark
     public Slice benchmarkToUpperCase(BenchmarkData data)
+    {
+        return toUpperCase(data.getUtf8(), data.getOffset(), data.getByteLength());
+    }
+
+    @Benchmark
+    public Slice benchmarkToUpperCaseTargeted(UpperCaseData data)
     {
         return toUpperCase(data.getUtf8(), data.getOffset(), data.getByteLength());
     }
@@ -658,6 +670,88 @@ public class SliceUtf8Benchmark
         public int getLength()
         {
             return length;
+        }
+    }
+
+    public abstract static class CaseChangeData
+    {
+        @Param({"64", "1024"})
+        private int repeatCount;
+
+        private byte[] utf8;
+        private int offset;
+        private int byteLength;
+
+        @Setup
+        public void setup()
+        {
+            byte[] input = createInput();
+            offset = 7;
+            utf8 = new byte[offset + input.length + 3];
+            System.arraycopy(input, 0, utf8, offset, input.length);
+            byteLength = input.length;
+        }
+
+        protected abstract byte[] createInput();
+
+        protected int getRepeatCount()
+        {
+            return repeatCount;
+        }
+
+        public byte[] getUtf8()
+        {
+            return utf8;
+        }
+
+        public int getOffset()
+        {
+            return offset;
+        }
+
+        public int getByteLength()
+        {
+            return byteLength;
+        }
+    }
+
+    @State(Thread)
+    public static class LowerCaseData
+            extends CaseChangeData
+    {
+        @Param({"ascii_change", "non_ascii_noop", "mixed_non_ascii_ascii_noop", "mixed_non_ascii_ascii_change"})
+        private String inputKind;
+
+        @Override
+        protected byte[] createInput()
+        {
+            return switch (inputKind) {
+                case "ascii_change" -> repeatUtf8("HELLO", getRepeatCount());
+                case "non_ascii_noop" -> repeatUtf8("ö", getRepeatCount());
+                case "mixed_non_ascii_ascii_noop" -> repeatUtf8("öhello", getRepeatCount());
+                case "mixed_non_ascii_ascii_change" -> repeatUtf8("éHELLO", getRepeatCount());
+                default -> throw new IllegalArgumentException("Unknown inputKind: " + inputKind);
+            };
+        }
+    }
+
+    @State(Thread)
+    public static class UpperCaseData
+            extends CaseChangeData
+    {
+        @Param({"ascii_change", "non_ascii_noop", "mixed_non_ascii_ascii_noop", "mixed_non_ascii_ascii_change"})
+        private String inputKind;
+
+        @Override
+        protected byte[] createInput()
+        {
+            return switch (inputKind) {
+                case "ascii_change" -> repeatUtf8("hello", getRepeatCount());
+                case "non_ascii_noop" -> repeatUtf8("Ö", getRepeatCount());
+                case "mixed_non_ascii_ascii_noop" -> repeatUtf8("ÖHELLO", getRepeatCount());
+                case "mixed_non_ascii_ascii_change" -> repeatUtf8("Éhello", getRepeatCount());
+                default -> throw new IllegalArgumentException("Unknown inputKind: " + inputKind);
+            };
         }
     }
 
@@ -1122,5 +1216,15 @@ public class SliceUtf8Benchmark
                 .build();
 
         new Runner(options).run();
+    }
+
+    private static byte[] repeatUtf8(String unit, int repeatCount)
+    {
+        byte[] encodedUnit = unit.getBytes(StandardCharsets.UTF_8);
+        DynamicSliceOutput output = new DynamicSliceOutput(encodedUnit.length * repeatCount);
+        for (int i = 0; i < repeatCount; i++) {
+            output.appendBytes(encodedUnit);
+        }
+        return output.slice().getBytes();
     }
 }
