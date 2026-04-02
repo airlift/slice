@@ -721,6 +721,17 @@ public class TestSliceUtf8
         INVALID_SEQUENCES.forEach(TestSliceUtf8::assertCaseChangeWithInvalidSequence);
     }
 
+    @Test
+    public void testToUpperCaseNoOpWrapsInputRange()
+    {
+        byte[] bytes = "HELLO".getBytes(UTF_8);
+
+        Slice upper = toUpperCase(bytes, 0, bytes.length);
+        bytes[0] = 'Y';
+
+        assertThat(upper.toStringUtf8()).isEqualTo("YELLO");
+    }
+
     private static void assertCaseChangeWithInvalidSequence(byte[] invalidSequence)
     {
         assertThat(toLowerCase(wrappedBuffer(invalidSequence)))

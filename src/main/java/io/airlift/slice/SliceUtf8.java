@@ -599,12 +599,34 @@ public final class SliceUtf8
 
     private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        Slice translated = Slices.allocate(utf8Length);
         int position = 0;
+
+        // Fast scan until the first ASCII byte that needs translation.
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, UPPER_CODE_POINTS);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, UPPER_CODE_POINTS);
+            }
+
+            if (value >= 'a' && value <= 'z') {
+                break;
+            }
+            position++;
+        }
+
+        // Nothing to translate in the entire input.
+        if (position == utf8Length) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+
+        Slice translated = Slices.allocate(utf8Length);
+        translated.setBytes(0, utf8, utf8Offset, position);
+
+        // Continue with a single tight loop once output exists.
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, UPPER_CODE_POINTS);
             }
 
             if (value >= 'a' && value <= 'z') {
@@ -615,6 +637,7 @@ public final class SliceUtf8
             }
             position++;
         }
+
         return translated;
     }
 
