@@ -888,6 +888,49 @@ public class TestSlice
         assertThat(data.indexOfBruteForce(pattern, offset)).isEqualTo(expected);
     }
 
+    @Test
+    public void testLastIndexOfWithAnchors()
+    {
+        // repetitive data with dense candidates
+        assertLastIndexOf(utf8Slice("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"), utf8Slice("aaab"), 28);
+        assertLastIndexOf(utf8Slice("abababababab"), utf8Slice("ababab"), 6);
+
+        // head and tail anchors match while the middle differs
+        assertLastIndexOf(utf8Slice("headXXXXtail-headYYYYtail"), utf8Slice("headXXXXtail"), 0);
+    }
+
+    @Test
+    public void testLastIndexOfRandom()
+    {
+        Random random = new Random(24);
+        for (int iteration = 0; iteration < 5000; iteration++) {
+            byte[] data = new byte[random.nextInt(80)];
+            for (int i = 0; i < data.length; i++) {
+                data[i] = (byte) ('a' + random.nextInt(3));
+            }
+
+            byte[] pattern = new byte[1 + random.nextInt(12)];
+            if (pattern.length <= data.length && random.nextBoolean()) {
+                // plant an existing substring so matches are common
+                System.arraycopy(data, random.nextInt(data.length - pattern.length + 1), pattern, 0, pattern.length);
+            }
+            else {
+                for (int i = 0; i < pattern.length; i++) {
+                    pattern[i] = (byte) ('a' + random.nextInt(3));
+                }
+            }
+
+            Slice dataSlice = Slices.wrappedBuffer(data);
+            Slice patternSlice = Slices.wrappedBuffer(pattern);
+            String dataString = new String(data, UTF_8);
+            String patternString = new String(pattern, UTF_8);
+
+            assertThat(dataSlice.lastIndexOf(patternSlice)).isEqualTo(dataString.lastIndexOf(patternString));
+            int fromIndex = random.nextInt(data.length + 1);
+            assertThat(dataSlice.lastIndexOf(patternSlice, fromIndex)).isEqualTo(dataString.lastIndexOf(patternString, fromIndex));
+        }
+    }
+
     private static void assertLastIndexOf(Slice data, Slice pattern, int expected)
     {
         assertLastIndexOf(data, pattern, data.length(), expected);

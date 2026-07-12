@@ -1328,13 +1328,39 @@ public final class Slice
         }
 
         byte firstByte = pattern.getByteUnchecked(0);
+        int patternLength = pattern.length();
+
+        if (patternLength >= SIZE_OF_INT) {
+            // Anchor candidates on the first and last four bytes of the pattern, mirroring
+            // indexOf: most false candidates fail an anchor, skipping the full comparison
+            int head = pattern.getIntUnchecked(0);
+            int tailOffset = patternLength - SIZE_OF_INT;
+            int tail = pattern.getIntUnchecked(tailOffset);
+            while (index >= 0) {
+                index = lastIndexOfByte(firstByte, index);
+                if (index < 0) {
+                    break;
+                }
+
+                if (getIntUnchecked(index) == head
+                        && getIntUnchecked(index + tailOffset) == tail
+                        && equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), patternLength)) {
+                    return index;
+                }
+
+                index--;
+            }
+
+            return -1;
+        }
+
         while (index >= 0) {
             index = lastIndexOfByte(firstByte, index);
             if (index < 0) {
                 break;
             }
 
-            if (equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
+            if (equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), patternLength)) {
                 return index;
             }
 
