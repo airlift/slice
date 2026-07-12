@@ -953,6 +953,37 @@ public class TestSlice
     }
 
     @Test
+    public void testIndexOfByteInRegion()
+    {
+        Slice slice = utf8Slice("appleappleappleappleappleappleappleappleappleappleappleappleappleappleapple!");
+
+        assertThat(slice.indexOfByte((byte) 'a', 0, slice.length())).isEqualTo(0);
+        assertThat(slice.indexOfByte((byte) 'a', 1, slice.length() - 1)).isEqualTo(5);
+        assertThat(slice.indexOfByte((byte) 'e', 5, 20)).isEqualTo(9);
+        assertThat(slice.indexOfByte((byte) '!', 0, slice.length())).isEqualTo(slice.length() - 1);
+
+        // byte exists in the slice, but not within the region
+        assertThat(slice.indexOfByte((byte) '!', 0, slice.length() - 1)).isEqualTo(-1);
+        assertThat(slice.indexOfByte((byte) 'a', 1, 4)).isEqualTo(-1);
+
+        // empty region
+        assertThat(slice.indexOfByte((byte) 'a', 0, 0)).isEqualTo(-1);
+        assertThat(slice.indexOfByte((byte) 'a', slice.length(), 0)).isEqualTo(-1);
+
+        // int overload
+        assertThat(slice.indexOfByte('a', 1, slice.length() - 1)).isEqualTo(5);
+        assertThat(slice.indexOfByte('x', 0, slice.length())).isEqualTo(-1);
+
+        assertThatThrownBy(() -> slice.indexOfByte(-1, 0, slice.length())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> slice.indexOfByte(256, 0, slice.length())).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> slice.indexOfByte((byte) 'a', -1, 4)).isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatThrownBy(() -> slice.indexOfByte((byte) 'a', 0, -1)).isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatThrownBy(() -> slice.indexOfByte((byte) 'a', 1, slice.length())).isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatThrownBy(() -> slice.indexOfByte((byte) 'a', slice.length() + 1, 0)).isInstanceOf(IndexOutOfBoundsException.class);
+    }
+
+    @Test
     public void testLastIndexOfByte()
     {
         Slice slice = utf8Slice("appleappleappleappleappleappleappleappleappleappleappleappleappleappleapple!");

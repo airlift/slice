@@ -1097,14 +1097,34 @@ public final class Slice
 
     public int indexOfByte(byte b)
     {
-        return indexOfByte(b, 0, size);
+        return indexOfByteUnchecked(b, 0, size);
     }
 
-    private int indexOfByte(byte b, int offset, int size)
+    /**
+     * Returns the index of the first occurrence of the byte within the specified
+     * region of this slice. If the byte is not found -1 is returned.
+     */
+    public int indexOfByte(int b, int offset, int length)
+    {
+        checkArgument((b >> Byte.SIZE) == 0, "byte value out of range");
+        return indexOfByte((byte) b, offset, length);
+    }
+
+    /**
+     * Returns the index of the first occurrence of the byte within the specified
+     * region of this slice. If the byte is not found -1 is returned.
+     */
+    public int indexOfByte(byte b, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, size);
+        return indexOfByteUnchecked(b, offset, offset + length);
+    }
+
+    private int indexOfByteUnchecked(byte b, int offset, int end)
     {
         long pattern = (b & 0xFFL) * 0x01010101_01010101L;
 
-        for (; offset < size - 7; offset += 8) {
+        for (; offset < end - 7; offset += 8) {
             long value = getLongUnchecked(offset);
             long xor = value ^ pattern;
             long hasZero = (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
@@ -1113,7 +1133,7 @@ public final class Slice
             }
         }
 
-        for (; offset < size; offset++) {
+        for (; offset < end; offset++) {
             if (getByteUnchecked(offset) == b) {
                 return offset;
             }
@@ -1287,7 +1307,7 @@ public final class Slice
         int lastValidIndex = size - pattern.length();
         int index = offset;
         while (index <= lastValidIndex) {
-            index = indexOfByte(firstByte, index, lastValidIndex + 1);
+            index = indexOfByteUnchecked(firstByte, index, lastValidIndex + 1);
             if (index < 0) {
                 break;
             }
