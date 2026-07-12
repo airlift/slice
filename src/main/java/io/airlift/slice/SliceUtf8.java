@@ -53,31 +53,74 @@ public final class SliceUtf8
     private static final long ASCII_GE_UPPER_A = 0x3F3F_3F3F_3F3F_3F3FL; // 0x80 - 'A'
     private static final long ASCII_GT_UPPER_Z = 0x2525_2525_2525_2525L; // 0x7F - 'Z'
 
-    private static final int[] LOWER_CODE_POINTS;
-    private static final int[] UPPER_CODE_POINTS;
-    private static final int[] TITLE_CODE_POINTS;
+    private static final int PAGE_SHIFT = 8;
+    private static final int PAGE_SIZE = 1 << PAGE_SHIFT;
+
+    // Case mappings are stored as per-code-point deltas in 256-entry pages indexed by the
+    // high bits of the code point. All pages without any mapping share the single zero
+    // page, keeping the tables small and cache friendly instead of a 4 MB flat array per
+    // mapping.
+    private static final int[][] LOWER_DELTA_PAGES;
+    private static final int[][] UPPER_DELTA_PAGES;
+    private static final int[][] TITLE_DELTA_PAGES;
     private static final boolean[] WHITESPACE_CODE_POINTS;
 
     static {
-        LOWER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
-        UPPER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
-        TITLE_CODE_POINTS = new int[MAX_CODE_POINT + 1];
+        int pageCount = (MAX_CODE_POINT + 1) >> PAGE_SHIFT;
+        LOWER_DELTA_PAGES = new int[pageCount][];
+        UPPER_DELTA_PAGES = new int[pageCount][];
+        TITLE_DELTA_PAGES = new int[pageCount][];
         WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
-        for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
-            int type = Character.getType(codePoint);
-            if (type != Character.SURROGATE) {
-                LOWER_CODE_POINTS[codePoint] = Character.toLowerCase(codePoint);
-                UPPER_CODE_POINTS[codePoint] = Character.toUpperCase(codePoint);
-                TITLE_CODE_POINTS[codePoint] = Character.toTitleCase(codePoint);
-                WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
+
+        int[] zeroDeltas = new int[PAGE_SIZE];
+
+        for (int page = 0; page < pageCount; page++) {
+            int[] lowerDeltas = zeroDeltas;
+            int[] upperDeltas = zeroDeltas;
+            int[] titleDeltas = zeroDeltas;
+
+            int pageStart = page << PAGE_SHIFT;
+            for (int index = 0; index < PAGE_SIZE; index++) {
+                int codePoint = pageStart + index;
+                int lowerCodePoint = REPLACEMENT_CODE_POINT;
+                int upperCodePoint = REPLACEMENT_CODE_POINT;
+                int titleCodePoint = REPLACEMENT_CODE_POINT;
+                if (Character.getType(codePoint) != Character.SURROGATE) {
+                    lowerCodePoint = Character.toLowerCase(codePoint);
+                    upperCodePoint = Character.toUpperCase(codePoint);
+                    titleCodePoint = Character.toTitleCase(codePoint);
+                    WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
+                }
+
+                if (lowerCodePoint != codePoint) {
+                    if (lowerDeltas == zeroDeltas) {
+                        lowerDeltas = new int[PAGE_SIZE];
+                    }
+                    lowerDeltas[index] = lowerCodePoint - codePoint;
+                }
+                if (upperCodePoint != codePoint) {
+                    if (upperDeltas == zeroDeltas) {
+                        upperDeltas = new int[PAGE_SIZE];
+                    }
+                    upperDeltas[index] = upperCodePoint - codePoint;
+                }
+                if (titleCodePoint != codePoint) {
+                    if (titleDeltas == zeroDeltas) {
+                        titleDeltas = new int[PAGE_SIZE];
+                    }
+                    titleDeltas[index] = titleCodePoint - codePoint;
+                }
             }
-            else {
-                LOWER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
-                UPPER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
-                TITLE_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
-                WHITESPACE_CODE_POINTS[codePoint] = false;
-            }
+
+            LOWER_DELTA_PAGES[page] = lowerDeltas;
+            UPPER_DELTA_PAGES[page] = upperDeltas;
+            TITLE_DELTA_PAGES[page] = titleDeltas;
         }
+    }
+
+    private static int translateCodePoint(int[][] deltaPages, int codePoint)
+    {
+        return codePoint + deltaPages[codePoint >>> PAGE_SHIFT][codePoint & (PAGE_SIZE - 1)];
     }
 
     /**
@@ -566,13 +609,14 @@ public final class SliceUtf8
         return toTitleCaseCodePoints(utf8, offset, length);
     }
 
-    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[] codePointTranslationMap)
+    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[][] codePointDeltaPages)
     {
+        int[] asciiDeltas = codePointDeltaPages[0];
         while (position < utf8Length) {
             int asciiStart = position;
             while (position < utf8Length) {
                 int value = utf8[utf8Offset + position] & 0xFF;
-                if (value >= 0x80 || codePointTranslationMap[value] != value) {
+                if (value >= 0x80 || asciiDeltas[value] != 0) {
                     break;
                 }
                 position++;
@@ -605,7 +649,7 @@ public final class SliceUtf8
                     translatedPosition = position;
                 }
 
-                int translatedCodePoint = codePointTranslationMap[value];
+                int translatedCodePoint = value + asciiDeltas[value];
                 int nextTranslatedPosition = translatedPosition + lengthOfCodePoint(translatedCodePoint);
                 if (nextTranslatedPosition > utf8Length) {
                     translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
@@ -619,7 +663,7 @@ public final class SliceUtf8
 
             int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
             if (codePoint >= 0) {
-                int translatedCodePoint = codePointTranslationMap[codePoint];
+                int translatedCodePoint = translateCodePoint(codePointDeltaPages, codePoint);
                 int codePointLength = lengthOfCodePoint(codePoint);
 
                 if (translatedCodePoint == codePoint) {
@@ -675,15 +719,15 @@ public final class SliceUtf8
 
     private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_LOWER_A, ASCII_GT_LOWER_Z, UPPER_CODE_POINTS);
+        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_LOWER_A, ASCII_GT_LOWER_Z, UPPER_DELTA_PAGES);
     }
 
     private static Slice toLowerCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_UPPER_A, ASCII_GT_UPPER_Z, LOWER_CODE_POINTS);
+        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_UPPER_A, ASCII_GT_UPPER_Z, LOWER_DELTA_PAGES);
     }
 
-    private static Slice translateAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length, long geAddend, long gtAddend, int[] codePointTranslationMap)
+    private static Slice translateAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length, long geAddend, long gtAddend, int[][] codePointDeltaPages)
     {
         int geByteAddend = (int) (geAddend & 0xFF);
         int gtByteAddend = (int) (gtAddend & 0xFF);
@@ -707,7 +751,7 @@ public final class SliceUtf8
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, codePointTranslationMap);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, codePointDeltaPages);
             }
 
             if (((value + geByteAddend) & ~(value + gtByteAddend) & 0x80) != 0) {
@@ -728,7 +772,7 @@ public final class SliceUtf8
         while (position <= utf8Length - Long.BYTES) {
             long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
             if ((word & TOP_MASK64) != 0) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointTranslationMap);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointDeltaPages);
             }
 
             long caseBits = (word + geAddend) & ~(word + gtAddend) & TOP_MASK64;
@@ -740,7 +784,7 @@ public final class SliceUtf8
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointTranslationMap);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointDeltaPages);
             }
 
             int caseBit = (value + geByteAddend) & ~(value + gtByteAddend) & 0x80;
@@ -787,7 +831,7 @@ public final class SliceUtf8
                 translatedCodePoint = codePoint;
             }
             else {
-                translatedCodePoint = wordStart ? TITLE_CODE_POINTS[codePoint] : LOWER_CODE_POINTS[codePoint];
+                translatedCodePoint = translateCodePoint(wordStart ? TITLE_DELTA_PAGES : LOWER_DELTA_PAGES, codePoint);
                 wordStart = false;
             }
 
