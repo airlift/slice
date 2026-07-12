@@ -75,8 +75,8 @@ public final class Slices
         int offset = existingSlice.byteArrayOffset();
         // copy of range can be more efficient because it avoids zeroing memory
         byte[] copy = Arrays.copyOfRange(bytes, offset, offset + newCapacity);
-        // but if the slice is a view, we need to zero the end of the array
-        Arrays.fill(copy, existingSlice.length(), bytes.length - offset, (byte) 0);
+        // but if the slice is a view, we need to zero the copied bytes beyond the view
+        Arrays.fill(copy, existingSlice.length(), Math.min(bytes.length - offset, newCapacity), (byte) 0);
         return new Slice(copy);
     }
 
