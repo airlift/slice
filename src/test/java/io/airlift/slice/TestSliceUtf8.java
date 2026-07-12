@@ -965,6 +965,37 @@ public class TestSliceUtf8
         INVALID_SEQUENCES.forEach(TestSliceUtf8::assertTrim);
     }
 
+    @Test
+    public void testTrimWordAtATime()
+    {
+        // whitespace runs of every length around the eight-byte boundaries, homogeneous
+        // and mixed, with non-ASCII whitespace and non-ASCII text
+        String[] whitespaceShapes = {" ", "\t", " \t", "\r\n", " \t\n\u000B\f\r\u001C\u001D\u001E\u001F ", "\u2028", " \u2028 "};
+        String[] bodies = {"", "x", "hello", "Öl"};
+        for (String shape : whitespaceShapes) {
+            for (int repeat = 0; repeat < 20; repeat++) {
+                String whitespace = shape.repeat(repeat);
+                for (String body : bodies) {
+                    assertTrimMatchesStrip(whitespace + body);
+                    assertTrimMatchesStrip(body + whitespace);
+                    assertTrimMatchesStrip(whitespace + body + whitespace);
+                }
+            }
+        }
+
+        // runs longer than the mismatch buffer
+        assertTrimMatchesStrip(" ".repeat(3000) + "hello" + " ".repeat(3000));
+        assertTrimMatchesStrip("\t".repeat(3000));
+    }
+
+    private static void assertTrimMatchesStrip(String string)
+    {
+        Slice slice = utf8Slice(string);
+        assertThat(leftTrim(slice).toStringUtf8()).isEqualTo(string.stripLeading());
+        assertThat(rightTrim(slice).toStringUtf8()).isEqualTo(string.stripTrailing());
+        assertThat(trim(slice).toStringUtf8()).isEqualTo(string.strip());
+    }
+
     private static void assertTrim(String string)
     {
         assertTrim(string.getBytes(UTF_8));

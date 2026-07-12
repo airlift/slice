@@ -136,6 +136,31 @@ public final class SliceUtf8
         return WHITESPACE_PAGES[codePoint >>> PAGE_SHIFT][codePoint & (PAGE_SIZE - 1)];
     }
 
+    // Runs of each ASCII whitespace byte, used to skip homogeneous whitespace stretches
+    // with the vectorized Arrays.mismatch
+    private static final byte[][] WHITESPACE_RUNS = new byte[0x21][];
+
+    static {
+        for (int value = 0; value <= 0x20; value++) {
+            if (Character.isWhitespace(value)) {
+                byte[] run = new byte[256];
+                Arrays.fill(run, (byte) value);
+                WHITESPACE_RUNS[value] = run;
+            }
+        }
+    }
+
+    // A stop bit is set in the high bit of each byte that is neither ASCII whitespace
+    // (0x09 to 0x0D, 0x1C to 0x20) nor ASCII at all. Carries from non-ASCII bytes can
+    // corrupt bits of higher lanes, but the lowest set bit is always exact, and a zero
+    // result exactly means eight bytes of ASCII whitespace.
+    private static long asciiWhitespaceStopBits(long word)
+    {
+        long controlWhitespace = (word + 0x7777_7777_7777_7777L) & ~(word + 0x7272_7272_7272_7272L); // 0x09 to 0x0D
+        long separatorOrSpace = (word + 0x6464_6464_6464_6464L) & ~(word + 0x5F5F_5F5F_5F5F_5F5FL); // 0x1C to 0x20
+        return (~(controlWhitespace | separatorOrSpace) | word) & TOP_MASK64;
+    }
+
     /**
      * Does the slice contain only 7-bit ASCII characters.
      */
@@ -957,15 +982,45 @@ public final class SliceUtf8
                     break;
                 }
                 position++;
+
+                // A run of ASCII whitespace may follow: scan it eight bytes at a time,
+                // skipping homogeneous stretches with the vectorized mismatch. A single
+                // whitespace byte before a multi-byte code point skips the scan entirely.
+                if (position >= utf8Length || utf8[utf8Offset + position] < 0) {
+                    continue;
+                }
+                while (position <= utf8Length - Long.BYTES) {
+                    long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                    long stopBits = asciiWhitespaceStopBits(word);
+                    if (stopBits != 0) {
+                        position += Long.numberOfTrailingZeros(stopBits) >>> 3;
+                        break;
+                    }
+
+                    if (word == Long.rotateLeft(word, 8)) {
+                        // all eight bytes are the same whitespace, skip the whole run of it
+                        byte[] run = WHITESPACE_RUNS[(int) (word & 0xFF)];
+                        int limit = Math.min(utf8Length - position, run.length);
+                        int mismatch = Arrays.mismatch(utf8, utf8Offset + position, utf8Offset + position + limit, run, 0, limit);
+                        position += (mismatch < 0) ? limit : mismatch;
+                    }
+                    else {
+                        position += Long.BYTES;
+                    }
+                }
                 continue;
             }
 
-            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
-            if (codePoint < 0 || !isWhitespaceCodePoint(codePoint)) {
-                break;
-            }
+            // Consume consecutive non-ASCII whitespace code points without re-probing the
+            // fast scan, which cannot help until ASCII bytes reappear
+            while (position < utf8Length && (utf8[utf8Offset + position] & 0x80) != 0) {
+                int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+                if (codePoint < 0 || !isWhitespaceCodePoint(codePoint)) {
+                    return position;
+                }
 
-            position += lengthOfCodePoint(codePoint);
+                position += lengthOfCodePoint(codePoint);
+            }
         }
         return position;
     }
@@ -1086,34 +1141,49 @@ public final class SliceUtf8
                     break;
                 }
                 position--;
+
+                // A run of ASCII whitespace may precede: skip whole windows of it eight
+                // bytes at a time. A single whitespace byte after a multi-byte code point
+                // skips the scan entirely.
+                if (position <= minPosition || utf8[utf8Offset + position - 1] < 0) {
+                    continue;
+                }
+                while (position - Long.BYTES >= minPosition
+                        && asciiWhitespaceStopBits((long) LONG_HANDLE.get(utf8, utf8Offset + position - Long.BYTES)) == 0) {
+                    position -= Long.BYTES;
+                }
                 continue;
             }
 
-            // decode the code point before position if possible
-            int codePoint;
-            int codePointLength;
-            if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
-                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
-                codePointLength = 2;
+            // Consume consecutive non-ASCII whitespace code points without re-probing the
+            // fast scan, which cannot help until ASCII bytes reappear
+            while (position > minPosition && (utf8[utf8Offset + position - 1] & 0x80) != 0) {
+                // decode the code point before position if possible
+                int codePoint;
+                int codePointLength;
+                if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
+                    codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
+                    codePointLength = 2;
+                }
+                else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
+                    codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
+                    codePointLength = 3;
+                }
+                else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
+                    codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
+                    codePointLength = 4;
+                }
+                else {
+                    return position;
+                }
+                if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
+                    return position;
+                }
+                if (!isWhitespaceCodePoint(codePoint)) {
+                    return position;
+                }
+                position -= codePointLength;
             }
-            else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
-                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
-                codePointLength = 3;
-            }
-            else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
-                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
-                codePointLength = 4;
-            }
-            else {
-                break;
-            }
-            if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
-                break;
-            }
-            if (!isWhitespaceCodePoint(codePoint)) {
-                break;
-            }
-            position -= codePointLength;
         }
         return position;
     }
