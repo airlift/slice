@@ -984,6 +984,56 @@ public class TestSlice
     }
 
     @Test
+    public void testIndexOfAnyByte()
+    {
+        Slice slice = utf8Slice("appleappleappleappleappleappleappleappleappleappleappleappleappleappleapple!");
+
+        assertThat(slice.indexOfAnyByte((byte) 'p', (byte) 'a', 0)).isEqualTo(0);
+        assertThat(slice.indexOfAnyByte((byte) 'l', (byte) 'e', 0)).isEqualTo(3);
+        assertThat(slice.indexOfAnyByte((byte) 'e', (byte) 'l', 0)).isEqualTo(3);
+        assertThat(slice.indexOfAnyByte((byte) 'x', (byte) 'e', 0)).isEqualTo(4);
+        assertThat(slice.indexOfAnyByte((byte) 'x', (byte) 'y', 0)).isEqualTo(-1);
+
+        // same byte twice behaves like indexOfByte
+        assertThat(slice.indexOfAnyByte((byte) 'e', (byte) 'e', 0)).isEqualTo(4);
+
+        // offset skips earlier occurrences, and the result is absolute
+        assertThat(slice.indexOfAnyByte((byte) 'a', (byte) 'p', 1)).isEqualTo(1);
+        assertThat(slice.indexOfAnyByte((byte) 'a', (byte) 'l', 4)).isEqualTo(5);
+        assertThat(slice.indexOfAnyByte((byte) 'x', (byte) '!', 40)).isEqualTo(slice.length() - 1);
+        assertThat(slice.indexOfAnyByte((byte) 'a', (byte) 'p', slice.length() - 1)).isEqualTo(-1);
+        assertThat(slice.indexOfAnyByte((byte) 'a', (byte) 'p', slice.length())).isEqualTo(-1);
+
+        // matches agree with a brute force scan for every offset, in and out of the vectorized loop
+        for (int offset = 0; offset <= slice.length(); offset++) {
+            for (byte first : new byte[] {'a', 'e', '!', 'x'}) {
+                for (byte second : new byte[] {'a', 'l', '!', 'x'}) {
+                    int expected = -1;
+                    for (int index = offset; index < slice.length(); index++) {
+                        byte current = slice.getByte(index);
+                        if (current == first || current == second) {
+                            expected = index;
+                            break;
+                        }
+                    }
+                    assertThat(slice.indexOfAnyByte(first, second, offset)).isEqualTo(expected);
+                }
+            }
+        }
+
+        // bytes with the high bit set, which stress the SWAR borrow propagation
+        Slice highBits = Slices.wrappedBuffer(new byte[] {0x00, (byte) 0x80, 0x7f, (byte) 0xff, 0x01, (byte) 0x80, 0x00, 0x00, (byte) 0xff, 0x01});
+        assertThat(highBits.indexOfAnyByte((byte) 0xff, (byte) 0x80, 0)).isEqualTo(1);
+        assertThat(highBits.indexOfAnyByte((byte) 0xff, (byte) 0x80, 2)).isEqualTo(3);
+        assertThat(highBits.indexOfAnyByte((byte) 0x00, (byte) 0x7f, 0)).isEqualTo(0);
+        assertThat(highBits.indexOfAnyByte((byte) 0x01, (byte) 0x7f, 3)).isEqualTo(4);
+        assertThat(highBits.indexOfAnyByte((byte) 0x7f, (byte) 0x7f, 3)).isEqualTo(-1);
+
+        assertThatThrownBy(() -> slice.indexOfAnyByte((byte) 'a', (byte) 'p', -1)).isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatThrownBy(() -> slice.indexOfAnyByte((byte) 'a', (byte) 'p', slice.length() + 1)).isInstanceOf(IndexOutOfBoundsException.class);
+    }
+
+    @Test
     public void testLastIndexOfByte()
     {
         Slice slice = utf8Slice("appleappleappleappleappleappleappleappleappleappleappleappleappleappleapple!");

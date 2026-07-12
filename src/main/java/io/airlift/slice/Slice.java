@@ -1122,14 +1122,12 @@ public final class Slice
 
     private int indexOfByteUnchecked(byte b, int offset, int end)
     {
-        long pattern = (b & 0xFFL) * 0x01010101_01010101L;
+        long pattern = repeat(b);
 
         for (; offset < end - 7; offset += 8) {
-            long value = getLongUnchecked(offset);
-            long xor = value ^ pattern;
-            long hasZero = (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
-            if (hasZero != 0) {
-                return offset + (numberOfTrailingZeros(hasZero) >>> 3);
+            long matches = match(getLongUnchecked(offset), pattern);
+            if (matches != 0) {
+                return offset + (numberOfTrailingZeros(matches) >>> 3);
             }
         }
 
@@ -1139,6 +1137,49 @@ public final class Slice
             }
         }
         return -1;
+    }
+
+    /**
+     * Returns the index of the first occurrence of any of the given bytes at or after {@code offset},
+     * or {@code -1} if none occurs in the remainder of this slice.
+     * The returned index is absolute, not relative to {@code offset}.
+     */
+    public int indexOfAnyByte(byte first, byte second, int offset)
+    {
+        checkFromIndexSize(offset, 0, size);
+
+        long firstPattern = repeat(first);
+        long secondPattern = repeat(second);
+        for (; offset < size - 7; offset += 8) {
+            long value = getLongUnchecked(offset);
+            long matches = match(value, firstPattern) | match(value, secondPattern);
+            if (matches != 0) {
+                return offset + (numberOfTrailingZeros(matches) >>> 3);
+            }
+        }
+
+        for (; offset < size; offset++) {
+            byte current = getByteUnchecked(offset);
+            if (current == first || current == second) {
+                return offset;
+            }
+        }
+        return -1;
+    }
+
+    private static long repeat(byte b)
+    {
+        return (b & 0xFFL) * 0x01010101_01010101L;
+    }
+
+    /**
+     * Sets the high bit of every byte of {@code value} equal to the byte broadcast in {@code pattern},
+     * and clears it everywhere else (Hacker's Delight 6-1).
+     */
+    private static long match(long value, long pattern)
+    {
+        long xor = value ^ pattern;
+        return (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
     }
 
     /**
@@ -1213,13 +1254,11 @@ public final class Slice
         if (size == 0) {
             return -1;
         }
-        long pattern = (b & 0xFFL) * 0x01010101_01010101L;
+        long pattern = repeat(b);
         int offset = fromIndex;
 
         for (; offset >= 7; offset -= 8) {
-            long value = getLongUnchecked(offset - 7);
-            long xor = value ^ pattern;
-            long hasZero = (xor - 0x01010101_01010101L) & ~xor & 0x80808080_80808080L;
+            long hasZero = match(getLongUnchecked(offset - 7), pattern);
             while (hasZero != 0) {
                 int byteIndex = 7 - (numberOfLeadingZeros(hasZero) >>> 3);
                 int candidateIndex = (offset - 7) + byteIndex;
