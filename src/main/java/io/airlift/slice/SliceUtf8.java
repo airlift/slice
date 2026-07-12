@@ -46,6 +46,13 @@ public final class SliceUtf8
     private static final int TOP_MASK32 = 0x8080_8080;
     private static final long TOP_MASK64 = 0x8080_8080_8080_8080L;
 
+    // Adding these to a word of ASCII bytes sets each byte's high bit according to the
+    // comparison in the constant name, e.g. adding 0x80 - 'a' sets it for bytes >= 'a'.
+    private static final long ASCII_GE_LOWER_A = 0x1F1F_1F1F_1F1F_1F1FL; // 0x80 - 'a'
+    private static final long ASCII_GT_LOWER_Z = 0x0505_0505_0505_0505L; // 0x7F - 'z'
+    private static final long ASCII_GE_UPPER_A = 0x3F3F_3F3F_3F3F_3F3FL; // 0x80 - 'A'
+    private static final long ASCII_GT_UPPER_Z = 0x2525_2525_2525_2525L; // 0x7F - 'Z'
+
     private static final int[] LOWER_CODE_POINTS;
     private static final int[] UPPER_CODE_POINTS;
     private static final int[] TITLE_CODE_POINTS;
@@ -668,60 +675,42 @@ public final class SliceUtf8
 
     private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        int position = 0;
-
-        // Fast scan until the first ASCII byte that needs translation.
-        while (position < utf8Length) {
-            int value = utf8[utf8Offset + position] & 0xFF;
-            if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, UPPER_CODE_POINTS);
-            }
-
-            if (value >= 'a' && value <= 'z') {
-                break;
-            }
-            position++;
-        }
-
-        // Nothing to translate in the entire input.
-        if (position == utf8Length) {
-            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
-        }
-
-        Slice translated = Slices.allocate(utf8Length);
-        translated.setBytes(0, utf8, utf8Offset, position);
-
-        // Continue with a single tight loop once output exists.
-        while (position < utf8Length) {
-            int value = utf8[utf8Offset + position] & 0xFF;
-            if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, UPPER_CODE_POINTS);
-            }
-
-            if (value >= 'a' && value <= 'z') {
-                translated.setByteUnchecked(position, value - ('a' - 'A'));
-            }
-            else {
-                translated.setByteUnchecked(position, value);
-            }
-            position++;
-        }
-
-        return translated;
+        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_LOWER_A, ASCII_GT_LOWER_Z, UPPER_CODE_POINTS);
     }
 
     private static Slice toLowerCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
+        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_UPPER_A, ASCII_GT_UPPER_Z, LOWER_CODE_POINTS);
+    }
+
+    private static Slice translateAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length, long geAddend, long gtAddend, int[] codePointTranslationMap)
+    {
+        int geByteAddend = (int) (geAddend & 0xFF);
+        int gtByteAddend = (int) (gtAddend & 0xFF);
         int position = 0;
 
-        // Fast scan until the first ASCII byte that needs translation.
+        // Fast scan until the first byte that is non-ASCII or needs translation, eight bytes at a time.
+        while (position <= utf8Length - Long.BYTES) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            long caseBits = (word + geAddend) & ~(word + gtAddend) & TOP_MASK64;
+            long needsChange = (word & TOP_MASK64) | caseBits;
+            if (needsChange != 0) {
+                // Non-ASCII bytes can carry into the case bits of higher lanes, but all bits
+                // below the lowest non-ASCII byte are exact, so the lowest set bit is reliable.
+                position += Long.numberOfTrailingZeros(needsChange) >>> 3;
+                break;
+            }
+            position += Long.BYTES;
+        }
+
+        // Scan the remaining tail bytes and dispatch on the byte found by the fast scan.
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, LOWER_CODE_POINTS);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, codePointTranslationMap);
             }
 
-            if (value >= 'A' && value <= 'Z') {
+            if (((value + geByteAddend) & ~(value + gtByteAddend) & 0x80) != 0) {
                 break;
             }
             position++;
@@ -735,19 +724,27 @@ public final class SliceUtf8
         Slice translated = Slices.allocate(utf8Length);
         translated.setBytes(0, utf8, utf8Offset, position);
 
-        // Continue with a single tight loop once output exists.
+        // Translate eight ASCII bytes at a time by flipping the case bit of bytes in the range.
+        while (position <= utf8Length - Long.BYTES) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            if ((word & TOP_MASK64) != 0) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointTranslationMap);
+            }
+
+            long caseBits = (word + geAddend) & ~(word + gtAddend) & TOP_MASK64;
+            translated.setLongUnchecked(position, word ^ (caseBits >>> 2));
+            position += Long.BYTES;
+        }
+
+        // Translate the remaining tail bytes branchlessly.
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, LOWER_CODE_POINTS);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointTranslationMap);
             }
 
-            if (value >= 'A' && value <= 'Z') {
-                translated.setByteUnchecked(position, value + ('a' - 'A'));
-            }
-            else {
-                translated.setByteUnchecked(position, value);
-            }
+            int caseBit = (value + geByteAddend) & ~(value + gtByteAddend) & 0x80;
+            translated.setByteUnchecked(position, value ^ (caseBit >>> 2));
             position++;
         }
 

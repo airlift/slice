@@ -723,6 +723,26 @@ public class TestSliceUtf8
     }
 
     @Test
+    public void testCaseChangeWordAtATime()
+    {
+        // exercise every lane of the eight-byte fast path: a case-changing, range-adjacent,
+        // or non-ASCII byte at every position within and around a word
+        for (int prefixLength = 0; prefixLength < 20; prefixLength++) {
+            String prefix = "-".repeat(prefixLength);
+            for (String interesting : ImmutableList.of("a", "z", "A", "Z", "`", "{", "@", "[", "ö", "Ö", "☃")) {
+                assertCaseChange(prefix + interesting);
+                assertCaseChange(prefix + interesting + "xYz-08_");
+            }
+        }
+
+        // long inputs: unchanged, fully translated, and switching to code points at a word boundary
+        assertCaseChange("-0189=+!?".repeat(10));
+        assertCaseChange("a".repeat(100));
+        assertCaseChange("Z".repeat(100));
+        assertCaseChange("abcdefgh".repeat(5) + "Ö" + "ABCDEFGH".repeat(5));
+    }
+
+    @Test
     public void testToUpperCaseNoOpWrapsInputRange()
     {
         byte[] bytes = "HELLO".getBytes(UTF_8);
