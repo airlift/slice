@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -837,6 +838,48 @@ public class TestSlice
         assertIndexOf(utf8Slice("test"), utf8Slice("no"), 4, -1);
         assertIndexOf(utf8Slice("test"), utf8Slice("no"), 5, -1);
         assertIndexOf(utf8Slice("test"), utf8Slice("no"), -1, -1);
+
+        // repetitive data with dense first-byte and head-anchor candidates
+        assertIndexOf(utf8Slice("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"), utf8Slice("aaab"));
+        assertIndexOf(utf8Slice("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"), utf8Slice("aaaaaaaab"));
+        assertIndexOf(utf8Slice("abababababababababababab"), utf8Slice("ababababbb"));
+
+        // head and tail anchors match while the middle differs
+        assertIndexOf(utf8Slice("headXXXXtail-headYYYYtail"), utf8Slice("headYYYYtail"));
+
+        // first-byte occurrence too close to the end for the pattern to fit
+        assertIndexOf(utf8Slice("xxxxxxxxxxxxxxxxtes"), utf8Slice("test"));
+        assertIndexOf(utf8Slice("xxxxxxxxxxxxxxxxxxt"), utf8Slice("test"));
+    }
+
+    @Test
+    public void testIndexOfRandom()
+    {
+        Random random = new Random(42);
+        for (int iteration = 0; iteration < 5000; iteration++) {
+            byte[] data = new byte[random.nextInt(80)];
+            for (int i = 0; i < data.length; i++) {
+                data[i] = (byte) ('a' + random.nextInt(3));
+            }
+
+            byte[] pattern = new byte[1 + random.nextInt(12)];
+            if (pattern.length <= data.length && random.nextBoolean()) {
+                // plant an existing substring so matches are common
+                System.arraycopy(data, random.nextInt(data.length - pattern.length + 1), pattern, 0, pattern.length);
+            }
+            else {
+                for (int i = 0; i < pattern.length; i++) {
+                    pattern[i] = (byte) ('a' + random.nextInt(3));
+                }
+            }
+
+            Slice dataSlice = Slices.wrappedBuffer(data);
+            Slice patternSlice = Slices.wrappedBuffer(pattern);
+
+            int expected = new String(data, UTF_8).indexOf(new String(pattern, UTF_8));
+            assertThat(dataSlice.indexOf(patternSlice)).isEqualTo(expected);
+            assertIndexOf(dataSlice, patternSlice);
+        }
     }
 
     public static void assertIndexOf(Slice data, Slice pattern, int offset, int expected)
