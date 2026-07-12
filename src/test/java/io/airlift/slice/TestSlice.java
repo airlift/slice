@@ -1103,6 +1103,24 @@ public class TestSlice
 
         assertThat(EMPTY_SLICE.lastIndexOfByte((byte) 'a', 0)).isEqualTo(-1);
 
+        // bytes differing only in the lowest bit after the last real match must not be matched
+        Slice tricky = utf8Slice("nnnooooooooooooooooooooo");
+        assertThat(tricky.lastIndexOfByte((byte) 'n', tricky.length() - 1)).isEqualTo(2);
+        assertThat(tricky.lastIndexOfByte((byte) 'o', tricky.length() - 1)).isEqualTo(tricky.length() - 1);
+
+        Random random = new Random(7);
+        for (int iteration = 0; iteration < 2000; iteration++) {
+            byte[] data = new byte[1 + random.nextInt(40)];
+            for (int i = 0; i < data.length; i++) {
+                data[i] = (byte) (random.nextBoolean() ? 'n' : 'o');
+            }
+            Slice randomSlice = Slices.wrappedBuffer(data);
+            String string = new String(data, UTF_8);
+            int fromIndex = random.nextInt(data.length);
+            assertThat(randomSlice.lastIndexOfByte((byte) 'n', fromIndex)).isEqualTo(string.lastIndexOf('n', fromIndex));
+            assertThat(randomSlice.lastIndexOfByte((byte) 'o', fromIndex)).isEqualTo(string.lastIndexOf('o', fromIndex));
+        }
+
         Slice shortSlice = utf8Slice("abcdefg");
         assertThat(shortSlice.lastIndexOfByte((byte) 'a', 6)).isEqualTo(0);
         assertThat(shortSlice.lastIndexOfByte((byte) 'g', 6)).isEqualTo(6);

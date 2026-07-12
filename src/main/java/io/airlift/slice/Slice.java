@@ -1271,14 +1271,13 @@ public final class Slice
         int offset = fromIndex;
 
         for (; offset >= 7; offset -= 8) {
-            long hasZero = match(getLongUnchecked(offset - 7), pattern);
-            while (hasZero != 0) {
-                int byteIndex = 7 - (numberOfLeadingZeros(hasZero) >>> 3);
-                int candidateIndex = (offset - 7) + byteIndex;
-                if (getByteUnchecked(candidateIndex) == b) {
-                    return candidateIndex;
-                }
-                hasZero &= ~(0x80L << (byteIndex * 8));
+            long value = getLongUnchecked(offset - 7);
+            long xor = value ^ pattern;
+            // exact zero-byte detection: the high bit is set only where the byte is zero,
+            // so the highest set bit is the last occurrence and needs no re-checking
+            long matches = ~(((xor & 0x7F7F7F7F_7F7F7F7FL) + 0x7F7F7F7F_7F7F7F7FL) | xor | 0x7F7F7F7F_7F7F7F7FL);
+            if (matches != 0) {
+                return offset - (numberOfLeadingZeros(matches) >>> 3);
             }
         }
 
