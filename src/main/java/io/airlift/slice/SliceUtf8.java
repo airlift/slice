@@ -56,28 +56,30 @@ public final class SliceUtf8
     private static final int PAGE_SHIFT = 8;
     private static final int PAGE_SIZE = 1 << PAGE_SHIFT;
 
-    // Case mappings are stored as per-code-point deltas in 256-entry pages indexed by the
-    // high bits of the code point. All pages without any mapping share the single zero
-    // page, keeping the tables small and cache friendly instead of a 4 MB flat array per
-    // mapping.
+    // Case mappings and whitespace flags are stored in 256-entry pages indexed by the high
+    // bits of the code point. Case pages hold deltas from the code point, so all pages
+    // without any mapping share the single zero page, and whitespace pages without any
+    // whitespace share the single empty page, keeping the tables small and cache friendly.
     private static final int[][] LOWER_DELTA_PAGES;
     private static final int[][] UPPER_DELTA_PAGES;
     private static final int[][] TITLE_DELTA_PAGES;
-    private static final boolean[] WHITESPACE_CODE_POINTS;
+    private static final boolean[][] WHITESPACE_PAGES;
 
     static {
         int pageCount = (MAX_CODE_POINT + 1) >> PAGE_SHIFT;
         LOWER_DELTA_PAGES = new int[pageCount][];
         UPPER_DELTA_PAGES = new int[pageCount][];
         TITLE_DELTA_PAGES = new int[pageCount][];
-        WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
+        WHITESPACE_PAGES = new boolean[pageCount][];
 
         int[] zeroDeltas = new int[PAGE_SIZE];
+        boolean[] noWhitespace = new boolean[PAGE_SIZE];
 
         for (int page = 0; page < pageCount; page++) {
             int[] lowerDeltas = zeroDeltas;
             int[] upperDeltas = zeroDeltas;
             int[] titleDeltas = zeroDeltas;
+            boolean[] whitespace = noWhitespace;
 
             int pageStart = page << PAGE_SHIFT;
             for (int index = 0; index < PAGE_SIZE; index++) {
@@ -89,7 +91,12 @@ public final class SliceUtf8
                     lowerCodePoint = Character.toLowerCase(codePoint);
                     upperCodePoint = Character.toUpperCase(codePoint);
                     titleCodePoint = Character.toTitleCase(codePoint);
-                    WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
+                    if (Character.isWhitespace(codePoint)) {
+                        if (whitespace == noWhitespace) {
+                            whitespace = new boolean[PAGE_SIZE];
+                        }
+                        whitespace[index] = true;
+                    }
                 }
 
                 if (lowerCodePoint != codePoint) {
@@ -115,12 +122,18 @@ public final class SliceUtf8
             LOWER_DELTA_PAGES[page] = lowerDeltas;
             UPPER_DELTA_PAGES[page] = upperDeltas;
             TITLE_DELTA_PAGES[page] = titleDeltas;
+            WHITESPACE_PAGES[page] = whitespace;
         }
     }
 
     private static int translateCodePoint(int[][] deltaPages, int codePoint)
     {
         return codePoint + deltaPages[codePoint >>> PAGE_SHIFT][codePoint & (PAGE_SIZE - 1)];
+    }
+
+    private static boolean isWhitespaceCodePoint(int codePoint)
+    {
+        return WHITESPACE_PAGES[codePoint >>> PAGE_SHIFT][codePoint & (PAGE_SIZE - 1)];
     }
 
     /**
@@ -826,7 +839,7 @@ public final class SliceUtf8
                 // Invalid UTF-8 sequences are copied verbatim and do not start a new word.
                 translatedCodePoint = codePoint;
             }
-            else if (WHITESPACE_CODE_POINTS[codePoint]) {
+            else if (isWhitespaceCodePoint(codePoint)) {
                 wordStart = true;
                 translatedCodePoint = codePoint;
             }
@@ -940,7 +953,7 @@ public final class SliceUtf8
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value < 0x80) {
-                if (!WHITESPACE_CODE_POINTS[value]) {
+                if (!isWhitespaceCodePoint(value)) {
                     break;
                 }
                 position++;
@@ -948,7 +961,7 @@ public final class SliceUtf8
             }
 
             int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
-            if (codePoint < 0 || !WHITESPACE_CODE_POINTS[codePoint]) {
+            if (codePoint < 0 || !isWhitespaceCodePoint(codePoint)) {
                 break;
             }
 
@@ -1069,7 +1082,7 @@ public final class SliceUtf8
         while (minPosition < position) {
             int value = utf8[utf8Offset + position - 1] & 0xFF;
             if (value < 0x80) {
-                if (!WHITESPACE_CODE_POINTS[value]) {
+                if (!isWhitespaceCodePoint(value)) {
                     break;
                 }
                 position--;
@@ -1097,7 +1110,7 @@ public final class SliceUtf8
             if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
                 break;
             }
-            if (!WHITESPACE_CODE_POINTS[codePoint]) {
+            if (!isWhitespaceCodePoint(codePoint)) {
                 break;
             }
             position -= codePointLength;
