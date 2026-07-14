@@ -207,8 +207,12 @@ public class DynamicSliceOutput
     @Override
     public void writeZero(int length)
     {
+        if (length < 0) {
+            throw new IllegalArgumentException("length must be 0 or greater than 0.");
+        }
         slice = Slices.ensureSize(slice, size + length);
-        super.writeZero(length);
+        slice.clear(size, length);
+        size += length;
     }
 
     @Override

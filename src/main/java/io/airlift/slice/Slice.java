@@ -1212,38 +1212,51 @@ public final class Slice
             return indexOfBruteForce(pattern, offset);
         }
 
-        // Using the first four bytes for faster search. We are not using eight bytes for long
-        // because we want more strings to get use of fast search.
+        int patternLength = pattern.length();
+
+        // Anchor candidates on the first and last four bytes of the pattern. Most false
+        // candidates fail an anchor, skipping the full comparison. Four-byte anchors are
+        // used so patterns as short as four bytes get the fast search.
         int head = pattern.getIntUnchecked(0);
+        int tailOffset = patternLength - SIZE_OF_INT;
+        int tail = pattern.getIntUnchecked(tailOffset);
 
-        // Take the first byte of head for faster skipping
-        int firstByteMask = head & 0xff;
-        firstByteMask |= firstByteMask << 8;
-        firstByteMask |= firstByteMask << 16;
-
-        int lastValidIndex = size - pattern.length();
+        long firstByteMask = (head & 0xFFL) * 0x01010101_01010101L;
+        int lastValidIndex = size - patternLength;
+        int scanLimit = Math.min(lastValidIndex, size - SIZE_OF_LONG);
         int index = offset;
-        while (index <= lastValidIndex) {
-            // Read four bytes in sequence
-            int value = getIntUnchecked(index);
 
-            // Compare all bytes of value with the first byte of search data
-            // see https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
-            int valueXor = value ^ firstByteMask;
-            int hasZeroBytes = (valueXor - 0x01010101) & ~valueXor & 0x80808080;
+        // Scan for occurrences of the first pattern byte, reading each window only once
+        while (index <= scanLimit) {
+            long value = getLongUnchecked(index);
+            long xor = value ^ firstByteMask;
+            // exact zero-byte detection: the high bit is set only where the byte is zero,
+            // so every candidate is a true occurrence of the first pattern byte
+            long candidates = ~(((xor & 0x7F7F7F7F_7F7F7F7FL) + 0x7F7F7F7F_7F7F7F7FL) | xor | 0x7F7F7F7F_7F7F7F7FL);
+            while (candidates != 0) {
+                int candidate = index + (numberOfTrailingZeros(candidates) >>> 3);
+                if (candidate > lastValidIndex) {
+                    return -1;
+                }
 
-            // If valueXor doesn't have any zero bytes, then there is no match and we can advance
-            if (hasZeroBytes == 0) {
-                index += SIZE_OF_INT;
-                continue;
+                if (getIntUnchecked(candidate) == head
+                        && getIntUnchecked(candidate + tailOffset) == tail
+                        && equalsUnchecked(candidate, pattern.byteArray(), pattern.byteArrayOffset(), patternLength)) {
+                    return candidate;
+                }
+
+                candidates &= candidates - 1;
             }
+            index += SIZE_OF_LONG;
+        }
 
-            // Try fast match of head and the rest
-            if (value == head && equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
+        // Check the remaining positions when the pattern is shorter than eight bytes
+        for (; index <= lastValidIndex; index++) {
+            if (getIntUnchecked(index) == head
+                    && getIntUnchecked(index + tailOffset) == tail
+                    && equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), patternLength)) {
                 return index;
             }
-
-            index++;
         }
 
         return -1;
@@ -1258,14 +1271,13 @@ public final class Slice
         int offset = fromIndex;
 
         for (; offset >= 7; offset -= 8) {
-            long hasZero = match(getLongUnchecked(offset - 7), pattern);
-            while (hasZero != 0) {
-                int byteIndex = 7 - (numberOfLeadingZeros(hasZero) >>> 3);
-                int candidateIndex = (offset - 7) + byteIndex;
-                if (getByteUnchecked(candidateIndex) == b) {
-                    return candidateIndex;
-                }
-                hasZero &= ~(0x80L << (byteIndex * 8));
+            long value = getLongUnchecked(offset - 7);
+            long xor = value ^ pattern;
+            // exact zero-byte detection: the high bit is set only where the byte is zero,
+            // so the highest set bit is the last occurrence and needs no re-checking
+            long matches = ~(((xor & 0x7F7F7F7F_7F7F7F7FL) + 0x7F7F7F7F_7F7F7F7FL) | xor | 0x7F7F7F7F_7F7F7F7FL);
+            if (matches != 0) {
+                return offset - (numberOfLeadingZeros(matches) >>> 3);
             }
         }
 
@@ -1316,13 +1328,39 @@ public final class Slice
         }
 
         byte firstByte = pattern.getByteUnchecked(0);
+        int patternLength = pattern.length();
+
+        if (patternLength >= SIZE_OF_INT) {
+            // Anchor candidates on the first and last four bytes of the pattern, mirroring
+            // indexOf: most false candidates fail an anchor, skipping the full comparison
+            int head = pattern.getIntUnchecked(0);
+            int tailOffset = patternLength - SIZE_OF_INT;
+            int tail = pattern.getIntUnchecked(tailOffset);
+            while (index >= 0) {
+                index = lastIndexOfByte(firstByte, index);
+                if (index < 0) {
+                    break;
+                }
+
+                if (getIntUnchecked(index) == head
+                        && getIntUnchecked(index + tailOffset) == tail
+                        && equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), patternLength)) {
+                    return index;
+                }
+
+                index--;
+            }
+
+            return -1;
+        }
+
         while (index >= 0) {
             index = lastIndexOfByte(firstByte, index);
             if (index < 0) {
                 break;
             }
 
-            if (equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
+            if (equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), patternLength)) {
                 return index;
             }
 

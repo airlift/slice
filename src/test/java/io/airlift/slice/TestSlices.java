@@ -143,6 +143,12 @@ public class TestSlices
         // the existing data outside the slice view is not copied
         assertThat(newSlice.toStringUtf8()).isEqualTo("Value\0\0\0\0\0");
 
+        // grow a view whose backing array extends beyond the new capacity
+        Slice viewOfLargerArray = Slices.utf8Slice("0123456789012345678901234567890123456789").slice(2, 3);
+        Slice grownView = ensureSize(viewOfLargerArray, 4);
+        assertThat(grownView.length()).isEqualTo(6);
+        assertThat(grownView.toStringUtf8()).isEqualTo("234\0\0\0");
+
         Slice fourBytes = wrappedBuffer(new byte[] {1, 2, 3, 4});
         assertThat(ensureSize(null, 42).length()).isEqualTo(42);
         assertThat(ensureSize(fourBytes, 3)).isSameAs(fourBytes);
