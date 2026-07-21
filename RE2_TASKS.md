@@ -11,11 +11,11 @@ Last organized: 2026-07-20
 | Item | Status |
 |---|---|
 | Ported surface | Engine, Slice API, reusable matcher, set/filtered APIs, and Trino operation adapter are present |
-| Build | Verified 2026-07-20: the latest Maven install passes with 2,709 tests, zero failures or errors, and one intentional skip; the current 917-test RE2 selector passes with and without native access |
+| Build | Verified 2026-07-20: the latest Maven install passes with 2,714 tests, zero failures or errors, and one intentional skip; the current 922-test RE2 selector passes with and without native access |
 | Release readiness | Not ready |
 | Correctness | Complete upstream case-table, exhaustive, randomized, native differential, public/direct-engine, and compatibility coverage passes |
 | Upstream parity | Applicable pinned upstream test tables and active generated parameters are ported |
-| Performance | Candidate qualification places normal public execution at 0.730x/0.638x native time and public capture at 1.028x/1.021x on Intel/Graviton. Normal Rebar execution is 0.991x/0.970x. Final Joni acceptance qualifies 78/80 rows per architecture and all qualify as wins, with 0.384x/0.337x geometric Slice/Joni time and 0.991x/0.963x worst rows. The final search-outlier campaign closes long Cloudflare at 0.950x/0.942x native time and reduces case-insensitive English to 1.157x/0.855x. Native outliers remain for Intel Unicode literal scanning, the smaller Intel case-insensitive residual, and `SplitBig2` capture. |
+| Performance | Candidate qualification places normal public execution at 0.730x/0.638x native time and public capture at 1.028x/1.021x on Intel/Graviton. Normal Rebar execution is 0.991x/0.970x. Final Joni acceptance qualifies 78/80 rows per architecture and all qualify as wins, with 0.384x/0.337x geometric Slice/Joni time and 0.991x/0.963x worst rows. The final search-outlier campaign closes long Cloudflare at 0.950x/0.942x native time and reduces case-insensitive English to 1.157x/0.855x. The vector literal campaign reduces the former Russian and Chinese literal outliers by 15x/12x and 30x/5x on Intel/Graviton; final same-session ratios are 0.592x/0.072x native for Russian and 0.726x/0.176x for Chinese. The smaller Intel case-insensitive residual and `SplitBig2` capture remain. |
 | Cleanup | Public-surface, package encapsulation, naming, and cold-path structural cleanup are complete; protected loops are frozen at the benchmark-qualified capture-engine baseline |
 | Review history | Development log consolidated into five independently buildable reviewer-facing commits |
 
@@ -44,8 +44,8 @@ without allocating a Slice view for every failed line search. Eligible repeated
 group-zero searches additionally use a bounded candidate-start cursor instead
 of replaying every match through forward and reverse DFA searches. That cursor
 bulk-scans rejected bytes while preserving its reset-scoped work budget. The
-complete local RE2 selector passes 917 tests with and without native access,
-and the full Maven install passes 2,709 tests with zero failures or errors and
+complete local RE2 selector passes 922 tests with and without native access,
+and the full Maven install passes 2,714 tests with zero failures or errors and
 one intentional skip.
 
 The latest source also scans matching DFA self-loops directly after the first
@@ -54,6 +54,15 @@ masks. Target session `20260720T224822Z-6754` closes Cloudflare simplified-long
 at `0.950x/0.942x` native time and moves case-insensitive English from
 `2.163x/1.628x` to `1.157x/0.855x` on Intel/Graviton. See
 `docs/benchmarks/history/2026-07-20-final-outlier-closure.md`.
+
+Case-sensitive non-ASCII multi-byte prefixes now use fused front/back masks so
+common UTF-8 leading bytes do not repeatedly return to scalar verification.
+Searches below 1 KiB use SWAR and longer searches use the platform's preferred
+vector species. Exact candidate/control brackets reduce Russian and Chinese
+literal count from 2.710 ms to 0.171-0.181 ms and 0.696 ms to 0.0227-0.0230 ms
+on Intel, and from 4.300 ms to 0.353-0.363 ms and 0.734 ms to 0.132-0.138 ms on
+Graviton. Apple Silicon qualification shows the same 12x and 5.5x improvements.
+See `docs/benchmarks/history/2026-07-20-vector-literal-scanning.md`.
 
 Focused Java/native ratios from the July 18 capture-engine campaign are retained
 for path-specific context; they are not the current census aggregates:

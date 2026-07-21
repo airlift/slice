@@ -31,12 +31,25 @@ CAPTURE_PIPELINE_STAGES=${CAPTURE_PIPELINE_STAGES:-control,setup,forward,reverse
 COUNT_PIPELINE_MEMORY_MEGABYTES=${COUNT_PIPELINE_MEMORY_MEGABYTES:-8,12,16,24,32,48,64,96,128}
 COUNT_PIPELINE_CONTROL_MEMORY_MEGABYTES=${COUNT_PIPELINE_CONTROL_MEMORY_MEGABYTES:-8,32,64}
 REBAR_MODEL_FILTER=${REBAR_MODEL_FILTER:-'^(?:compile|count|count-spans|count-captures|grep|grep-captures)$'}
+REBAR_BENCHMARK_FILTER=${REBAR_BENCHMARK_FILTER:-'^curated/'}
 REBAR_ALLOW_NATIVE_DRIFT=${REBAR_ALLOW_NATIVE_DRIFT:-false}
 REBAR_EXCLUDE_NATIVE_DRIFT=${REBAR_EXCLUDE_NATIVE_DRIFT:-false}
 TRADITIONAL_BENCHMARK_CLASS=${TRADITIONAL_BENCHMARK_CLASS:-}
+VECTOR_SCANNER_FILTER=${VECTOR_SCANNER_FILTER:-'BenchmarkByteScanner\.(swar|vector128|vector256|vector512)$'}
+VECTOR_SCANNER_SOURCE_LENGTHS=${VECTOR_SCANNER_SOURCE_LENGTHS:-16,64,256,1024,32768}
+VECTOR_SCANNER_CANDIDATE_COUNTS=${VECTOR_SCANNER_CANDIDATE_COUNTS:-1,2,3}
+VECTOR_SCANNER_INPUT_SHAPES=${VECTOR_SCANNER_INPUT_SHAPES:-ABSENT,EARLY}
+VECTOR_SCANNER_ARRAY_OFFSETS=${VECTOR_SCANNER_ARRAY_OFFSETS:-0}
+VECTOR_SCANNER_FORKS=${VECTOR_SCANNER_FORKS:-3}
+VECTOR_LITERAL_FILTER=${VECTOR_LITERAL_FILTER:-'BenchmarkLiteralScanner\.(repeatedSwar|swar|vector128|vector256|vector512)$'}
+VECTOR_LITERAL_LANGUAGES=${VECTOR_LITERAL_LANGUAGES:-RUSSIAN,CHINESE}
+VECTOR_LITERAL_SOURCE_LENGTHS=${VECTOR_LITERAL_SOURCE_LENGTHS:-64,1024,32768}
+VECTOR_LITERAL_INPUT_SHAPES=${VECTOR_LITERAL_INPUT_SHAPES:-ABSENT,DENSE_FIRST_BYTE_FALSE,DENSE_TWO_OFFSET_FALSE}
+VECTOR_LITERAL_OFFSET_SELECTIONS=${VECTOR_LITERAL_OFFSET_SELECTIONS:-FRONT_BACK,TWO_RAREST}
+VECTOR_LITERAL_FORKS=${VECTOR_LITERAL_FORKS:-1}
 
 case "${BENCHMARK_MODE}" in
-    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison) ;;
+    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison | vector-literal | vector-scanner) ;;
     *) echo "Unsupported benchmark mode: ${BENCHMARK_MODE}" >&2; exit 1 ;;
 esac
 if [[ "${BENCHMARK_MODE}" == dfa-large-pointer ]]; then
@@ -91,7 +104,7 @@ exec > >(tee "${RESULT_DIR}/run.log") 2>&1
 install_packages()
 {
     sudo dnf install -y cmake gcc-c++ git jq make ninja-build perf tar gzip
-    if [[ "${BENCHMARK_MODE}" == rebar-official || "${BENCHMARK_MODE}" == rebar-native-comparison || "${BENCHMARK_MODE}" == bounded-count || "${BENCHMARK_MODE}" == dfa-large-pointer || "${BENCHMARK_MODE}" == byte-scan-fallback || "${BENCHMARK_MODE}" == capture-pipeline ]]; then
+    if [[ "${BENCHMARK_MODE}" == rebar-official || "${BENCHMARK_MODE}" == rebar-native-comparison || "${BENCHMARK_MODE}" == bounded-count || "${BENCHMARK_MODE}" == dfa-large-pointer || "${BENCHMARK_MODE}" == byte-scan-fallback || "${BENCHMARK_MODE}" == capture-pipeline || "${BENCHMARK_MODE}" == vector-literal ]]; then
         sudo dnf install -y abseil-cpp-devel cargo rust
     fi
 }
@@ -199,8 +212,15 @@ record_environment()
         printf 'count_pipeline_memory_megabytes=%s\n' "${COUNT_PIPELINE_MEMORY_MEGABYTES}"
         printf 'count_pipeline_control_memory_megabytes=%s\n' "${COUNT_PIPELINE_CONTROL_MEMORY_MEGABYTES}"
         printf 'rebar_model_filter=%s\n' "${REBAR_MODEL_FILTER}"
+        printf 'rebar_benchmark_filter=%s\n' "${REBAR_BENCHMARK_FILTER}"
         printf 'rebar_allow_native_drift=%s\n' "${REBAR_ALLOW_NATIVE_DRIFT}"
         printf 'rebar_exclude_native_drift=%s\n' "${REBAR_EXCLUDE_NATIVE_DRIFT}"
+        printf 'vector_literal_filter=%s\n' "${VECTOR_LITERAL_FILTER}"
+        printf 'vector_literal_languages=%s\n' "${VECTOR_LITERAL_LANGUAGES}"
+        printf 'vector_literal_source_lengths=%s\n' "${VECTOR_LITERAL_SOURCE_LENGTHS}"
+        printf 'vector_literal_input_shapes=%s\n' "${VECTOR_LITERAL_INPUT_SHAPES}"
+        printf 'vector_literal_offset_selections=%s\n' "${VECTOR_LITERAL_OFFSET_SELECTIONS}"
+        printf 'vector_literal_forks=%s\n' "${VECTOR_LITERAL_FORKS}"
     } > "${RESULT_DIR}/environment.txt" 2>&1
 }
 
@@ -386,7 +406,7 @@ run_official_rebar()
     local rebar="${rebar_root}/target/release/rebar"
     local engine_filter='^(?:re2|slice/re2)$'
     local model_filter='^(?:compile|count|count-spans|count-captures|grep|grep-captures)$'
-    local benchmark_filter='^curated/'
+    local benchmark_filter=${REBAR_BENCHMARK_FILTER}
 
     "${SLICE_DIR}/tools/re2-benchmark/rebar/prepare.sh" "${rebar_root}" "${benchmark_directory}"
     "${SLICE_DIR}/tools/re2-benchmark/rebar/build-slice.sh"
@@ -449,7 +469,7 @@ run_rebar_native_comparison()
     local rebar="${rebar_root}/target/release/rebar"
     local engine_filter='^(?:re2|re2/pinned-portable|re2/pinned-host-tuned-before|re2/pinned-host-tuned-after|slice/re2|slice/re2-object)$'
     local model_filter=${REBAR_MODEL_FILTER}
-    local benchmark_filter='^curated/'
+    local benchmark_filter=${REBAR_BENCHMARK_FILTER}
 
     "${SLICE_DIR}/tools/re2-golden/fetch-dependencies.sh" | tee "${RESULT_DIR}/native-fetch.log"
     cmake -S "${abseil_source}" -B "${abseil_build}" \
@@ -971,6 +991,8 @@ elif [[ "${BENCHMARK_MODE}" == dfa-layout-screen ]]; then
     ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" -Dtest=TestBenchmarkDfaByteTransitionLayout,TestBenchmarkDfaCharacterOffsetLayout,TestBenchmarkDfaCompactTransitionLayout,TestBenchmarkDfaTransitionLayout,TestBenchmarkDfaRealTransitionLayout,TestBenchmarkDfaPairedTransitionScaling,TestBenchmarkDfaPartialPairedTransitions,TestBenchmarkRebarPairedTransitions,TestDfaPairedTransitions test | tee "${RESULT_DIR}/slice-tests.log"
 elif [[ "${BENCHMARK_MODE}" == dfa-layout || "${BENCHMARK_MODE}" == dfa-pair-candidate || "${BENCHMARK_MODE}" == dfa-pair-diagnostic || "${BENCHMARK_MODE}" == dfa-pair-scaling || "${BENCHMARK_MODE}" == dfa-paired-corpus || "${BENCHMARK_MODE}" == dfa-partial-candidate || "${BENCHMARK_MODE}" == dfa-self-loop-final || "${BENCHMARK_MODE}" == dfa-self-loop-paired-protected || "${BENCHMARK_MODE}" == dfa-self-loop-protected || "${BENCHMARK_MODE}" == dfa-self-loop-rebar ]]; then
     ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" -Dtest=TestBenchmarkDfaTransitionLayout,TestBenchmarkDfaRealTransitionLayout,TestBenchmarkDfaSampledSelfLoopSearch,TestBenchmarkDfaSelfLoopSearch,TestBenchmarkDfaPairedTransitionScaling,TestBenchmarkDfaPartialPairedTransitions,TestBenchmarkRebarPairedTransitions,TestDfaPairedTransitions test | tee "${RESULT_DIR}/slice-tests.log"
+elif [[ "${BENCHMARK_MODE}" == vector-scanner || "${BENCHMARK_MODE}" == vector-literal ]]; then
+    ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" -Dtest=TestBenchmarkByteScanner test | tee "${RESULT_DIR}/slice-tests.log"
 elif [[ "${BENCHMARK_MODE}" != historical-dfa ]]; then
     ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" "-Dtest=**/re2/**/Test*" test | tee "${RESULT_DIR}/slice-tests.log"
 fi
@@ -1006,6 +1028,22 @@ if [[ "${BENCHMARK_MODE}" == joni-memory ]]; then
 fi
 if [[ "${BENCHMARK_MODE}" == joni-memory-census ]]; then
     run_joni_memory_census
+    exit 0
+fi
+if [[ "${BENCHMARK_MODE}" == vector-scanner ]]; then
+    BENCHMARK_FORKS="${VECTOR_SCANNER_FORKS}" \
+        BENCHMARK_WARMUP_ITERATIONS=5 \
+        BENCHMARK_MEASUREMENT_ITERATIONS=5 \
+        BENCHMARK_WARMUP_TIME=200ms \
+        BENCHMARK_MEASUREMENT_TIME=200ms \
+        run_jmh \
+            "${SLICE_CLASSPATH}" \
+            "${VECTOR_SCANNER_FILTER}" \
+            "${RESULT_DIR}/vector-scanner.json" \
+            -p "sourceLength=${VECTOR_SCANNER_SOURCE_LENGTHS}" \
+            -p "candidateCount=${VECTOR_SCANNER_CANDIDATE_COUNTS}" \
+            -p "inputShape=${VECTOR_SCANNER_INPUT_SHAPES}" \
+            -p "arrayOffset=${VECTOR_SCANNER_ARRAY_OFFSETS}"
     exit 0
 fi
 
@@ -1206,6 +1244,47 @@ run_byte_scan_source_comparison()
 
 if [[ "${BENCHMARK_MODE}" == byte-scan-fallback ]]; then
     run_byte_scan_source_comparison
+    exit 0
+fi
+
+if [[ "${BENCHMARK_MODE}" == vector-literal ]]; then
+    BENCHMARK_FORKS="${VECTOR_LITERAL_FORKS}" \
+        BENCHMARK_WARMUP_ITERATIONS=5 \
+        BENCHMARK_MEASUREMENT_ITERATIONS=5 \
+        BENCHMARK_WARMUP_TIME=200ms \
+        BENCHMARK_MEASUREMENT_TIME=200ms \
+        run_jmh \
+            "${SLICE_CLASSPATH}" \
+            "${VECTOR_LITERAL_FILTER}" \
+            "${RESULT_DIR}/vector-literal.json" \
+            -p "language=${VECTOR_LITERAL_LANGUAGES}" \
+            -p "sourceLength=${VECTOR_LITERAL_SOURCE_LENGTHS}" \
+            -p "inputShape=${VECTOR_LITERAL_INPUT_SHAPES}" \
+            -p "offsetSelection=${VECTOR_LITERAL_OFFSET_SELECTIONS}"
+
+    prepare_byte_scan_rebar
+    run_byte_scan_rebar candidate-before
+
+    candidate_source="${RESULT_DIR}/candidate-Prog.java"
+    cp src/main/java/io/airlift/slice/re2/Prog.java "${candidate_source}"
+    restore_vector_literal_candidate()
+    {
+        cp "${candidate_source}" src/main/java/io/airlift/slice/re2/Prog.java
+    }
+    trap restore_vector_literal_candidate EXIT
+    sed -i 's/if (prefixFoldCase || prefixSize <= 1 || prefix\[0\] >= 0) {/if (true) {/' \
+        src/main/java/io/airlift/slice/re2/Prog.java
+    if cmp -s "${candidate_source}" src/main/java/io/airlift/slice/re2/Prog.java; then
+        echo "Unable to disable the fused prefix route" >&2
+        exit 1
+    fi
+    ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" -q test-compile
+    run_byte_scan_rebar control
+
+    restore_vector_literal_candidate
+    trap - EXIT
+    ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" -q test-compile
+    run_byte_scan_rebar candidate-after
     exit 0
 fi
 

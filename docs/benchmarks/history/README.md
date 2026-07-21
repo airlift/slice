@@ -12,6 +12,8 @@ as release claims. Current work is in
 
 | Document | Historical purpose |
 |---|---|
+| [`2026-07-20-vector-literal-scanning.md`](2026-07-20-vector-literal-scanning.md) | Accepted cross-platform fused vector literal scanner and cutoff qualification |
+| [`2026-07-20-vector-literal-native-comparison.csv`](2026-07-20-vector-literal-native-comparison.csv) | Final Intel and Graviton rows against pinned host-tuned native RE2 |
 | [`2026-07-20-joni-final-acceptance.md`](2026-07-20-joni-final-acceptance.md) | Final three-session, complete-matrix Intel and Graviton acceptance against Joni |
 | [`2026-07-20-joni-final-qualified.csv`](2026-07-20-joni-final-qualified.csv) | Qualified row-level final Joni evidence |
 | [`2026-07-20-joni-final-underqualified.csv`](2026-07-20-joni-final-underqualified.csv) | Rows excluded from final Joni aggregates by the strict bracket gate |

@@ -85,6 +85,49 @@ public class TestRe2Utf8Match
         assertThat(reUtf8Ungreedy.fullMatch(target)).isFalse();
     }
 
+    @Test
+    public void testLatin1HighByteFusedPrefix()
+    {
+        byte[] prefix = {(byte) 0xE9, (byte) 0xF1};
+        byte[] pattern = concatenate(prefix, "([0-9]+)".getBytes(StandardCharsets.ISO_8859_1));
+        Re2 re2 = Re2.compile(Slices.wrappedBuffer(pattern), Re2.Options.latin1());
+
+        byte[] padding = new byte[1_100];
+        Arrays.fill(padding, (byte) 'x');
+        byte[] rejectedCandidate = concatenate(prefix, new byte[] {'x', ' '});
+        byte[] match = concatenate(prefix, new byte[] {'1', '2'});
+        Slice text = Slices.wrappedBuffer(concatenate(padding, rejectedCandidate, match));
+
+        MatchResult result = re2.partialMatchResult(text);
+        assertThat(result).isNotNull();
+        assertThat(result.start(0)).isEqualTo(padding.length + rejectedCandidate.length);
+        assertThat(result.end(0)).isEqualTo(text.length());
+        assertThat(result.groupSlice(1).getBytes()).containsExactly((byte) '1', (byte) '2');
+
+        assertThat(re2.partialMatchResult(Slices.wrappedBuffer(concatenate(padding, rejectedCandidate)))).isNull();
+    }
+
+    @Test
+    public void testFusedPrefixWithMalformedUtf8Haystack()
+    {
+        byte[] prefix = "Шерлок Холмс".getBytes(StandardCharsets.UTF_8);
+        Re2 re2 = Re2.compile(Slices.utf8Slice("Шерлок Холмс([0-9]+)"));
+        byte[] padding = new byte[1_100];
+        Arrays.fill(padding, (byte) 'x');
+        byte[] malformed = {(byte) 0xFF, (byte) 0xC2, (byte) 0xE0, (byte) 0x80, (byte) 0xF0, (byte) 0x80, (byte) 0x80};
+        byte[] rejectedCandidate = concatenate(prefix, new byte[] {'x'});
+        byte[] match = concatenate(prefix, new byte[] {'4', '2'});
+        Slice text = Slices.wrappedBuffer(concatenate(padding, malformed, rejectedCandidate, malformed, match));
+
+        MatchResult result = re2.partialMatchResult(text);
+        assertThat(result).isNotNull();
+        int expectedStart = padding.length + malformed.length + rejectedCandidate.length + malformed.length;
+        assertThat(result.start(0)).isEqualTo(expectedStart);
+        assertThat(result.end(0)).isEqualTo(text.length());
+
+        assertThat(re2.partialMatchResult(Slices.wrappedBuffer(concatenate(padding, malformed, rejectedCandidate, malformed)))).isNull();
+    }
+
     private static Re2.Options latin1Options()
     {
         return Re2.Options.latin1();
@@ -93,5 +136,19 @@ public class TestRe2Utf8Match
     private static byte[] toByteArray(Slice slice)
     {
         return slice.getBytes();
+    }
+
+    private static byte[] concatenate(byte[]... arrays)
+    {
+        int length = Arrays.stream(arrays)
+                .mapToInt(array -> array.length)
+                .sum();
+        byte[] result = new byte[length];
+        int offset = 0;
+        for (byte[] array : arrays) {
+            System.arraycopy(array, 0, result, offset, array.length);
+            offset += array.length;
+        }
+        return result;
     }
 }

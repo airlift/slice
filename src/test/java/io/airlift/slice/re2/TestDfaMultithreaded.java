@@ -297,6 +297,57 @@ public class TestDfaMultithreaded
         assertThat(dfa.resetCount()).isGreaterThan(initialResetCount);
     }
 
+    @Test
+    public void testConcurrentFusedPrefixSearch()
+            throws Exception
+    {
+        try (ExecutorService executor = Executors.newFixedThreadPool(THREADS)) {
+            assertConcurrentFusedPrefixSearch(executor, 256);
+        }
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            assertConcurrentFusedPrefixSearch(executor, 1_000);
+        }
+    }
+
+    private static void assertConcurrentFusedPrefixSearch(ExecutorService executor, int taskCount)
+            throws Exception
+    {
+        String prefix = "Шерлок Холмс";
+        String rejectedCandidate = prefix + "x ";
+        String leadingText = "x".repeat(1_100) + rejectedCandidate;
+        Slice matchingText = Slices.utf8Slice(leadingText + prefix + "123");
+        Slice nonMatchingText = Slices.utf8Slice(leadingText + prefix + "x");
+        int expectedStart = leadingText.getBytes(UTF_8).length;
+        int expectedEnd = matchingText.length();
+
+        Re2 firstMatch = Re2.compile(Slices.utf8Slice(prefix + "([0-9]+)"));
+        Re2 longestMatch = Re2.compile(
+                Slices.utf8Slice(prefix + "([0-9]+)"),
+                Re2.Options.defaults().setLongestMatch(true));
+
+        List<Future<?>> futures = new ArrayList<>();
+        for (int task = 0; task < taskCount; task++) {
+            int taskNumber = task;
+            futures.add(executor.submit(() -> {
+                boolean shouldMatch = (taskNumber & 1) == 0;
+                Re2 pattern = (taskNumber & 2) == 0 ? firstMatch : longestMatch;
+                MatchResult result = pattern.partialMatchResult(shouldMatch ? matchingText : nonMatchingText);
+                if (!shouldMatch) {
+                    assertThat(result).isNull();
+                    return;
+                }
+                assertThat(result).isNotNull();
+                assertThat(result.start(0)).isEqualTo(expectedStart);
+                assertThat(result.end(0)).isEqualTo(expectedEnd);
+                assertThat(result.groupSlice(1).toStringUtf8()).isEqualTo("123");
+            }));
+        }
+
+        for (Future<?> future : futures) {
+            future.get(30, TimeUnit.SECONDS);
+        }
+    }
+
     private static void doSearch(Prog prog, Slice match, Slice noMatch)
     {
         for (int i = 0; i < 2; i++) {

@@ -32,6 +32,7 @@ REBAR_CORPUS_DIR=${REBAR_CORPUS_DIR:-"${SLICE_DIR}/target/rebar-selected"}
 REBAR_OFFICIAL_DIR=${REBAR_OFFICIAL_DIR:-"${SLICE_DIR}/target/rebar-corpus"}
 REBAR_COMPARATOR_ORDER=${REBAR_COMPARATOR_ORDER:-forward}
 REBAR_MODEL_FILTER=${REBAR_MODEL_FILTER:-'^(?:compile|count|count-spans|count-captures|grep|grep-captures)$'}
+REBAR_BENCHMARK_FILTER=${REBAR_BENCHMARK_FILTER:-'^curated/'}
 REBAR_ALLOW_NATIVE_DRIFT=${REBAR_ALLOW_NATIVE_DRIFT:-false}
 REBAR_EXCLUDE_NATIVE_DRIFT=${REBAR_EXCLUDE_NATIVE_DRIFT:-false}
 JONI_MEMORY_CONTEXT_DIR=${JONI_MEMORY_CONTEXT_DIR:-"${SLICE_DIR}/benchmark-results/re2-engineering/20260718T192636Z-67046/intel/re2-results/context"}
@@ -54,11 +55,23 @@ TRADITIONAL_JMH_FORKS=${TRADITIONAL_JMH_FORKS:-5}
 TRADITIONAL_NATIVE_REPETITIONS=${TRADITIONAL_NATIVE_REPETITIONS:-5}
 TRADITIONAL_NATIVE_MINIMUM_TIME=${TRADITIONAL_NATIVE_MINIMUM_TIME:-1s}
 TRADITIONAL_BENCHMARK_CLASS=${TRADITIONAL_BENCHMARK_CLASS:-}
+VECTOR_SCANNER_FILTER=${VECTOR_SCANNER_FILTER:-'BenchmarkByteScanner\.(swar|vector128|vector256|vector512)$'}
+VECTOR_SCANNER_SOURCE_LENGTHS=${VECTOR_SCANNER_SOURCE_LENGTHS:-16,64,256,1024,32768}
+VECTOR_SCANNER_CANDIDATE_COUNTS=${VECTOR_SCANNER_CANDIDATE_COUNTS:-1,2,3}
+VECTOR_SCANNER_INPUT_SHAPES=${VECTOR_SCANNER_INPUT_SHAPES:-ABSENT,EARLY}
+VECTOR_SCANNER_ARRAY_OFFSETS=${VECTOR_SCANNER_ARRAY_OFFSETS:-0}
+VECTOR_SCANNER_FORKS=${VECTOR_SCANNER_FORKS:-3}
+VECTOR_LITERAL_FILTER=${VECTOR_LITERAL_FILTER:-'BenchmarkLiteralScanner\.(repeatedSwar|swar|vector128|vector256|vector512)$'}
+VECTOR_LITERAL_LANGUAGES=${VECTOR_LITERAL_LANGUAGES:-RUSSIAN,CHINESE}
+VECTOR_LITERAL_SOURCE_LENGTHS=${VECTOR_LITERAL_SOURCE_LENGTHS:-64,1024,32768}
+VECTOR_LITERAL_INPUT_SHAPES=${VECTOR_LITERAL_INPUT_SHAPES:-ABSENT,DENSE_FIRST_BYTE_FALSE,DENSE_TWO_OFFSET_FALSE}
+VECTOR_LITERAL_OFFSET_SELECTIONS=${VECTOR_LITERAL_OFFSET_SELECTIONS:-FRONT_BACK,TWO_RAREST}
+VECTOR_LITERAL_FORKS=${VECTOR_LITERAL_FORKS:-1}
 HSDIS_AMD64_SHA256=2ebd13ca0dd0a3f20c49b99c12b72e376b6c371975f734403048ddf3d7b51507
 HSDIS_AARCH64_SHA256=c531ae2f6002987b1d7ee5713a76e51bb54dc3da7b00c8b1214f021abda4dffb
 
 case "${CAMPAIGN_MODE}" in
-    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison) ;;
+    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison | vector-literal | vector-scanner) ;;
     *) echo "Unsupported campaign mode: ${CAMPAIGN_MODE}" >&2; exit 1 ;;
 esac
 if [[ "${CAMPAIGN_MODE}" == dfa-large-pointer ]]; then
@@ -471,6 +484,7 @@ export BENCHMARK_JAVA_ARCHIVE_SHA256='${BENCHMARK_JAVA_ARCHIVE_SHA256}'
 export REBAR_ROOT='/opt/re2-work/rebar'
 export REBAR_COMPARATOR_ORDER='${REBAR_COMPARATOR_ORDER}'
 export REBAR_MODEL_FILTER='${REBAR_MODEL_FILTER}'
+export REBAR_BENCHMARK_FILTER='${REBAR_BENCHMARK_FILTER}'
 export REBAR_ALLOW_NATIVE_DRIFT='${REBAR_ALLOW_NATIVE_DRIFT}'
 export REBAR_EXCLUDE_NATIVE_DRIFT='${REBAR_EXCLUDE_NATIVE_DRIFT}'
 export BENCHMARK_HEAP_SIZE='${BENCHMARK_HEAP_SIZE:-8g}'
@@ -493,6 +507,18 @@ export TRADITIONAL_JMH_FORKS='${TRADITIONAL_JMH_FORKS}'
 export TRADITIONAL_NATIVE_REPETITIONS='${TRADITIONAL_NATIVE_REPETITIONS}'
 export TRADITIONAL_NATIVE_MINIMUM_TIME='${TRADITIONAL_NATIVE_MINIMUM_TIME}'
 export TRADITIONAL_BENCHMARK_CLASS='${TRADITIONAL_BENCHMARK_CLASS}'
+export VECTOR_SCANNER_FILTER='${VECTOR_SCANNER_FILTER}'
+export VECTOR_SCANNER_SOURCE_LENGTHS='${VECTOR_SCANNER_SOURCE_LENGTHS}'
+export VECTOR_SCANNER_CANDIDATE_COUNTS='${VECTOR_SCANNER_CANDIDATE_COUNTS}'
+export VECTOR_SCANNER_INPUT_SHAPES='${VECTOR_SCANNER_INPUT_SHAPES}'
+export VECTOR_SCANNER_ARRAY_OFFSETS='${VECTOR_SCANNER_ARRAY_OFFSETS}'
+export VECTOR_SCANNER_FORKS='${VECTOR_SCANNER_FORKS}'
+export VECTOR_LITERAL_FILTER='${VECTOR_LITERAL_FILTER}'
+export VECTOR_LITERAL_LANGUAGES='${VECTOR_LITERAL_LANGUAGES}'
+export VECTOR_LITERAL_SOURCE_LENGTHS='${VECTOR_LITERAL_SOURCE_LENGTHS}'
+export VECTOR_LITERAL_INPUT_SHAPES='${VECTOR_LITERAL_INPUT_SHAPES}'
+export VECTOR_LITERAL_OFFSET_SELECTIONS='${VECTOR_LITERAL_OFFSET_SELECTIONS}'
+export VECTOR_LITERAL_FORKS='${VECTOR_LITERAL_FORKS}'
 
 /opt/re2-work/slice/tools/re2-benchmark/aws/run-host.sh \
     /opt/re2-work/slice \
@@ -577,7 +603,7 @@ if [[ "${CAMPAIGN_MODE}" == dfa-paired-corpus || "${CAMPAIGN_MODE}" == dfa-parti
         -C "$(dirname "${REBAR_CORPUS_DIR}")" "$(basename "${REBAR_CORPUS_DIR}")"
     REBAR_CORPUS_SHA256=$(sha256 "${SESSION_DIR}/rebar-selected.tar.gz")
 fi
-if [[ "${CAMPAIGN_MODE}" == rebar-official || "${CAMPAIGN_MODE}" == rebar-native-comparison || "${CAMPAIGN_MODE}" == bounded-count || "${CAMPAIGN_MODE}" == dfa-large-pointer || "${CAMPAIGN_MODE}" == byte-scan-fallback || "${CAMPAIGN_MODE}" == capture-pipeline ]]; then
+if [[ "${CAMPAIGN_MODE}" == rebar-official || "${CAMPAIGN_MODE}" == rebar-native-comparison || "${CAMPAIGN_MODE}" == bounded-count || "${CAMPAIGN_MODE}" == dfa-large-pointer || "${CAMPAIGN_MODE}" == byte-scan-fallback || "${CAMPAIGN_MODE}" == capture-pipeline || "${CAMPAIGN_MODE}" == vector-literal ]]; then
     if [[ ! -d "${REBAR_OFFICIAL_DIR}/.git" ]]; then
         echo "Pinned Rebar checkout does not exist: ${REBAR_OFFICIAL_DIR}" >&2
         exit 1
@@ -710,6 +736,7 @@ count_pipeline_memory_megabytes=${COUNT_PIPELINE_MEMORY_MEGABYTES}
 count_pipeline_control_memory_megabytes=${COUNT_PIPELINE_CONTROL_MEMORY_MEGABYTES}
 rebar_comparator_order=${REBAR_COMPARATOR_ORDER}
 rebar_model_filter=${REBAR_MODEL_FILTER}
+rebar_benchmark_filter=${REBAR_BENCHMARK_FILTER}
 rebar_allow_native_drift=${REBAR_ALLOW_NATIVE_DRIFT}
 rebar_exclude_native_drift=${REBAR_EXCLUDE_NATIVE_DRIFT}
 benchmark_java_archive_url=${BENCHMARK_JAVA_ARCHIVE_URL:-default-temurin-25}
@@ -734,6 +761,18 @@ traditional_jmh_forks=${TRADITIONAL_JMH_FORKS}
 traditional_native_repetitions=${TRADITIONAL_NATIVE_REPETITIONS}
 traditional_native_minimum_time=${TRADITIONAL_NATIVE_MINIMUM_TIME}
 traditional_benchmark_class=${TRADITIONAL_BENCHMARK_CLASS:-all}
+vector_scanner_filter=${VECTOR_SCANNER_FILTER}
+vector_scanner_source_lengths=${VECTOR_SCANNER_SOURCE_LENGTHS}
+vector_scanner_candidate_counts=${VECTOR_SCANNER_CANDIDATE_COUNTS}
+vector_scanner_input_shapes=${VECTOR_SCANNER_INPUT_SHAPES}
+vector_scanner_array_offsets=${VECTOR_SCANNER_ARRAY_OFFSETS}
+vector_scanner_forks=${VECTOR_SCANNER_FORKS}
+vector_literal_filter=${VECTOR_LITERAL_FILTER}
+vector_literal_languages=${VECTOR_LITERAL_LANGUAGES}
+vector_literal_source_lengths=${VECTOR_LITERAL_SOURCE_LENGTHS}
+vector_literal_input_shapes=${VECTOR_LITERAL_INPUT_SHAPES}
+vector_literal_offset_selections=${VECTOR_LITERAL_OFFSET_SELECTIONS}
+vector_literal_forks=${VECTOR_LITERAL_FORKS}
 intel_instance_type=${INTEL_INSTANCE_TYPE}
 intel_instance_id=${INTEL_INSTANCE_ID}
 arm_instance_type=${ARM_INSTANCE_TYPE}

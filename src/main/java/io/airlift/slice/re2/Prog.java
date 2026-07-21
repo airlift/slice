@@ -15,10 +15,6 @@ package io.airlift.slice.re2;
 
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
-import jdk.incubator.vector.ByteVector;
-import jdk.incubator.vector.VectorMask;
-import jdk.incubator.vector.VectorOperators;
-import jdk.incubator.vector.VectorSpecies;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -33,6 +29,7 @@ import static java.util.Objects.requireNonNull;
 final class Prog
 {
     private static final long BIT_STATE_BITMAP_MAXIMUM_BYTES = 256L * 1024L;
+    private static final int FUSED_PREFIX_VECTOR_MINIMUM_BYTES = 1024;
 
     public enum MatchKind
     {
@@ -42,21 +39,18 @@ final class Prog
         MANY_MATCH,
     }
 
-    /**
-     * Toggle between SWAR (scalar) and Vector API (SIMD) for byte scanning.
-     * Isolated benchmarks (16MB scan): SWAR 33.7 GB/s, Vector API 36.4 GB/s
-     * End-to-end RE2 (EASY0 16MB): SWAR 8.16 GB/s, Vector API 7.72 GB/s
-     * Default: SWAR (better end-to-end performance, no special flags needed)
-     */
-    private static final boolean USE_VECTOR_API = false;
+    enum PrefixAccelStrategy
+    {
+        REPEATED_BYTE,
+        FUSED_SWAR,
+        FUSED_VECTOR,
+    }
 
     // VarHandles for SWAR byte scanning (8-byte and 4-byte at a time)
     private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.nativeOrder());
     private static final VarHandle INT_HANDLE = MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.nativeOrder());
     private static final int MAXIMUM_FIXED_DISTANCE_BYTE_OFFSET = 16;
 
-    // Vector API species for SIMD byte scanning (ARM NEON 128-bit on Apple Silicon)
-    private static final VectorSpecies<Byte> VECTOR_SPECIES = ByteVector.SPECIES_PREFERRED;
     private static final int[] WORD_RANGES = {48, 57, 65, 90, 95, 95, 97, 122};
     private static final int[] NON_WORD_RANGES = {0, 47, 58, 64, 91, 94, 96, 96, 123, 255};
 
@@ -866,6 +860,17 @@ final class Prog
         return prefixFoldCase;
     }
 
+    PrefixAccelStrategy prefixAccelStrategy(int length)
+    {
+        if (prefixFoldCase || prefixSize <= 1 || prefix[0] >= 0) {
+            return PrefixAccelStrategy.REPEATED_BYTE;
+        }
+        if (VectorSupport.isAvailable() && length >= FUSED_PREFIX_VECTOR_MINIMUM_BYTES) {
+            return PrefixAccelStrategy.FUSED_VECTOR;
+        }
+        return PrefixAccelStrategy.FUSED_SWAR;
+    }
+
     /**
      * Specialized prefix scan for single-byte, case-sensitive prefix acceleration.
      * Keeps the scan path branch-free with respect to foldCase/prefix mode.
@@ -877,9 +882,6 @@ final class Prog
         }
         if (!canUseSingleBytePrefixAccelFastPath()) {
             throw new IllegalStateException("single-byte prefix accel fast path not configured");
-        }
-        if (USE_VECTOR_API) {
-            return indexOfVectorAPI(data, offset, length, prefix[0]);
         }
         return indexOfSWAR(data, offset, length, prefixFrontBroadcastMask);
     }
@@ -906,7 +908,6 @@ final class Prog
             this.prefixFrontBroadcastMask = 0;
         }
         else if (bytes.length != 1) {
-            // Use FrontAndBack for non-foldCase prefixes longer than 1 byte
             this.prefixSize = bytes.length;
             this.prefixFrontBroadcastMask = (bytes[0] & 0xFFL) * 0x0101010101010101L;
         }
@@ -948,6 +949,20 @@ final class Prog
             return indexOf(data, offset, length, prefix[0], prefixFoldCase);
         }
 
+        PrefixAccelStrategy strategy = prefixAccelStrategy(length);
+        if (strategy == PrefixAccelStrategy.FUSED_VECTOR) {
+            return VectorPrefixScanner.find(
+                    data,
+                    offset,
+                    length,
+                    prefix,
+                    0,
+                    prefixSize - 1);
+        }
+        if (strategy == PrefixAccelStrategy.FUSED_SWAR) {
+            return prefixAccelNoFoldCaseFrontAndBackSwar(data, offset, length);
+        }
+
         // FrontAndBack optimization: use first and last bytes to filter candidates
         byte prefixFront = prefix[0];
         byte prefixBack = prefix[prefixSize - 1];
@@ -979,35 +994,27 @@ final class Prog
         return -1;
     }
 
-    private int prefixAccelFoldCaseFrontAndBack(byte[] data, int offset, int length)
+    // PERFORMANCE-SENSITIVE HOT LOOP: changes here require target-host assembly
+    // and benchmark evidence. The two loads dominate this loop.
+    private int prefixAccelNoFoldCaseFrontAndBackSwar(byte[] data, int offset, int length)
     {
-        if (prefixSize == 1) {
-            return indexOfFoldCase(data, offset, length, prefix[0]);
-        }
-        if (USE_VECTOR_API) {
-            return prefixAccelFoldCaseFrontAndBackVectorAPI(data, offset, length);
-        }
-        return prefixAccelFoldCaseFrontAndBackSWAR(data, offset, length);
-    }
-
-    // PERFORMANCE-SENSITIVE HOT LOOPS: the fused front/back masks replace upstream's
-    // serial ShiftDFA dependency chain. Retain target-host evidence for any change.
-    private int prefixAccelFoldCaseFrontAndBackVectorAPI(byte[] data, int offset, int length)
-    {
+        long lowBits = 0x0101010101010101L;
+        long highBits = 0x8080808080808080L;
         int candidateCount = length - prefixSize + 1;
-        int vectorLength = VECTOR_SPECIES.length();
-        int vectorEnd = offset + VECTOR_SPECIES.loopBound(candidateCount);
-        int backOffset = prefixSize - 1;
+        int wordEnd = offset + (candidateCount / Long.BYTES) * Long.BYTES;
+        int primaryOffset = 0;
+        int secondaryOffset = prefixSize - 1;
+        long primaryBroadcast = (prefix[primaryOffset] & 0xFFL) * lowBits;
+        long secondaryBroadcast = (prefix[secondaryOffset] & 0xFFL) * lowBits;
         int position = offset;
 
-        for (; position < vectorEnd; position += vectorLength) {
-            ByteVector frontBytes = ByteVector.fromArray(VECTOR_SPECIES, data, position);
-            ByteVector backBytes = ByteVector.fromArray(VECTOR_SPECIES, data, position + backOffset);
-            long candidates = foldCaseMatches(frontBytes, prefix[0])
-                    .and(foldCaseMatches(backBytes, prefix[backOffset]))
-                    .toLong();
+        for (; position < wordEnd; position += Long.BYTES) {
+            long primaryDifference = ((long) LONG_HANDLE.get(data, position + primaryOffset)) ^ primaryBroadcast;
+            long secondaryDifference = ((long) LONG_HANDLE.get(data, position + secondaryOffset)) ^ secondaryBroadcast;
+            long candidates = ((primaryDifference - lowBits) & ~primaryDifference & highBits) &
+                    ((secondaryDifference - lowBits) & ~secondaryDifference & highBits);
             while (candidates != 0) {
-                int candidate = position + Long.numberOfTrailingZeros(candidates);
+                int candidate = position + (Long.numberOfTrailingZeros(candidates) >>> 3);
                 if (prefixMatchesAt(data, candidate)) {
                     return candidate;
                 }
@@ -1017,8 +1024,8 @@ final class Prog
 
         int end = offset + candidateCount;
         for (; position < end; position++) {
-            if (byteMatches(data[position], prefix[0], true) &&
-                    byteMatches(data[position + backOffset], prefix[backOffset], true) &&
+            if (data[position + primaryOffset] == prefix[primaryOffset] &&
+                    data[position + secondaryOffset] == prefix[secondaryOffset] &&
                     prefixMatchesAt(data, position)) {
                 return position;
             }
@@ -1026,14 +1033,12 @@ final class Prog
         return -1;
     }
 
-    private static VectorMask<Byte> foldCaseMatches(ByteVector data, byte expected)
+    private int prefixAccelFoldCaseFrontAndBack(byte[] data, int offset, int length)
     {
-        int lowerCaseByte = asciiLower(expected & 0xFF);
-        VectorMask<Byte> matches = data.compare(VectorOperators.EQ, (byte) lowerCaseByte);
-        if (lowerCaseByte >= 'a' && lowerCaseByte <= 'z') {
-            matches = matches.or(data.compare(VectorOperators.EQ, (byte) (lowerCaseByte - ('a' - 'A'))));
+        if (prefixSize == 1) {
+            return indexOfFoldCase(data, offset, length, prefix[0]);
         }
-        return matches;
+        return prefixAccelFoldCaseFrontAndBackSWAR(data, offset, length);
     }
 
     private int prefixAccelFoldCaseFrontAndBackSWAR(byte[] data, int offset, int length)
@@ -1085,8 +1090,6 @@ final class Prog
     }
 
     /**
-     * Find the first occurrence of byte {@code b} in {@code data[offset..offset+length)}.
-     * Dispatches to either SWAR (scalar) or Vector API (SIMD) based on USE_VECTOR_API flag.
      * Returns absolute index or -1 if not found.
      */
     private int indexOf(byte[] data, int offset, int length, byte b, boolean foldCase)
@@ -1103,34 +1106,22 @@ final class Prog
         // Use pre-computed broadcast mask when searching for the prefix front byte
         long broadcastMask = (prefix != null && b == prefix[0]) ? prefixFrontBroadcastMask : (b & 0xFFL) * 0x0101010101010101L;
 
-        // Case-sensitive: dispatch to SWAR or Vector API
-        if (USE_VECTOR_API) {
-            return indexOfVectorAPI(data, offset, length, b);
-        }
-        else {
-            return indexOfSWAR(data, offset, length, broadcastMask);
-        }
+        return indexOfSWAR(data, offset, length, broadcastMask);
     }
 
     /**
-     * Case-insensitive byte search using the configured vector or SWAR path.
+     * Case-insensitive byte search using the SWAR path.
      */
     private int indexOfFoldCase(byte[] data, int offset, int length, byte b)
     {
         int lowerCaseByte = asciiLower(b & 0xFF);
         if (lowerCaseByte < 'a' || lowerCaseByte > 'z') {
             long broadcastMask = (lowerCaseByte & 0xFFL) * 0x0101010101010101L;
-            if (USE_VECTOR_API) {
-                return indexOfVectorAPI(data, offset, length, (byte) lowerCaseByte);
-            }
             return indexOfSWAR(data, offset, length, broadcastMask);
         }
 
         byte lowerCase = (byte) lowerCaseByte;
         byte upperCase = (byte) (lowerCaseByte - ('a' - 'A'));
-        if (USE_VECTOR_API) {
-            return indexOfEitherVectorAPI(data, offset, length, lowerCase, upperCase);
-        }
         return indexOfEitherSWAR(data, offset, length, lowerCase, upperCase);
     }
 
@@ -1165,33 +1156,6 @@ final class Prog
         }
 
         for (int position = vectorEnd; position < end; position++) {
-            byte value = data[position];
-            if (value == first || value == second) {
-                return position;
-            }
-        }
-        return -1;
-    }
-
-    private int indexOfEitherVectorAPI(byte[] data, int offset, int length, byte first, byte second)
-    {
-        ByteVector firstVector = ByteVector.broadcast(VECTOR_SPECIES, first);
-        ByteVector secondVector = ByteVector.broadcast(VECTOR_SPECIES, second);
-        int vectorLength = VECTOR_SPECIES.length();
-        int loopBound = VECTOR_SPECIES.loopBound(length);
-        int end = offset + length;
-
-        int position = offset;
-        for (; position < offset + loopBound; position += vectorLength) {
-            ByteVector dataVector = ByteVector.fromArray(VECTOR_SPECIES, data, position);
-            VectorMask<Byte> matches = dataVector.compare(VectorOperators.EQ, firstVector)
-                    .or(dataVector.compare(VectorOperators.EQ, secondVector));
-            if (matches.anyTrue()) {
-                return position + matches.firstTrue();
-            }
-        }
-
-        for (; position < end; position++) {
             byte value = data[position];
             if (value == first || value == second) {
                 return position;
@@ -1244,44 +1208,6 @@ final class Prog
         // Tail: byte-by-byte for remaining bytes
         byte b = (byte) broadcastMask;
         for (int i = end16; i < end; i++) {
-            if (data[i] == b) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    /**
-     * Vector API byte scanning using ARM NEON (128-bit SIMD).
-     * Processes 16 bytes per iteration using true SIMD instructions.
-     * Throughput: ~36.4 GB/s on 16MB buffers (6.0x faster than byte-by-byte).
-     * Requires: --add-modules jdk.incubator.vector
-     */
-    private int indexOfVectorAPI(byte[] data, int offset, int length, byte b)
-    {
-        // Broadcast target to all 16 lanes (for ARM NEON 128-bit)
-        ByteVector targetVec = ByteVector.broadcast(VECTOR_SPECIES, b);
-        int vlen = VECTOR_SPECIES.length();  // 16 bytes for ARM NEON
-        int loopBound = VECTOR_SPECIES.loopBound(length);
-        int end = offset + length;
-
-        // Vectorized loop: 16 bytes per iteration
-        int i = offset;
-        for (; i < offset + loopBound; i += vlen) {
-            // Load 16 bytes into NEON vector register
-            ByteVector dataVec = ByteVector.fromArray(VECTOR_SPECIES, data, i);
-
-            // Parallel compare: all 16 bytes compared simultaneously
-            VectorMask<Byte> mask = dataVec.compare(VectorOperators.EQ, targetVec);
-
-            if (mask.anyTrue()) {
-                return i + mask.firstTrue();  // Find first matching lane
-            }
-        }
-
-        // Tail: byte-by-byte for remaining bytes
-        for (; i < end; i++) {
             if (data[i] == b) {
                 return i;
             }

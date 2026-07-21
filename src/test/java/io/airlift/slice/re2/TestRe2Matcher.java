@@ -375,6 +375,38 @@ public class TestRe2Matcher
     }
 
     @Test
+    public void testFusedPrefixLogicalRegionAndBackingOffset()
+    {
+        String prefix = "Шерлок Холмс";
+        String match = prefix + "123";
+        byte[] matchBytes = Slices.utf8Slice(match).getBytes();
+        byte[] regionBytes = Slices.utf8Slice(match + "x".repeat(1_100) + match).getBytes();
+        byte[] decoyBytes = Slices.utf8Slice(match + " ").getBytes();
+        byte[] logicalInput = new byte[(2 * decoyBytes.length) + regionBytes.length];
+        System.arraycopy(decoyBytes, 0, logicalInput, 0, decoyBytes.length);
+        System.arraycopy(regionBytes, 0, logicalInput, decoyBytes.length, regionBytes.length);
+        System.arraycopy(decoyBytes, 0, logicalInput, decoyBytes.length + regionBytes.length, decoyBytes.length);
+
+        byte[] backing = new byte[logicalInput.length + 13];
+        System.arraycopy(logicalInput, 0, backing, 7, logicalInput.length);
+        Slice input = Slices.wrappedBuffer(backing, 7, logicalInput.length);
+        Re2Matcher matcher = Re2.compile(Slices.utf8Slice(prefix + "([0-9]+)"))
+                .matcher(input)
+                .reset(input, decoyBytes.length, decoyBytes.length + regionBytes.length);
+
+        assertThat(matcher.find()).isTrue();
+        assertThat(matcher.start()).isZero();
+        assertThat(matcher.end()).isEqualTo(matchBytes.length);
+        assertThat(matcher.group(1).toStringUtf8()).isEqualTo("123");
+
+        assertThat(matcher.find()).isTrue();
+        assertThat(matcher.start()).isEqualTo(regionBytes.length - matchBytes.length);
+        assertThat(matcher.end()).isEqualTo(regionBytes.length);
+        assertThat(matcher.group(1).toStringUtf8()).isEqualTo("123");
+        assertThat(matcher.find()).isFalse();
+    }
+
+    @Test
     public void testLogicalRegionExhaustiveAgreement()
     {
         Slice input = Slices.utf8Slice(" a\nab💰x\n");

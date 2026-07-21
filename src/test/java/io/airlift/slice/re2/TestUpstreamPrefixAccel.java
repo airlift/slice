@@ -26,6 +26,45 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TestUpstreamPrefixAccel
 {
     @Test
+    public void testNonAsciiPrefixAccelRoute()
+    {
+        Prog nonAsciiProgram = compile("x");
+        nonAsciiProgram.configurePrefixAccel(Slices.utf8Slice("Шерлок Холмс"), false);
+        assertThat(nonAsciiProgram.prefixAccelStrategy(64)).isEqualTo(Prog.PrefixAccelStrategy.FUSED_SWAR);
+        assertThat(nonAsciiProgram.prefixAccelStrategy(1023)).isEqualTo(Prog.PrefixAccelStrategy.FUSED_SWAR);
+        assertThat(nonAsciiProgram.prefixAccelStrategy(1024)).isEqualTo(Prog.PrefixAccelStrategy.FUSED_VECTOR);
+
+        Prog asciiProgram = compile("x");
+        asciiProgram.configurePrefixAccel(Slices.utf8Slice("Sherlock Holmes"), false);
+        assertThat(asciiProgram.prefixAccelStrategy(32768)).isEqualTo(Prog.PrefixAccelStrategy.REPEATED_BYTE);
+    }
+
+    @Test
+    public void testNonAsciiPrefixAccelMatchesReference()
+    {
+        Random random = new Random(2);
+        for (String prefix : List.of("Шерлок Холмс", "夏洛克·福尔摩斯")) {
+            byte[] literal = prefix.getBytes(StandardCharsets.UTF_8);
+            Prog program = compile("x");
+            program.configurePrefixAccel(Slices.wrappedBuffer(literal), false);
+
+            for (int iteration = 0; iteration < 1_000; iteration++) {
+                byte[] data = new byte[random.nextInt(2049) + literal.length + 8];
+                random.nextBytes(data);
+                if (random.nextBoolean()) {
+                    int insertionPosition = random.nextInt(data.length - literal.length + 1);
+                    System.arraycopy(literal, 0, data, insertionPosition, literal.length);
+                }
+
+                int offset = random.nextInt(4);
+                int length = data.length - offset - random.nextInt(4);
+                assertThat(program.prefixAccel(data, offset, length))
+                        .isEqualTo(referenceSearch(data, offset, length, literal));
+            }
+        }
+    }
+
+    @Test
     public void testFoldCasePrefixAccelCandidateScan()
     {
         // Pattern with case-insensitive prefix
@@ -120,6 +159,24 @@ public class TestUpstreamPrefixAccel
                     expected += 'a' - 'A';
                 }
                 if (actual != expected) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) {
+                return position;
+            }
+        }
+        return -1;
+    }
+
+    private static int referenceSearch(byte[] data, int offset, int length, byte[] literal)
+    {
+        int lastStart = offset + length - literal.length;
+        for (int position = offset; position <= lastStart; position++) {
+            boolean matches = true;
+            for (int index = 0; index < literal.length; index++) {
+                if (data[position + index] != literal[index]) {
                     matches = false;
                     break;
                 }

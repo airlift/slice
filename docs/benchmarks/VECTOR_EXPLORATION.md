@@ -1,7 +1,10 @@
 # Vector Search Exploration
 
-**Status:** Proposed engineering exploration. This document defines an ordered
-investigation, not an implemented design or a performance claim.
+**Status:** The first bounded campaign is complete. A fused vector literal
+scanner with a SWAR fallback when the optional Vector module is unavailable is
+accepted; general small-set and folded-prefix integration remain separate
+work. See
+[`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md).
 
 ## Question
 
@@ -389,9 +392,11 @@ Engineering acceptance requires dedicated runs on:
 
 - modern Intel x64
 - AWS Graviton AArch64
+- Apple Silicon AArch64
 
-Apple Silicon is useful only for local directional development. It is not an
-acceptance platform for this server library.
+Apple Silicon is a supported target. Its Vector API results must be qualified
+independently because its preferred 128-bit NEON lowering and crossover do not
+predict Intel AVX-512 behavior.
 
 ### Evidence
 

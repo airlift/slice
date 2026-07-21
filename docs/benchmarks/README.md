@@ -15,9 +15,10 @@ absolute-pointer representation.
 the bounded current-engine comparison with official and pinned native RE2. Its
 executed results are in
 [`history/2026-07-16-rebar-native-comparison.md`](history/2026-07-16-rebar-native-comparison.md).
-[`VECTOR_EXPLORATION.md`](VECTOR_EXPLORATION.md) defines the proposed sequence
-for evaluating Vector API candidate scanning, literal filtering, DFA state
-acceleration, and small multi-literal search.
+[`VECTOR_EXPLORATION.md`](VECTOR_EXPLORATION.md) records the bounded Vector API
+exploration and its accepted fused literal scanner. The measurements and
+rejected alternatives are in
+[`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md).
 
 [`METHODOLOGY.md`](METHODOLOGY.md) is the current guide for designing, running,
 and interpreting benchmarks.
