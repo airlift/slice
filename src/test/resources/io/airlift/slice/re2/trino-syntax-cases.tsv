@@ -1,0 +1,27 @@
+# expected	pattern	reason
+ACCEPT	(?<name>x)	Java named capture syntax is supported
+ACCEPT	(?P<name>x)	RE2 named capture syntax is supported
+ACCEPT	[[:alpha:]]	POSIX character class is supported
+ACCEPT	\p{Old_Italic}	RE2 Unicode script name is supported
+ACCEPT	\C	Match one byte is an intentional RE2 extension
+ACCEPT	\Q[x]\E	Quoted literal is supported outside character classes
+ACCEPT	\x{10000}	Braced Unicode escape is supported
+REJECT	(?=x)	Lookahead requires backtracking semantics
+REJECT	(?<=x)y	Lookbehind requires backtracking semantics
+REJECT	(?>x)	Atomic groups are not regular-language syntax
+REJECT	x++	Possessive quantifiers are not supported
+REJECT	(x)\1	Backreferences are not regular-language syntax
+REJECT	\R	Java line-break escape is not RE2 syntax
+REJECT	\h	Java horizontal-whitespace escape is not RE2 syntax
+REJECT	(?x)x	Java comments mode is not RE2 syntax
+REJECT	\Z	Java end-of-input escape is not RE2 syntax
+REJECT	\G	Java previous-match boundary is not RE2 syntax
+COLLISION	(?U)a+	Java Unicode-character-class mode means RE2 ungreedy mode
+COLLISION	(?iU:a+)	Combined Java Unicode-character-class mode means RE2 ungreedy mode
+COLLISION	(?-U:a+)	Disabled Java Unicode-character-class mode changes RE2 greediness
+COLLISION	[a-z&&[^bc]]	Java character-class intersection has different RE2 meaning
+ACCEPT	\(\?U\)	Escaped flag text is a literal and is not a collision
+ACCEPT	[&][&]	Separate ampersand classes are not Java intersection syntax
+ACCEPT	\p{InBasic_Latin}	JVM-backed Unicode blocks are supported
+ACCEPT	\p{javaLowerCase}	JVM-backed Java binary properties are supported
+REJECT	[\Q]	Quoted literals inside character classes follow a different contract
