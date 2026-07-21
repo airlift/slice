@@ -1,0 +1,5 @@
+architecture,operation,workload,source_length,stable_sessions,slice_to_joni_ratio,median_allocation_difference_bytes,maximum_stable_bracket_ratio,maximum_observed_bracket_ratio
+arm,count,emptyMatches,1024,0,0.041264987627182254,-152.23973126111323,,1.070999545273487
+arm,replaceLambda,emptyMatches,32768,1,0.29408382820466145,-1310825.1348911922,1.0011721116132382,1.0616864418949121
+intel,replaceLambda,emptyMatches,1024,1,0.3124366769005954,-41085.55174847708,1.0154674757749356,1.0498037345409352
+intel,replaceLambda,emptyMatches,32768,1,0.2981035782994775,-1310847.286266719,1.0128323783273776,1.034099677687431

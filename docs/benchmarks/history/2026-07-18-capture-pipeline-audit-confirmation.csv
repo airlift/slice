@@ -1,0 +1,13 @@
+architecture,qualification,name,model,haystack_len,slice_median_ns,re2_pinned_host_tuned_bracketed_median_ns,slice_to_re2_pinned_host_tuned_ratio,native_before_after_drift,absolute_deficit_ns
+Intel,rejected-native-drift,curated/04-ruff-noqa/real,grep-captures,32514634,103090000,73059999.3156,1.41103204169,0.000273785078713,30030000.6844
+Intel,rejected-native-drift,curated/04-ruff-noqa/tweaked,grep-captures,32514634,51800000,41309989.1068,1.25393400289,0.00145348837209,10490010.8932
+Intel,rejected-native-drift,curated/05-lexer-veryl/single,count-captures,150600,155070000,146309972.319,1.05987307319,0.00123102174805,8760027.68095
+Intel,rejected-native-drift,curated/07-unicode-character-data/parse-line,grep-captures,1913704,30600000,21201858.4091,1.44326970823,0.0350287907869,9398141.59089
+Intel,rejected-native-drift,curated/09-aws-keys/full,grep-captures,32514634,40090000,75384995.8546,0.53180343841,0.000663481953291,-35294995.8546
+Intel,rejected-native-drift,curated/11-unstructured-to-json/extract,grep-captures,23952,388290,238179.696868,1.63023971021,0.0460322913088,150110.303132
+Graviton,qualified,curated/04-ruff-noqa/real,grep-captures,32514634,108990000,98721552.8646,1.10401423841,0.0168539325843,10268447.1354
+Graviton,qualified,curated/04-ruff-noqa/tweaked,grep-captures,32514634,62050000,53354482.4734,1.16297632595,0.00884789156627,8695517.52664
+Graviton,qualified,curated/05-lexer-veryl/single,count-captures,150600,216600000,222999991.928,0.971300483588,0.000538261415628,-6399991.92825
+Graviton,qualified,curated/07-unicode-character-data/parse-line,grep-captures,1913704,30220000,29304999.5735,1.03122335574,0.000341296928328,915000.426548
+Graviton,qualified,curated/09-aws-keys/full,grep-captures,32514634,43940000,98519707.6731,0.446002135388,0.004884004884,-54579707.6731
+Graviton,qualified,curated/11-unstructured-to-json/extract,grep-captures,23952,417250,320478.736268,1.30195845396,0.00563239251518,96771.2637319
