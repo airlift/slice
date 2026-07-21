@@ -318,7 +318,7 @@ final class Prog
      * <p>
      * When {@code true}:
      * <ul>
-     * <li>Execution scans bytes right-to-left (backward)
+     * <li>{@link io.airlift.slice.re2.Dfa#search} scans bytes right-to-left (backward)
      * <li>Anchor flags are swapped from pattern semantics: {@code ^} becomes {@code $}, {@code $} becomes {@code ^}
      * <li>Used in Phase 2 of two-phase search to find match start after forward DFA found end
      * <li>Memory budget typically 1/3 of total (vs 2/3 for forward)
@@ -332,6 +332,7 @@ final class Prog
      * <p>
      *
      * @see io.airlift.slice.re2.Compiler#compile for reverse compilation
+     * @see io.airlift.slice.re2.Dfa#search for search execution
      */
     private boolean reversed;
 
@@ -372,6 +373,9 @@ final class Prog
 
     // DFA caching with memory budgets (like upstream RE2).
     private long dfaMemory;  // Total DFA memory budget
+    private final AtomicReference<Dfa.DfaInstance> dfaFirstMatch = new AtomicReference<>();
+    private final AtomicReference<Dfa.DfaInstance> dfaLongestMatch = new AtomicReference<>();
+    private final AtomicReference<Dfa.DfaInstance> dfaManyMatch = new AtomicReference<>();
     // Immutable flattened instruction tables for NFA no-submatch fast path.
     private final AtomicReference<NoSubmatchTables> noSubmatchNfaTables = new AtomicReference<>();
     // Compact immutable instructions built lazily after flattening and shared by capture engines.
@@ -1422,6 +1426,60 @@ final class Prog
     public long dfaMemory()
     {
         return dfaMemory;
+    }
+
+    /**
+     * Get or create cached DFA with memory budget.
+     * Like upstream Prog::GetDFA().
+     */
+    public Dfa.DfaInstance getCachedDfa(Dfa.DfaInstance.Kind kind)
+    {
+        requireNonNull(kind, "kind is null");
+        AtomicReference<Dfa.DfaInstance> ref = dfaReference(kind);
+
+        // Fast path - already cached
+        Dfa.DfaInstance cached = ref.get();
+        if (cached != null) {
+            return cached;
+        }
+
+        // Lazy initialization with memory budget
+        long budget = switch (kind) {
+            case MANY_MATCH -> dfaMemory;
+            case FIRST_MATCH -> dfaMemory / 2;
+            case LONGEST_MATCH -> reversed ? dfaMemory : dfaMemory / 2;
+        };
+        if (budget <= 0) {
+            return null;
+        }
+        Dfa.DfaInstance newDfa = new Dfa.DfaInstance(this, kind, budget);
+
+        if (!newDfa.ok()) {
+            // Budget too small to even initialize DFA
+            return null;
+        }
+
+        // CAS to cache
+        if (ref.compareAndSet(null, newDfa)) {
+            return newDfa;
+        }
+        // Lost race - use winner's DFA
+        return ref.get();
+    }
+
+    Dfa.DfaInstance cachedDfaIfPresent(Dfa.DfaInstance.Kind kind)
+    {
+        requireNonNull(kind, "kind is null");
+        return dfaReference(kind).get();
+    }
+
+    private AtomicReference<Dfa.DfaInstance> dfaReference(Dfa.DfaInstance.Kind kind)
+    {
+        return switch (kind) {
+            case FIRST_MATCH -> dfaFirstMatch;
+            case LONGEST_MATCH -> dfaLongestMatch;
+            case MANY_MATCH -> dfaManyMatch;
+        };
     }
 
     NoSubmatchTables getOrCreateNoSubmatchTables()
