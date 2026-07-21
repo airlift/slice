@@ -49,7 +49,7 @@ VECTOR_LITERAL_OFFSET_SELECTIONS=${VECTOR_LITERAL_OFFSET_SELECTIONS:-FRONT_BACK,
 VECTOR_LITERAL_FORKS=${VECTOR_LITERAL_FORKS:-1}
 
 case "${BENCHMARK_MODE}" in
-    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison | vector-literal | vector-scanner) ;;
+    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | safere-comparator | safere-contains | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison | vector-literal | vector-scanner) ;;
     *) echo "Unsupported benchmark mode: ${BENCHMARK_MODE}" >&2; exit 1 ;;
 esac
 if [[ "${BENCHMARK_MODE}" == dfa-large-pointer ]]; then
@@ -205,6 +205,11 @@ record_environment()
         printf 'qualification_jmh_warmup=10x1s\n'
         printf 'qualification_jmh_measurement=10x1s\n'
         printf 'qualification_native_repetitions=5\n'
+        if [[ "${BENCHMARK_MODE}" == safere-comparator || "${BENCHMARK_MODE}" == safere-contains ]]; then
+            printf 'safere_jmh_forks=3\n'
+            printf 'safere_jmh_warmup=5x500ms\n'
+            printf 'safere_jmh_measurement=5x500ms\n'
+        fi
         printf 'capture_shard=%s\n' "${CAPTURE_SHARD}"
         printf 'capture_control=%s\n' "${CAPTURE_CONTROL}"
         printf 'capture_engine=%s\n' "${CAPTURE_ENGINE}"
@@ -380,6 +385,96 @@ run_joni_memory_qualification()
         --slice-after "${RESULT_DIR}/slice-after.json"
 
     run_joni_memory_census
+}
+
+run_safere_qualification()
+{
+    local operation_filter='contains'
+    local expected_benchmark_count=1
+    if [[ "${BENCHMARK_MODE}" == safere-comparator ]]; then
+        operation_filter='contains|count|positionThird|extract|extractAll|split|replace|replaceLambda'
+        expected_benchmark_count=8
+    fi
+    local slice_operation_filter="BenchmarkTrinoRegexp\.(${operation_filter})$"
+    local safere_operation_filter="BenchmarkSafeReTrinoRegexp\.(${operation_filter})SafeRe$"
+    local slice_benchmark_count
+    local safere_benchmark_count
+
+    slice_benchmark_count=$(java --add-modules jdk.incubator.vector -cp "${SLICE_CLASSPATH}" org.openjdk.jmh.Main -l "${slice_operation_filter}" | grep -c '^io.airlift.slice.re2.BenchmarkTrinoRegexp\.')
+    safere_benchmark_count=$(java --add-modules jdk.incubator.vector -cp "${SLICE_CLASSPATH}" org.openjdk.jmh.Main -l "${safere_operation_filter}" | grep -c '^io.airlift.slice.re2.BenchmarkSafeReTrinoRegexp\.')
+    if [[ ${slice_benchmark_count} -ne ${expected_benchmark_count} || ${safere_benchmark_count} -ne ${expected_benchmark_count} ]]; then
+        echo "Expected ${expected_benchmark_count} Slice and SafeRE operation benchmarks, found Slice=${slice_benchmark_count}, SafeRE=${safere_benchmark_count}" >&2
+        exit 1
+    fi
+
+    BENCHMARK_FORKS=3 \
+        BENCHMARK_WARMUP_ITERATIONS=5 \
+        BENCHMARK_MEASUREMENT_ITERATIONS=5 \
+        BENCHMARK_WARMUP_TIME=500ms \
+        BENCHMARK_MEASUREMENT_TIME=500ms \
+        BENCHMARK_NATIVE_ACCESS=true \
+        BENCHMARK_DENY_NATIVE_ACCESS=true \
+        run_jmh \
+            "${SLICE_CLASSPATH}" \
+            "${slice_operation_filter}" \
+            "${RESULT_DIR}/slice-before.json" \
+            -prof gc
+    BENCHMARK_FORKS=3 \
+        BENCHMARK_WARMUP_ITERATIONS=5 \
+        BENCHMARK_MEASUREMENT_ITERATIONS=5 \
+        BENCHMARK_WARMUP_TIME=500ms \
+        BENCHMARK_MEASUREMENT_TIME=500ms \
+        run_jmh \
+            "${SLICE_CLASSPATH}" \
+            "${safere_operation_filter}" \
+            "${RESULT_DIR}/safere.json" \
+            -prof gc
+    BENCHMARK_FORKS=3 \
+        BENCHMARK_WARMUP_ITERATIONS=5 \
+        BENCHMARK_MEASUREMENT_ITERATIONS=5 \
+        BENCHMARK_WARMUP_TIME=500ms \
+        BENCHMARK_MEASUREMENT_TIME=500ms \
+        BENCHMARK_NATIVE_ACCESS=true \
+        BENCHMARK_DENY_NATIVE_ACCESS=true \
+        run_jmh \
+            "${SLICE_CLASSPATH}" \
+            "${slice_operation_filter}" \
+            "${RESULT_DIR}/slice-after.json" \
+            -prof gc
+
+    python3 "${SLICE_DIR}/tools/re2-benchmark/safere/summarize.py" \
+        "${RESULT_DIR}/slice-before.json" \
+        "${RESULT_DIR}/safere.json" \
+        "${RESULT_DIR}/operation-summary" \
+        --slice-after "${RESULT_DIR}/slice-after.json"
+}
+
+run_boolean_partial_match_qualification()
+{
+    local benchmark_filter='BenchmarkRe2BooleanPartialMatch\.match$'
+    local benchmark_count
+
+    benchmark_count=$(java --add-modules jdk.incubator.vector -cp "${SLICE_CLASSPATH}" org.openjdk.jmh.Main -l "${benchmark_filter}" | grep -c '^io.airlift.slice.re2.BenchmarkRe2BooleanPartialMatch\.match$')
+    if [[ ${benchmark_count} -ne 1 ]]; then
+        echo "Expected one boolean partial-match benchmark, found ${benchmark_count}" >&2
+        exit 1
+    fi
+
+    BENCHMARK_FORKS=3 \
+        BENCHMARK_WARMUP_ITERATIONS=5 \
+        BENCHMARK_MEASUREMENT_ITERATIONS=5 \
+        BENCHMARK_WARMUP_TIME=500ms \
+        BENCHMARK_MEASUREMENT_TIME=500ms \
+        BENCHMARK_NATIVE_ACCESS=true \
+        BENCHMARK_DENY_NATIVE_ACCESS=true \
+        run_jmh \
+            "${SLICE_CLASSPATH}" \
+            "${benchmark_filter}" \
+            "${RESULT_DIR}/boolean-partial-match.json"
+
+    python3 "${SLICE_DIR}/tools/re2-benchmark/safere/summarize_boolean_partial_match.py" \
+        "${RESULT_DIR}/boolean-partial-match.json" \
+        "${RESULT_DIR}/boolean-partial-match-summary"
 }
 
 run_joni_memory_census()
@@ -961,6 +1056,14 @@ elif [[ "${BENCHMARK_MODE}" == joni-memory || "${BENCHMARK_MODE}" == joni-memory
         ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" \
         -Dtest=TestBenchmarkTrinoRegexp,TestTraditionalBenchmarkInputs \
         test | tee "${RESULT_DIR}/slice-tests-native-access.log"
+elif [[ "${BENCHMARK_MODE}" == safere-comparator || "${BENCHMARK_MODE}" == safere-contains ]]; then
+    ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" \
+        -Dtest=TestBenchmarkRe2BooleanPartialMatch,TestBenchmarkSafeReTrinoRegexp,TestBenchmarkTrinoRegexp,TestRe2BooleanMatchOptimizations \
+        test | tee "${RESULT_DIR}/slice-tests-object.log"
+    JDK_JAVA_OPTIONS='--enable-native-access=ALL-UNNAMED --illegal-native-access=deny' \
+        ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" \
+        -Dtest=TestBenchmarkRe2BooleanPartialMatch,TestBenchmarkSafeReTrinoRegexp,TestBenchmarkTrinoRegexp,TestRe2BooleanMatchOptimizations \
+        test | tee "${RESULT_DIR}/slice-tests-native-access.log"
 elif [[ "${BENCHMARK_MODE}" == bounded-count || "${BENCHMARK_MODE}" == dfa-large-pointer ]]; then
     ./mvnw "${MAVEN_SNAPSHOT_ARGS[@]}" \
         -Dtest=TestCountPipelineRunner,TestDfaCountMatches,TestRebarRunner \
@@ -1028,6 +1131,13 @@ if [[ "${BENCHMARK_MODE}" == joni-memory ]]; then
 fi
 if [[ "${BENCHMARK_MODE}" == joni-memory-census ]]; then
     run_joni_memory_census
+    exit 0
+fi
+if [[ "${BENCHMARK_MODE}" == safere-comparator || "${BENCHMARK_MODE}" == safere-contains ]]; then
+    if [[ "${BENCHMARK_MODE}" == safere-contains ]]; then
+        run_boolean_partial_match_qualification
+    fi
+    run_safere_qualification
     exit 0
 fi
 if [[ "${BENCHMARK_MODE}" == vector-scanner ]]; then

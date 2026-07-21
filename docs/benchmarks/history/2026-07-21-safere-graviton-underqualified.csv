@@ -1,0 +1,3 @@
+architecture,operation,workload,source_length,stable_sessions,diagnostic_time_ratio,minimum_slice_bracket_ratio
+arm,count,unicodeSparse,32768,1,0.45454986074931547,1.0052015747480727
+arm,extractAll,delimiterDense,1024,1,0.16024681349554307,1.002990893382986

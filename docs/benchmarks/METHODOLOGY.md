@@ -137,6 +137,14 @@ Before accepting timings, run the semantic smoke tests:
 compares every Joni result with historical RE2J for all workload/size pairs.
 This protects the comparator itself; it is not performance evidence.
 
+`BenchmarkSafeReTrinoRegexp` applies the same matrix to SafeRE's borrowed UTF-8
+API. Its test-only adapter includes the per-value `Utf8Input.trusted` view that
+a Trino integration requires, but does not decode or copy source bytes.
+`TestBenchmarkSafeReTrinoRegexp` compares all results with `TrinoRegexp` before
+timing. Run the paired Intel and Graviton comparison with
+`CAMPAIGN_MODE=safere-comparator`; the host brackets SafeRE with Slice before
+and after and records normalized allocation.
+
 ### AWS Engineering Session
 
 `tools/re2-benchmark/aws/run-campaign.sh` runs one internal engineering session

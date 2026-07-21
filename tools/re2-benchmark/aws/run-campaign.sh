@@ -71,7 +71,7 @@ HSDIS_AMD64_SHA256=2ebd13ca0dd0a3f20c49b99c12b72e376b6c371975f734403048ddf3d7b51
 HSDIS_AARCH64_SHA256=c531ae2f6002987b1d7ee5713a76e51bb54dc3da7b00c8b1214f021abda4dffb
 
 case "${CAMPAIGN_MODE}" in
-    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison | vector-literal | vector-scanner) ;;
+    full | targeted | trino-comparator | joni-focused | joni-memory | joni-memory-census | safere-comparator | safere-contains | bounded-count | byte-scan-fallback | capture-count | capture-engine | capture-pipeline | dfa-absolute-pointer-integrated | dfa-diagnostic | dfa-large-pointer | dfa-layout | dfa-layout-screen | dfa-layout-perfasm | dfa-real-layout-screen | dfa-pair-candidate | dfa-pair-diagnostic | dfa-pair-scaling | dfa-paired-corpus | dfa-partial-candidate | dfa-self-loop-final | dfa-self-loop-paired-protected | dfa-self-loop-protected | dfa-self-loop-rebar | fixed-distance | group-zero | historical-dfa | nullable-repeat | rebar-native-comparison | rebar-official | start-byte | traditional-native-comparison | vector-literal | vector-scanner) ;;
     *) echo "Unsupported campaign mode: ${CAMPAIGN_MODE}" >&2; exit 1 ;;
 esac
 if [[ "${CAMPAIGN_MODE}" == dfa-large-pointer ]]; then
@@ -538,7 +538,7 @@ launch_instance()
     local ami
     local root_device
     local subnet
-    local market_arguments=()
+    local launch_arguments
 
     ami=$(aws_cli ssm get-parameter --name "${ami_parameter}" --query Parameter.Value --output text)
     root_device=$(aws_cli ec2 describe-images --image-ids "${ami}" --query 'Images[0].RootDeviceName' --output text)
@@ -550,13 +550,7 @@ launch_instance()
 
     create_user_data "${architecture}" "${result_key}" "${user_data}"
 
-    if [[ "${INSTANCE_MARKET_TYPE}" == spot ]]; then
-        market_arguments=(
-            --instance-market-options
-            'MarketType=spot,SpotOptions={SpotInstanceType=one-time,InstanceInterruptionBehavior=terminate}')
-    fi
-
-    aws_cli ec2 run-instances \
+    launch_arguments=(
         --image-id "${ami}" \
         --instance-type "${instance_type}" \
         --count 1 \
@@ -564,8 +558,15 @@ launch_instance()
         --block-device-mappings "DeviceName=${root_device},Ebs={VolumeSize=100,VolumeType=gp3,DeleteOnTermination=true,Encrypted=true}" \
         --metadata-options HttpTokens=required,HttpEndpoint=enabled \
         --iam-instance-profile "Name=${INSTANCE_PROFILE_NAME}" \
-        --instance-initiated-shutdown-behavior terminate \
-        "${market_arguments[@]}" \
+        --instance-initiated-shutdown-behavior terminate)
+    if [[ "${INSTANCE_MARKET_TYPE}" == spot ]]; then
+        launch_arguments+=(
+            --instance-market-options
+            'MarketType=spot,SpotOptions={SpotInstanceType=one-time,InstanceInterruptionBehavior=terminate}')
+    fi
+
+    aws_cli ec2 run-instances \
+        "${launch_arguments[@]}" \
         --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=re2-engineering-${label}-${SESSION_ID}},{Key=Project,Value=re2-port-benchmark}]" \
         --user-data "file://${user_data}" \
         --query 'Instances[0].InstanceId' \

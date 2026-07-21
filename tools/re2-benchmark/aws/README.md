@@ -332,6 +332,26 @@ If a completed operation phase needs only its retained-memory companion
 recovered, `CAMPAIGN_MODE=joni-memory-census` runs the same semantic tests and
 96 MiB census without repeating the operation matrix.
 
+Use `safere-comparator` for the same Trino-shaped operation matrix against the
+pinned SafeRE test dependency. Each host runs Slice, SafeRE, and Slice again,
+using the direct UTF-8 APIs and recording normalized allocation:
+
+```bash
+CAMPAIGN_MODE=safere-comparator \
+  INTEL_INSTANCE_TYPE=c8i.2xlarge \
+  ARM_INSTANCE_TYPE=c8g.2xlarge \
+  AWS_PROFILE=dev \
+  tools/re2-benchmark/aws/run-campaign.sh
+```
+
+Run three independent sessions before using the strict two-of-three 1.02x
+Slice bracket gate in `tools/re2-benchmark/safere/qualify.py`.
+
+Use `safere-contains` for a focused engineering run of the ten `contains`
+workload and source-size rows. It preserves the same Slice/SafeRE/Slice
+bracket and also compares the optimized boolean route with the existing engine
+route. It is not a replacement for the complete comparator campaign.
+
 The Slice-only focused modes do not build Trino's Joni comparator. Pair their
 results with `trino-comparator`, or use `full` to refresh every matrix.
 

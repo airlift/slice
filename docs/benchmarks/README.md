@@ -19,8 +19,10 @@ executed results are in
 exploration and its accepted fused literal scanner. The initial measurements
 are in
 [`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md),
-and the rejected ranked-byte campaign is in
+and the rejected ranked-byte productionization campaign is in
 [`history/2026-07-21-packed-pair-selection.md`](history/2026-07-21-packed-pair-selection.md).
+The Trino-shaped comparison with SafeRE 0.9.0 is in
+[`history/2026-07-21-safere-comparison.md`](history/2026-07-21-safere-comparison.md).
 
 [`METHODOLOGY.md`](METHODOLOGY.md) is the current guide for designing, running,
 and interpreting benchmarks.

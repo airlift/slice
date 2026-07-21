@@ -12,6 +12,12 @@ as release claims. Current work is in
 
 | Document | Historical purpose |
 |---|---|
+| [`2026-07-21-safere-boolean-match-optimizations.md`](2026-07-21-safere-boolean-match-optimizations.md) | Focused Intel and Graviton check of SafeRE-inspired boolean match specializations |
+| [`2026-07-21-safere-comparison.md`](2026-07-21-safere-comparison.md) | Three-session Trino-shaped Intel and Graviton qualification against SafeRE 0.9.0 |
+| [`2026-07-21-safere-intel-qualified.csv`](2026-07-21-safere-intel-qualified.csv) | Qualified Intel row-level SafeRE comparison |
+| [`2026-07-21-safere-intel-underqualified.csv`](2026-07-21-safere-intel-underqualified.csv) | Intel rows excluded by the strict SafeRE bracket gate |
+| [`2026-07-21-safere-graviton-qualified.csv`](2026-07-21-safere-graviton-qualified.csv) | Qualified Graviton row-level SafeRE comparison |
+| [`2026-07-21-safere-graviton-underqualified.csv`](2026-07-21-safere-graviton-underqualified.csv) | Graviton rows excluded by the strict SafeRE bracket gate |
 | [`2026-07-21-packed-pair-selection.md`](2026-07-21-packed-pair-selection.md) | Rejected ranked UTF-8 literal integration and the Intel generated-code stability gate |
 | [`2026-07-20-vector-literal-scanning.md`](2026-07-20-vector-literal-scanning.md) | Accepted cross-platform fused vector literal scanner and cutoff qualification |
 | [`2026-07-20-vector-literal-native-comparison.csv`](2026-07-20-vector-literal-native-comparison.csv) | Final Intel and Graviton rows against pinned host-tuned native RE2 |

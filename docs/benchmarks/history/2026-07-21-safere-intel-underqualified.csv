@@ -1,0 +1,4 @@
+architecture,operation,workload,source_length,stable_sessions,diagnostic_time_ratio,minimum_slice_bracket_ratio
+intel,contains,unicodeSparse,1024,1,1.0920263873550269,1.0000074903148963
+intel,extractAll,emptyMatches,32768,0,0.04597922521095224,1.0247858264555827
+intel,replaceLambda,emptyMatches,1024,1,0.11935195657722898,1.019403720734016

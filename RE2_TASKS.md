@@ -4,14 +4,14 @@ This is the authoritative status and task list for the RE2 port. Campaign logs,
 historical audits, and benchmark results record useful evidence, but they do not
 override this document.
 
-Last organized: 2026-07-20
+Last organized: 2026-07-21
 
 ## Current Status
 
 | Item | Status |
 |---|---|
 | Ported surface | Engine, Slice API, reusable matcher, set/filtered APIs, and Trino operation adapter are present |
-| Build | Verified 2026-07-20: the latest Maven install passes with 2,714 tests, zero failures or errors, and one intentional skip; the current 922-test RE2 selector passes with and without native access |
+| Build | Verified 2026-07-21: the latest Maven install passes with 2,734 tests, zero failures or errors, and one intentional skip; the current local RE2 selector passes 942 tests, and the focused boolean-match tests pass on Intel and Graviton with and without native access |
 | Release readiness | Not ready |
 | Correctness | Complete upstream case-table, exhaustive, randomized, native differential, public/direct-engine, and compatibility coverage passes |
 | Upstream parity | Applicable pinned upstream test tables and active generated parameters are ported |
@@ -44,9 +44,9 @@ without allocating a Slice view for every failed line search. Eligible repeated
 group-zero searches additionally use a bounded candidate-start cursor instead
 of replaying every match through forward and reverse DFA searches. That cursor
 bulk-scans rejected bytes while preserving its reset-scoped work budget. The
-complete local RE2 selector passes 922 tests with and without native access,
-and the full Maven install passes 2,714 tests with zero failures or errors and
-one intentional skip.
+complete local RE2 selector passes 942 tests, and the full Maven install passes
+2,734 tests with zero failures or errors and one intentional skip. The focused
+boolean-match tests pass on Intel and Graviton with and without native access.
 
 The latest source also scans matching DFA self-loops directly after the first
 paired match and replaces folded-prefix ShiftDFA with fused first/last candidate
@@ -556,6 +556,14 @@ test in addition to benchmarks.
   maximum. Tiny `x*` containment uses a 144-byte sidecar; the explicit
   75,850-state graph uses 7,959,120 bytes, resets zero times, and runs at
   `0.070x/0.065x` Joni time on Intel/Graviton.
+- [x] **P2.19 Specialize simple boolean partial matches.** Complete
+  case-sensitive literals use the existing exact scanner even when captures
+  wrap the literal, and nullable patterns bypass matcher setup when cached DFA
+  metadata proves that the initial empty match wins. Focused session
+  `20260721T201148Z-35792` wins all ten `contains` rows against SafeRE on both
+  Intel and Graviton. Unaffected A/B controls remain within 1.2% on Intel and
+  2.1% on Graviton in this single engineering session. See
+  `docs/benchmarks/history/2026-07-21-safere-boolean-match-optimizations.md`.
 Rejected campaign experiments are evidence against repeating the same patch,
 not evidence that the underlying gap is resolved. See
 `docs/benchmarks/history/` before retrying an approach.
