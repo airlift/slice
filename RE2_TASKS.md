@@ -64,6 +64,16 @@ on Intel, and from 4.300 ms to 0.353-0.363 ms and 0.734 ms to 0.132-0.138 ms on
 Graviton. Apple Silicon qualification shows the same 12x and 5.5x improvements.
 See `docs/benchmarks/history/2026-07-20-vector-literal-scanning.md`.
 
+The follow-up ranked-byte campaign is closed without accepting the selector.
+A balanced Rebar rank table reduced Russian and Chinese false candidates from
+`9,661` to `25` and `721` to `20`, and the optional Vector-module boundary
+reached helper/inline parity. The integrated Intel Chinese result remained
+bimodal: two selected forks ran about 30% slower than front/back while one ran
+about 16% faster. The optional module boundary is retained, but front/back
+selection remains the production design. Any new selector campaign must first
+isolate the good and bad C2 compilations or test candidate-only prefiltering.
+See `docs/benchmarks/history/2026-07-21-packed-pair-selection.md`.
+
 Focused Java/native ratios from the July 18 capture-engine campaign are retained
 for path-specific context; they are not the current census aggregates:
 

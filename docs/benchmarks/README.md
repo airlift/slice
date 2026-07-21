@@ -16,9 +16,11 @@ the bounded current-engine comparison with official and pinned native RE2. Its
 executed results are in
 [`history/2026-07-16-rebar-native-comparison.md`](history/2026-07-16-rebar-native-comparison.md).
 [`VECTOR_EXPLORATION.md`](VECTOR_EXPLORATION.md) records the bounded Vector API
-exploration and its accepted fused literal scanner. The measurements and
-rejected alternatives are in
-[`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md).
+exploration and its accepted fused literal scanner. The initial measurements
+are in
+[`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md),
+and the rejected ranked-byte campaign is in
+[`history/2026-07-21-packed-pair-selection.md`](history/2026-07-21-packed-pair-selection.md).
 
 [`METHODOLOGY.md`](METHODOLOGY.md) is the current guide for designing, running,
 and interpreting benchmarks.

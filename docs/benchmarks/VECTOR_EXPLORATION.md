@@ -1,10 +1,12 @@
 # Vector Search Exploration
 
-**Status:** The first bounded campaign is complete. A fused vector literal
-scanner with a SWAR fallback when the optional Vector module is unavailable is
-accepted; general small-set and folded-prefix integration remain separate
-work. See
-[`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md).
+**Status:** The bounded campaigns are complete. A fused vector literal scanner
+with a SWAR fallback when the optional Vector module is unavailable is
+accepted; ranked byte selection failed its Intel integration gate. General
+small-set and folded-prefix integration remain separate work. See
+[`history/2026-07-20-vector-literal-scanning.md`](history/2026-07-20-vector-literal-scanning.md)
+and
+[`history/2026-07-21-packed-pair-selection.md`](history/2026-07-21-packed-pair-selection.md).
 
 ## Question
 

@@ -147,10 +147,13 @@ orders of magnitude slower. Production uses only the preferred species.
 
 ### Corpus-Specific Rare Offsets
 
-Comparing two rare internal literal bytes can reduce false positives, but the
-fused front/back loop already removes the expensive scalar handoff. The
-synthetic results did not justify a byte-frequency table or language-specific
-selection policy in production.
+This initial campaign did not have representative selector evidence. The
+follow-up campaign used a pinned, multilingual training corpus and separate
+evaluation files. Although deterministic ranked selection reduced Russian
+false candidates from 9,661 to 25 and Chinese false candidates from 721 to 20,
+the integrated Intel Chinese result was bimodal and failed the performance
+gate. See
+[`2026-07-21-packed-pair-selection.md`](2026-07-21-packed-pair-selection.md).
 
 ### Folded-Prefix Vector Route
 
