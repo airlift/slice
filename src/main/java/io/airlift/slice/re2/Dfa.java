@@ -495,12 +495,19 @@ final class Dfa
             int contextEnd,
             int searchBegin)
     {
-        for (int candidate = searchBegin; candidate < contextEnd; candidate++) {
-            if (!cursor.consumeWork()) {
+        int scanBegin = searchBegin;
+        while (scanBegin < contextEnd) {
+            int scanLength = cursor.workBoundedScanLength(contextEnd - scanBegin);
+            if (scanLength == 0) {
                 return CANDIDATE_SEARCH_FALLBACK;
             }
-            if (!cursor.dfa.isStartByteCandidate(bytes[candidate] & 0xFF)) {
-                continue;
+            int candidate = cursor.dfa.findStartByteCandidate(bytes, scanBegin, scanLength);
+            int scanEnd = candidate < 0 ? scanBegin + scanLength : candidate + 1;
+            if (!cursor.consumeWork(scanEnd - scanBegin)) {
+                return CANDIDATE_SEARCH_FALLBACK;
+            }
+            if (candidate < 0) {
+                return scanEnd == contextEnd ? SEARCH_NO_MATCH : CANDIDATE_SEARCH_FALLBACK;
             }
             if (!cursor.consumeWork()) {
                 return CANDIDATE_SEARCH_FALLBACK;
@@ -515,6 +522,7 @@ final class Dfa
                 int relativeEnd = matchEnd - contextBegin;
                 return ((long) relativeStart << 32) | (relativeEnd & 0xFFFF_FFFFL);
             }
+            scanBegin = candidate + 1;
         }
         return SEARCH_NO_MATCH;
     }
@@ -2751,12 +2759,23 @@ final class Dfa
             return fallbackCount;
         }
 
+        int workBoundedScanLength(int requestedLength)
+        {
+            return (int) Math.min(remainingWork, requestedLength);
+        }
+
         private boolean consumeWork()
         {
-            if (remainingWork == 0) {
+            return consumeWork(1);
+        }
+
+        private boolean consumeWork(long work)
+        {
+            if (work > remainingWork) {
+                remainingWork = 0;
                 return false;
             }
-            remainingWork--;
+            remainingWork -= work;
             return true;
         }
     }

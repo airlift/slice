@@ -67,6 +67,32 @@ public class TestDfaCandidateStartCursor
     }
 
     @Test
+    public void testCandidateCursorBulkScansSparseCapturePattern()
+    {
+        TestingTrinoRegexpBenchmarkInputs.Input input = TestingTrinoRegexpBenchmarkInputs.create("captureSparse", 32_768);
+        Re2 pattern = Re2.compile(input.pattern());
+        Re2Matcher matcher = pattern.groupZeroMatcher(input.source(), null);
+
+        assertThat(boundaries(matcher)).containsExactly(
+                new Boundary(8_192, 8_199),
+                new Boundary(16_384, 16_391),
+                new Boundary(24_576, 24_583));
+        assertThat(matcher.candidateStartRouteCountForDiagnostics()).isEqualTo(3);
+        assertThat(matcher.candidateStartFallbackCountForDiagnostics()).isZero();
+        assertThat(pattern.isReverseProgramComputed()).isFalse();
+    }
+
+    @Test
+    public void testCandidateCursorBoundsBulkScanToRemainingWork()
+    {
+        Dfa.CandidateStartCursor cursor = compile("a+z|b+").createCandidateStartCursor();
+        cursor.reset(4);
+
+        assertThat(cursor.workBoundedScanLength(3)).isEqualTo(3);
+        assertThat(cursor.workBoundedScanLength(100)).isEqualTo(12);
+    }
+
+    @Test
     public void testCandidateCursorPreservesRegionsAndUtf8()
     {
         Slice input = utf8("padding-x💰💰y-padding");
