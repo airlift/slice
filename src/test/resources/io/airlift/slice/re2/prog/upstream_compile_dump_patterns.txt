@@ -1,0 +1,25 @@
+# Patterns from upstream re2/testing/compile_test.cc (subset)
+a
+ab
+a|c
+a|b
+[ab]
+a+
+a+?
+a*
+a*?
+a?
+a??
+a{4}
+(a)
+(?:a)
+
+.
+[^ab]
+[Aa]
+\C+
+\C*
+\C?
+[[-`]
+(?:|a)*
+(?:|a)+

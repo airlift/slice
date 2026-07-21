@@ -1,0 +1,5 @@
+{"pattern":".","flags":"0x220","ok":true,"bytemap":"[00-09] -> 0\n[0a-0a] -> 1\n[0b-ff] -> 0\n"}
+{"pattern":"[0-9A-Fa-f]+","flags":"0x220","ok":true,"bytemap":"[00-2f] -> 0\n[30-39] -> 1\n[3a-40] -> 0\n[41-46] -> 1\n[47-60] -> 0\n[61-66] -> 1\n[67-ff] -> 0\n"}
+{"pattern":"\\b","flags":"0x7b4","ok":true,"bytemap":"[00-2f] -> 0\n[30-39] -> 1\n[3a-40] -> 0\n[41-5a] -> 1\n[5b-5e] -> 0\n[5f-5f] -> 1\n[60-60] -> 0\n[61-7a] -> 1\n[7b-ff] -> 0\n"}
+{"pattern":"[^_]","flags":"0x7b4","ok":true,"bytemap":"[00-5e] -> 0\n[5f-5f] -> 1\n[60-ff] -> 0\n"}
+{"pattern":".","flags":"0x200","ok":true,"bytemap":"[00-09] -> 0\n[0a-0a] -> 1\n[0b-7f] -> 0\n[80-bf] -> 2\n[c0-c1] -> 1\n[c2-df] -> 3\n[e0-ef] -> 4\n[f0-f4] -> 5\n[f5-ff] -> 1\n"}
