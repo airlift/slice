@@ -1,0 +1,26 @@
+diff --git a/src/main/java/io/airlift/slice/re2/Nfa.java b/src/main/java/io/airlift/slice/re2/Nfa.java
+--- a/src/main/java/io/airlift/slice/re2/Nfa.java
++++ b/src/main/java/io/airlift/slice/re2/Nfa.java
+@@ -138,10 +138,18 @@ final class Nfa
+
+     static int captureStackSize(Prog prog)
+     {
+-        int stackSize = 2 * prog.getInstCount(InstOp.CAPTURE) +
+-                prog.getInstCount(InstOp.EMPTY_WIDTH) +
+-                prog.getInstCount(InstOp.NOP) + 1;
+-        return Math.max(8, stackSize);
++        int captureCount = 0;
++        int emptyWidthCount = 0;
++        int noOpCount = 0;
++        for (int instructionId = 0; instructionId < prog.size(); instructionId++) {
++            switch (prog.inst(instructionId).opcode()) {
++                case CAPTURE -> captureCount++;
++                case EMPTY_WIDTH -> emptyWidthCount++;
++                case NOP -> noOpCount++;
++                default -> {}
++            }
++        }
++        return Math.max(8, 2 * captureCount + emptyWidthCount + noOpCount + 1);
+     }
+
+     // Sparse queue specialized for NFA hot loops. Membership is tracked with sparse positions

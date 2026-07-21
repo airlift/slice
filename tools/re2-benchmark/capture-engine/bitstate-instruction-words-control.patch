@@ -1,0 +1,191 @@
+--- a/src/main/java/io/airlift/slice/re2/BitState.java
++++ b/src/main/java/io/airlift/slice/re2/BitState.java
+@@ -14,6 +14,7 @@
+ package io.airlift.slice.re2;
+
+ import io.airlift.slice.Slice;
++import io.airlift.slice.re2.Prog.Inst;
+
+ import java.util.Arrays;
+
+@@ -94,15 +95,6 @@
+     private static final class BitStateImpl
+     {
+         private static final int VISITED_BITS = 64;
+-        private static final int OP_ALT = 0;
+-        private static final int OP_ALT_MATCH = 1;
+-        private static final int OP_BYTE_RANGE = 2;
+-        private static final int OP_CAPTURE = 3;
+-        private static final int OP_EMPTY_WIDTH = 4;
+-        private static final int OP_MATCH = 5;
+-        private static final int OP_NOP = 6;
+-        private static final int OP_FAIL = 7;
+-        private static final long OUTPUT_MASK = (1L << 28) - 1;
+
+         private final Prog prog;
+         private final Slice context;
+@@ -237,7 +229,6 @@
+
+         private boolean trySearch(int startId, int startPosition)
+         {
+-            long[] instructionWords = prog.getOrCreateCaptureInstructionWords();
+             boolean matched = false;
+             jobCount = 0;
+
+@@ -268,88 +259,81 @@
+                 }
+
+                 while (true) {
+-                    long instructionWord = instructionWords[id];
+-                    int output = (int) ((instructionWord >>> 4) & OUTPUT_MASK);
+-                    boolean last = (instructionWord & (1L << 3)) != 0;
+-                    int payload = (int) (instructionWord >>> 32);
+-                    switch ((int) (instructionWord & 0b111)) {
+-                        case OP_FAIL -> {
++                    Inst instruction = prog.inst(id);
++                    switch (instruction.opcode()) {
++                        case FAIL -> {
+                             id = 0;
+                         }
+-                        case OP_ALT_MATCH -> {
+-                            if (payload < 0) {
+-                                id = payload & (int) OUTPUT_MASK;
++                        case ALT_MATCH -> {
++                            if (instruction.greedy(prog)) {
++                                id = instruction.out1();
+                                 position = textEnd;
+                                 continue;
+                             }
+                             if (longest) {
+-                                id = output;
++                                id = instruction.out();
+                                 position = textEnd;
+                                 continue;
+                             }
+-                            id = nextInList(last, id);
++                            id = nextInList(instruction, id);
+                         }
+-                        case OP_BYTE_RANGE -> {
++                        case BYTE_RANGE -> {
+                             int c = (position < textEnd) ? (bytes[position] & 0xFF) : -1;
+-                            if (payload < 0 && 'A' <= c && c <= 'Z') {
+-                                c += 'a' - 'A';
+-                            }
+-                            int lowerBound = payload & 0xFF;
+-                            int upperBound = (payload >>> 8) & 0xFF;
+-                            if (c < lowerBound || c > upperBound) {
+-                                id = nextInList(last, id);
++                            if (!instruction.matches(c)) {
++                                id = nextInList(instruction, id);
+                                 break;
+                             }
+
+-                            int hint = (payload >>> 16) & 0x7FFF;
++                            int hint = instruction.hint();
+                             if (hint != 0) {
+                                 push(id + hint, position);
+                             }
+-                            id = output;
++                            id = instruction.out();
+                             position++;
+                             if (!checkAndLoop(textLen, id, position)) {
+                                 id = 0;
+                             }
+                         }
+-                        case OP_CAPTURE -> {
+-                            if (!last) {
++                        case CAPTURE -> {
++                            if (!instruction.last()) {
+                                 push(id + 1, position);
+                             }
+-                            if (0 <= payload && payload < cap.length) {
+-                                push(-id, cap[payload]);
+-                                cap[payload] = position;
++                            int capIndex = instruction.cap();
++                            if (0 <= capIndex && capIndex < cap.length) {
++                                push(-id, cap[capIndex]);
++                                cap[capIndex] = position;
+                             }
+-                            id = output;
++                            id = instruction.out();
+                             if (!checkAndLoop(textLen, id, position)) {
+                                 id = 0;
+                             }
+                         }
+-                        case OP_EMPTY_WIDTH -> {
++                        case EMPTY_WIDTH -> {
+                             int empty = Prog.emptyFlags(context, position);
+-                            if ((payload & ~empty) != 0) {
+-                                id = nextInList(last, id);
++                            if ((instruction.empty() & ~empty) != 0) {
++                                id = nextInList(instruction, id);
+                                 break;
+                             }
+-                            if (!last) {
++                            if (!instruction.last()) {
+                                 push(id + 1, position);
+                             }
+-                            id = output;
++                            id = instruction.out();
+                             if (!checkAndLoop(textLen, id, position)) {
+                                 id = 0;
+                             }
+                         }
+-                        case OP_NOP -> {
+-                            if (!last) {
++                        case NOP -> {
++                            if (!instruction.last()) {
+                                 push(id + 1, position);
+                             }
+-                            id = output;
++                            id = instruction.out();
+                             if (!checkAndLoop(textLen, id, position)) {
+                                 id = 0;
+                             }
+                         }
+-                        case OP_MATCH -> {
++                        case MATCH -> {
+                             if (endMatch && position != textEnd) {
+-                                id = nextInList(last, id);
++                                id = nextInList(instruction, id);
+                                 break;
+                             }
+
+@@ -385,9 +369,9 @@
+                                 return true;
+                             }
+
+-                            id = nextInList(last, id);
++                            id = nextInList(instruction, id);
+                         }
+-                        case OP_ALT -> {
++                        case ALT -> {
+                             // Unreachable in flattened programs.
+                             id = 0;
+                         }
+@@ -402,9 +386,9 @@
+             return matched;
+         }
+
+-        private int nextInList(boolean last, int id)
++        private int nextInList(Inst instruction, int id)
+         {
+-            if (!last) {
++            if (!instruction.last()) {
+                 return id + 1;
+             }
+             return 0;
+@@ -416,6 +400,13 @@
+                 return false;
+             }
+
++            // id must be the head of its list (debug assertion in upstream).
++            if (id != 0 && id - 1 >= 0) {
++                if (!prog.inst(id - 1).last()) {
++                    throw new IllegalStateException("expected list head but id-1 is not last (id=" + id + ")");
++                }
++            }
++
+             return shouldVisit(textLen, visited, listHeads[id], p - textBegin);
+         }
+     }

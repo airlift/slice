@@ -1,0 +1,85 @@
+diff --git a/re2/testing/regexp_benchmark.cc b/re2/testing/regexp_benchmark.cc
+index 3940467..1b150d9 100644
+--- a/re2/testing/regexp_benchmark.cc
++++ b/re2/testing/regexp_benchmark.cc
+@@ -163,8 +163,11 @@ std::string RandomText(int64_t nbytes) {
+     std::string* text = new std::string;
+-    srand(1);
++    uint64_t random_state = 1;
+     text->resize(16<<20);
+     for (int64_t i = 0; i < 16<<20; i++) {
++      random_state ^= random_state << 13;
++      random_state ^= random_state >> 7;
++      random_state ^= random_state << 17;
+       // Generate a one-byte rune that isn't a control character (e.g. '\n').
+       // Clipping to 0x20 introduces some bias, but we don't need uniformity.
+-      int byte = rand() & 0x7F;
++      int byte = static_cast<int>(random_state & 0x7F);
+       if (byte < 0x20)
+@@ -264,2 +267,58 @@ void Search_Hard_CachedRE2(benchmark::State& state)     { Search(state, HARD, Se
+
++void SearchHardTail(benchmark::State& state, bool expect_match) {
++  static constexpr absl::string_view kSuffix = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
++  ABSL_CHECK_GE(state.range(0), kSuffix.size());
++  std::string text(state.range(0), 'x');
++  text.replace(text.size() - kSuffix.size(), kSuffix.size(), kSuffix);
++  if (!expect_match)
++    text.back() = '_';
++  SearchCachedDFA(state, HARD, text, Prog::kUnanchored, expect_match);
++  state.SetBytesProcessed(state.iterations() * state.range(0));
++}
++
++void Search_HardTailMatch_CachedDFA(benchmark::State& state) {
++  SearchHardTail(state, true);
++}
++
++void Search_HardTailNoMatch_CachedDFA(benchmark::State& state) {
++  SearchHardTail(state, false);
++}
++const char* SelfLoopSuffixPattern() {
++  static const std::string* const pattern = []() {
++    std::string* pattern = new std::string("[ -~]*");
++    for (int i = 0; i < 20; i++)
++      pattern->append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
++    pattern->append("$");
++    return pattern;
++  }();
++  return pattern->c_str();
++}
++
++void Search_SelfLoopSuffixNoMatch_CachedDFA(benchmark::State& state) {
++  Search(state, SelfLoopSuffixPattern(), SearchCachedDFA);
++}
++
++const char* StateChangingPattern() {
++  static const std::string* const pattern = []() {
++    std::string* pattern = new std::string("^(?:");
++    for (char letter = 'a'; letter <= 'z'; letter++) {
++      pattern->push_back('[');
++      pattern->push_back(letter);
++      pattern->push_back(letter - 'a' + 'A');
++      pattern->push_back(']');
++    }
++    pattern->append(")*(?:0|11)$");
++    return pattern;
++  }();
++  return pattern->c_str();
++}
++
++void Search_StateChangingNoMatch_CachedDFA(benchmark::State& state) {
++  static constexpr absl::string_view kSequence = "abcdefghijklmnopqrstuvwxyz";
++  std::string text(state.range(0), 'a');
++  for (size_t position = 0; position < text.size(); position++)
++    text[position] = kSequence[position % kSequence.size()];
++  SearchCachedDFA(state, StateChangingPattern(), text, Prog::kAnchored, false);
++  state.SetBytesProcessed(state.iterations() * state.range(0));
++}
+ BENCHMARK_RANGE(Search_Hard_CachedDFA,     8, 16<<20)->ThreadRange(1, NumCPUs());
+@@ -270,3 +329,6 @@ BENCHMARK_RANGE(Search_Hard_CachedPCRE,    8, 4<<10)->ThreadRange(1, NumCPUs());
+ BENCHMARK_RANGE(Search_Hard_CachedRE2,     8, 16<<20)->ThreadRange(1, NumCPUs());
+-
++BENCHMARK(Search_HardTailMatch_CachedDFA)->Arg(32 << 10)->Arg(1 << 20)->Arg(16 << 20)->Threads(1);
++BENCHMARK(Search_HardTailNoMatch_CachedDFA)->Arg(32 << 10)->Arg(1 << 20)->Arg(16 << 20)->Threads(1);
++BENCHMARK(Search_SelfLoopSuffixNoMatch_CachedDFA)->Arg(16 << 20)->Threads(1);
++BENCHMARK(Search_StateChangingNoMatch_CachedDFA)->Arg(16 << 20)->Threads(1);
+ void Search_Fanout_CachedDFA(benchmark::State& state)     { Search(state, FANOUT, SearchCachedDFA); }

@@ -1,0 +1,24 @@
+--- a/src/main/java/io/airlift/slice/re2/OnePass.java
++++ b/src/main/java/io/airlift/slice/re2/OnePass.java
+@@ -185,10 +185,8 @@
+                     if (matchCount > 1 && (matchCond & CAP_MASK) != 0) {
+                         applyCaptures(matchCond, position, captures, captureSlotCount);
+                     }
+-                    if (captures != matchCaptures || captureFinalization == CaptureFinalization.DIRECT_REBASE) {
+-                        for (int i = 2; i < captureSlotCount; i++) {
+-                            matchCaptures[i] = captures[i];
+-                        }
++                    for (int i = 2; i < captureSlotCount; i++) {
++                        matchCaptures[i] = captures[i];
+                     }
+                     matchCaptures[1] = position;
+                     matched = true;
+@@ -203,7 +201,7 @@
+             return false;
+         }
+
+-        if (submatch != null && captureFinalization != CaptureFinalization.DIRECT_ZERO_ORIGIN) {
++        if (submatch != null) {
+             for (int i = 0; i < matchCount; i++) {
+                 int a = matchCaptures[2 * i];
+                 int b = matchCaptures[2 * i + 1];

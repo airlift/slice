@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.20)
+project(re2_benchmark_dependencies LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set(ABSL_PROPAGATE_CXX_STD ON)
+set(BENCHMARK_ENABLE_TESTING OFF)
+set(BENCHMARK_ENABLE_INSTALL OFF)
+set(INSTALL_GTEST OFF)
+set(RE2_BENCHMARK ON)
+set(RE2_INSTALL OFF)
+
+add_subdirectory("${ABSL_DIR}" abseil-cpp)
+add_subdirectory("${BENCHMARK_DIR}" benchmark)
+add_subdirectory("${GOOGLETEST_DIR}" googletest)
+add_subdirectory("${RE2_DIR}" re2)
+
+add_executable(dfa_pointer_benchmark dfa_pointer_benchmark.cc)
+target_link_libraries(dfa_pointer_benchmark PRIVATE benchmark::benchmark)

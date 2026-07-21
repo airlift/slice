@@ -1,0 +1,11 @@
+--- a/src/main/java/io/airlift/slice/re2/BitState.java
++++ b/src/main/java/io/airlift/slice/re2/BitState.java
+@@ -156,7 +156,7 @@
+             this.cap = new int[captureSlotCount];
+             Arrays.fill(this.cap, -1);
+
+-            this.jobs = new Job[initialJobCapacity(prog.size())];
++            this.jobs = new Job[64];
+             for (int i = 0; i < jobs.length; i++) {
+                 jobs[i] = new Job();
+             }

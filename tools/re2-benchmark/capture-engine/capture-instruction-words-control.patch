@@ -1,0 +1,227 @@
+--- a/src/main/java/io/airlift/slice/re2/Nfa.java
++++ b/src/main/java/io/airlift/slice/re2/Nfa.java
+@@ -14,6 +14,7 @@
+ package io.airlift.slice.re2;
+
+ import io.airlift.slice.Slice;
++import io.airlift.slice.re2.Prog.Inst;
+
+ import java.util.Arrays;
+
+@@ -785,18 +786,7 @@
+
+     private static final class NfaImpl
+     {
+-        private static final int OP_ALT = 0;
+-        private static final int OP_ALT_MATCH = 1;
+-        private static final int OP_BYTE_RANGE = 2;
+-        private static final int OP_CAPTURE = 3;
+-        private static final int OP_EMPTY_WIDTH = 4;
+-        private static final int OP_MATCH = 5;
+-        private static final int OP_NOP = 6;
+-        private static final int OP_FAIL = 7;
+-        private static final long OUTPUT_MASK = (1L << 28) - 1;
+-
+         private final Prog prog;
+-        private final long[] instructionWords;
+         private final byte[] bytes;
+
+         private final int start;
+@@ -845,7 +835,6 @@
+         {
+             this.bytes = requireNonNull(bytes, "bytes is null");
+             this.prog = requireNonNull(prog, "prog is null");
+-            this.instructionWords = prog.getOrCreateCaptureInstructionWords();
+
+             this.start = start;
+             this.textBegin = textBegin;
+@@ -906,17 +895,16 @@
+                     position = textEnd;
+                     int id = shortcut;
+                     for (; ; ) {
+-                        long instructionWord = instructionWords[id];
+-                        switch ((int) (instructionWord & 0b111)) {
+-                            case OP_CAPTURE -> {
+-                                int captureIndex = (int) (instructionWord >>> 32);
+-                                if (captureIndex < ncapture) {
+-                                    match[captureIndex] = position;
++                        Inst instruction = prog.inst(id);
++                        switch (instruction.opcode()) {
++                            case CAPTURE -> {
++                                if (instruction.cap() < ncapture) {
++                                    match[instruction.cap()] = position;
+                                 }
+-                                id = (int) ((instructionWord >>> 4) & OUTPUT_MASK);
++                                id = instruction.out();
+                             }
+-                            case OP_NOP -> id = (int) ((instructionWord >>> 4) & OUTPUT_MASK);
+-                            case OP_MATCH -> {
++                            case NOP -> id = instruction.out();
++                            case MATCH -> {
+                                 match[1] = position;
+                                 matched = true;
+                                 id = 0;
+@@ -1009,16 +997,14 @@
+                 }
+
+                 int id = runQueue.instructionIdAt(it);
+-                long instructionWord = instructionWords[id];
+-                switch ((int) (instructionWord & 0b111)) {
+-                    case OP_BYTE_RANGE -> addToThreadq(nextQueue, (int) ((instructionWord >>> 4) & OUTPUT_MASK), c, position, t);
+-                    case OP_ALT_MATCH -> {
++                Inst instruction = prog.inst(id);
++                switch (instruction.opcode()) {
++                    case BYTE_RANGE -> addToThreadq(nextQueue, instruction.out(), c, position, t);
++                    case ALT_MATCH -> {
+                         if (it != 0) {
+                             break;
+                         }
+-                        int payload = (int) (instructionWord >>> 32);
+-                        boolean greedy = payload < 0;
+-                        if (greedy || longest) {
++                        if (instruction.greedy(prog) || longest) {
+                             copyCapture(match, threadCapture[t]);
+                             matched = true;
+
+@@ -1030,13 +1016,13 @@
+                                 }
+                             }
+                             runQueue.clear();
+-                            if (greedy) {
+-                                return payload & (int) OUTPUT_MASK;
++                            if (instruction.greedy(prog)) {
++                                return instruction.out1();
+                             }
+-                            return (int) ((instructionWord >>> 4) & OUTPUT_MASK);
++                            return instruction.out();
+                         }
+                     }
+-                    case OP_MATCH -> {
++                    case MATCH -> {
+                         if (endMatch && (position - 1) != textEnd) {
+                             break;
+                         }
+@@ -1109,56 +1095,48 @@
+                     if (queuePosition < 0) {
+                         break;
+                     }
+-                    long instructionWord = instructionWords[id];
+-                    int output = (int) ((instructionWord >>> 4) & OUTPUT_MASK);
+-                    boolean last = (instructionWord & (1L << 3)) != 0;
+-                    int payload = (int) (instructionWord >>> 32);
++                    Inst instruction = prog.inst(id);
+
+-                    switch ((int) (instructionWord & 0b111)) {
+-                        case OP_FAIL -> {
++                    switch (instruction.opcode()) {
++                        case FAIL -> {
+                             id = 0;
+                         }
+-                        case OP_ALT_MATCH -> {
++                        case ALT_MATCH -> {
+                             queue.setThreadAt(queuePosition, incref(t0));
+-                            if (last) {
++                            if (instruction.last()) {
+                                 id = 0;
+                                 break;
+                             }
+                             id = id + 1;
+                         }
+-                        case OP_NOP -> {
+-                            if (!last) {
++                        case NOP -> {
++                            if (!instruction.last()) {
+                                 pushAddState(id + 1, 0, stackPointer++);
+                             }
+-                            id = output;
++                            id = instruction.out();
+                         }
+-                        case OP_CAPTURE -> {
+-                            if (!last) {
++                        case CAPTURE -> {
++                            if (!instruction.last()) {
+                                 pushAddState(id + 1, 0, stackPointer++);
+                             }
+
+-                            if (payload < ncapture) {
++                            int cap = instruction.cap();
++                            if (cap < ncapture) {
+                                 // Push a dummy whose only job is to restore t0.
+                                 pushAddState(0, t0, stackPointer++);
+
+                                 int t = allocThread();
+                                 copyCapture(threadCapture[t], threadCapture[t0]);
+-                                threadCapture[t][payload] = position;
++                                threadCapture[t][cap] = position;
+                                 t0 = t;
+                             }
+
+-                            id = output;
++                            id = instruction.out();
+                         }
+-                        case OP_BYTE_RANGE -> {
+-                            int value = c;
+-                            if (payload < 0 && 'A' <= value && value <= 'Z') {
+-                                value += 'a' - 'A';
+-                            }
+-                            int lowerBound = payload & 0xFF;
+-                            int upperBound = (payload >>> 8) & 0xFF;
+-                            if (value < lowerBound || value > upperBound) {
++                        case BYTE_RANGE -> {
++                            if (!instruction.matches(c)) {
+                                 // Does not match; fall through to next in the list.
+-                                if (last) {
++                                if (instruction.last()) {
+                                     id = 0;
+                                 }
+                                 else {
+@@ -1168,39 +1146,39 @@
+                             }
+
+                             queue.setThreadAt(queuePosition, incref(t0));
+-                            int hint = (payload >>> 16) & 0x7FFF;
++                            int hint = instruction.hint();
+                             if (hint == 0) {
+                                 id = 0;
+                                 break;
+                             }
+                             id = id + hint;
+                         }
+-                        case OP_MATCH -> {
++                        case MATCH -> {
+                             queue.setThreadAt(queuePosition, incref(t0));
+-                            if (last) {
++                            if (instruction.last()) {
+                                 id = 0;
+                             }
+                             else {
+                                 id = id + 1;
+                             }
+                         }
+-                        case OP_EMPTY_WIDTH -> {
+-                            if (!last) {
++                        case EMPTY_WIDTH -> {
++                            if (!instruction.last()) {
+                                 pushAddState(id + 1, 0, stackPointer++);
+                             }
+
+                             int empty = emptyFlags(position);
+-                            if ((payload & ~empty) == 0) {
+-                                id = output;
++                            if ((instruction.empty() & ~empty) == 0) {
++                                id = instruction.out();
+                             }
+                             else {
+                                 id = 0;
+                             }
+                         }
+-                        case OP_ALT -> {
++                        case ALT -> {
+                             // Unreachable in flattened programs but safe to handle.
+-                            pushAddState(payload & (int) OUTPUT_MASK, 0, stackPointer++);
+-                            id = output;
++                            pushAddState(instruction.out1(), 0, stackPointer++);
++                            id = instruction.out();
+                         }
+                     }
+                     if (id == 0) {
