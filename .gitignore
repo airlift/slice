@@ -9,3 +9,5 @@ test-output/
 .idea
 .*.swp
 .*.swo
+
+re2_upstream/
