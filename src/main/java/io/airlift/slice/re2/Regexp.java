@@ -13,6 +13,7 @@
  */
 package io.airlift.slice.re2;
 
+import io.airlift.slice.DynamicSliceOutput;
 import io.airlift.slice.Slice;
 import io.airlift.slice.Slices;
 
@@ -183,6 +184,47 @@ final class Regexp
         byte[] prefixBytes = convertRunesToBytes(latin1, regexp.op == RegexpOp.LITERAL ? new int[] {regexp.rune} : regexp.runes);
         boolean foldCase = (regexp.parseFlags & FOLD_CASE) != 0;
         return new RequiredPrefixForAccelResult(Slices.wrappedBuffer(prefixBytes), foldCase);
+    }
+
+    /**
+     * Returns the complete encoded literal matched by this expression, or {@code null} when the
+     * expression contains non-literal behavior or case folding. Captures are transparent because
+     * callers use this only when capture offsets are not requested.
+     */
+    Slice exactLiteral()
+    {
+        DynamicSliceOutput literal = new DynamicSliceOutput(16);
+        Deque<Regexp> stack = new ArrayDeque<>();
+        stack.addLast(this);
+
+        while (!stack.isEmpty()) {
+            Regexp regexp = stack.removeLast();
+            switch (regexp.op) {
+                case EMPTY_MATCH -> {}
+                case CAPTURE -> stack.addLast(regexp.subs.getFirst());
+                case CONCAT -> stack.addAll(regexp.subs.reversed());
+                case LITERAL -> {
+                    if ((regexp.parseFlags & FOLD_CASE) != 0) {
+                        return null;
+                    }
+                    literal.writeBytes(convertRunesToBytes(
+                            (regexp.parseFlags & LATIN1) != 0,
+                            new int[] {regexp.rune}));
+                }
+                case LITERAL_STRING -> {
+                    if ((regexp.parseFlags & FOLD_CASE) != 0) {
+                        return null;
+                    }
+                    literal.writeBytes(convertRunesToBytes(
+                            (regexp.parseFlags & LATIN1) != 0,
+                            regexp.runes));
+                }
+                default -> {
+                    return null;
+                }
+            }
+        }
+        return literal.slice();
     }
 
     /**
