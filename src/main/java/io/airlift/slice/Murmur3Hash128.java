@@ -15,12 +15,18 @@ package io.airlift.slice;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
+
 public final class Murmur3Hash128
 {
     private static final long C1 = 0x87c37b91114253d5L;
     private static final long C2 = 0x4cf5ad432745937fL;
 
     private static final long DEFAULT_SEED = 0;
+
+    private static final VarHandle LONG_HANDLE = MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.LITTLE_ENDIAN);
 
     private Murmur3Hash128() {}
 
@@ -37,18 +43,18 @@ public final class Murmur3Hash128
     @SuppressFBWarnings("SF_SWITCH_NO_DEFAULT")
     public static Slice hash(long seed, Slice data, int offset, int length)
     {
-        final int fastLimit = offset + length - (2 * SizeOf.SIZE_OF_LONG) + 1;
+        byte[] base = data.byteArray();
+        int baseOffset = data.byteArrayOffset() + offset;
 
         long h1 = seed;
         long h2 = seed;
 
-        int current = offset;
+        int current = 0;
+        int fastLimit = length - 15;
         while (current < fastLimit) {
-            long k1 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
-
-            long k2 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
+            long k1 = (long) LONG_HANDLE.get(base, baseOffset + current);
+            long k2 = (long) LONG_HANDLE.get(base, baseOffset + current + 8);
+            current += 16;
 
             k1 *= C1;
             k1 = Long.rotateLeft(k1, 31);
@@ -71,22 +77,23 @@ public final class Murmur3Hash128
 
         long k1 = 0;
         long k2 = 0;
+        int tailBase = baseOffset + current;
 
         switch (length & 15) {
             case 15:
-                k2 ^= ((long) data.getUnsignedByte(current + 14)) << 48;
+                k2 ^= ((long) base[tailBase + 14] & 0xFF) << 48;
             case 14:
-                k2 ^= ((long) data.getUnsignedByte(current + 13)) << 40;
+                k2 ^= ((long) base[tailBase + 13] & 0xFF) << 40;
             case 13:
-                k2 ^= ((long) data.getUnsignedByte(current + 12)) << 32;
+                k2 ^= ((long) base[tailBase + 12] & 0xFF) << 32;
             case 12:
-                k2 ^= ((long) data.getUnsignedByte(current + 11)) << 24;
+                k2 ^= ((long) base[tailBase + 11] & 0xFF) << 24;
             case 11:
-                k2 ^= ((long) data.getUnsignedByte(current + 10)) << 16;
+                k2 ^= ((long) base[tailBase + 10] & 0xFF) << 16;
             case 10:
-                k2 ^= ((long) data.getUnsignedByte(current + 9)) << 8;
+                k2 ^= ((long) base[tailBase + 9] & 0xFF) << 8;
             case 9:
-                k2 ^= ((long) data.getUnsignedByte(current + 8)) << 0;
+                k2 ^= ((long) base[tailBase + 8] & 0xFF);
 
                 k2 *= C2;
                 k2 = Long.rotateLeft(k2, 33);
@@ -94,21 +101,21 @@ public final class Murmur3Hash128
                 h2 ^= k2;
 
             case 8:
-                k1 ^= ((long) data.getUnsignedByte(current + 7)) << 56;
+                k1 ^= ((long) base[tailBase + 7] & 0xFF) << 56;
             case 7:
-                k1 ^= ((long) data.getUnsignedByte(current + 6)) << 48;
+                k1 ^= ((long) base[tailBase + 6] & 0xFF) << 48;
             case 6:
-                k1 ^= ((long) data.getUnsignedByte(current + 5)) << 40;
+                k1 ^= ((long) base[tailBase + 5] & 0xFF) << 40;
             case 5:
-                k1 ^= ((long) data.getUnsignedByte(current + 4)) << 32;
+                k1 ^= ((long) base[tailBase + 4] & 0xFF) << 32;
             case 4:
-                k1 ^= ((long) data.getUnsignedByte(current + 3)) << 24;
+                k1 ^= ((long) base[tailBase + 3] & 0xFF) << 24;
             case 3:
-                k1 ^= ((long) data.getUnsignedByte(current + 2)) << 16;
+                k1 ^= ((long) base[tailBase + 2] & 0xFF) << 16;
             case 2:
-                k1 ^= ((long) data.getUnsignedByte(current + 1)) << 8;
+                k1 ^= ((long) base[tailBase + 1] & 0xFF) << 8;
             case 1:
-                k1 ^= ((long) data.getUnsignedByte(current + 0)) << 0;
+                k1 ^= ((long) base[tailBase] & 0xFF);
 
                 k1 *= C1;
                 k1 = Long.rotateLeft(k1, 31);
@@ -151,18 +158,18 @@ public final class Murmur3Hash128
     @SuppressFBWarnings({"SF_SWITCH_NO_DEFAULT", "SF_SWITCH_FALLTHROUGH"})
     public static long hash64(long seed, Slice data, int offset, int length)
     {
-        final int fastLimit = offset + length - (2 * SizeOf.SIZE_OF_LONG) + 1;
+        byte[] base = data.byteArray();
+        int baseOffset = data.byteArrayOffset() + offset;
 
         long h1 = seed;
         long h2 = seed;
 
-        int current = offset;
+        int current = 0;
+        int fastLimit = length - 15;
         while (current < fastLimit) {
-            long k1 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
-
-            long k2 = data.getLong(current);
-            current += SizeOf.SIZE_OF_LONG;
+            long k1 = (long) LONG_HANDLE.get(base, baseOffset + current);
+            long k2 = (long) LONG_HANDLE.get(base, baseOffset + current + 8);
+            current += 16;
 
             k1 *= C1;
             k1 = Long.rotateLeft(k1, 31);
@@ -185,22 +192,23 @@ public final class Murmur3Hash128
 
         long k1 = 0;
         long k2 = 0;
+        int tailBase = baseOffset + current;
 
         switch (length & 15) {
             case 15:
-                k2 ^= ((long) data.getUnsignedByte(current + 14)) << 48;
+                k2 ^= ((long) base[tailBase + 14] & 0xFF) << 48;
             case 14:
-                k2 ^= ((long) data.getUnsignedByte(current + 13)) << 40;
+                k2 ^= ((long) base[tailBase + 13] & 0xFF) << 40;
             case 13:
-                k2 ^= ((long) data.getUnsignedByte(current + 12)) << 32;
+                k2 ^= ((long) base[tailBase + 12] & 0xFF) << 32;
             case 12:
-                k2 ^= ((long) data.getUnsignedByte(current + 11)) << 24;
+                k2 ^= ((long) base[tailBase + 11] & 0xFF) << 24;
             case 11:
-                k2 ^= ((long) data.getUnsignedByte(current + 10)) << 16;
+                k2 ^= ((long) base[tailBase + 10] & 0xFF) << 16;
             case 10:
-                k2 ^= ((long) data.getUnsignedByte(current + 9)) << 8;
+                k2 ^= ((long) base[tailBase + 9] & 0xFF) << 8;
             case 9:
-                k2 ^= ((long) data.getUnsignedByte(current + 8)) << 0;
+                k2 ^= ((long) base[tailBase + 8] & 0xFF);
 
                 k2 *= C2;
                 k2 = Long.rotateLeft(k2, 33);
@@ -208,21 +216,21 @@ public final class Murmur3Hash128
                 h2 ^= k2;
 
             case 8:
-                k1 ^= ((long) data.getUnsignedByte(current + 7)) << 56;
+                k1 ^= ((long) base[tailBase + 7] & 0xFF) << 56;
             case 7:
-                k1 ^= ((long) data.getUnsignedByte(current + 6)) << 48;
+                k1 ^= ((long) base[tailBase + 6] & 0xFF) << 48;
             case 6:
-                k1 ^= ((long) data.getUnsignedByte(current + 5)) << 40;
+                k1 ^= ((long) base[tailBase + 5] & 0xFF) << 40;
             case 5:
-                k1 ^= ((long) data.getUnsignedByte(current + 4)) << 32;
+                k1 ^= ((long) base[tailBase + 4] & 0xFF) << 32;
             case 4:
-                k1 ^= ((long) data.getUnsignedByte(current + 3)) << 24;
+                k1 ^= ((long) base[tailBase + 3] & 0xFF) << 24;
             case 3:
-                k1 ^= ((long) data.getUnsignedByte(current + 2)) << 16;
+                k1 ^= ((long) base[tailBase + 2] & 0xFF) << 16;
             case 2:
-                k1 ^= ((long) data.getUnsignedByte(current + 1)) << 8;
+                k1 ^= ((long) base[tailBase + 1] & 0xFF) << 8;
             case 1:
-                k1 ^= ((long) data.getUnsignedByte(current + 0)) << 0;
+                k1 ^= ((long) base[tailBase] & 0xFF);
 
                 k1 *= C1;
                 k1 = Long.rotateLeft(k1, 31);
