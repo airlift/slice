@@ -106,6 +106,14 @@ public class TestSlices
     }
 
     @Test
+    public void testNegativeAllocation()
+    {
+        assertThatThrownBy(() -> allocate(-1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("capacity is negative");
+    }
+
+    @Test
     public void testRandom()
     {
         assertThat(Slices.random(0)).isSameAs(EMPTY_SLICE);

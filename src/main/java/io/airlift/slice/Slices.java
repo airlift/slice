@@ -82,6 +82,9 @@ public final class Slices
 
     public static Slice allocate(int capacity)
     {
+        if (capacity < 0) {
+            throw new IllegalArgumentException("capacity is negative");
+        }
         if (capacity == 0) {
             return EMPTY_SLICE;
         }
