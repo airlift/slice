@@ -723,6 +723,40 @@ public class TestSliceUtf8
     }
 
     @Test
+    public void testSimpleCaseAsciiWords()
+    {
+        for (int value = 0; value < 128; value++) {
+            for (int position = 0; position < Long.BYTES; position++) {
+                String word = "@AZ[az{".substring(0, position) + (char) value + "@AZ[az{".substring(position);
+                for (String prefix : List.of("", "é", "İ", "ı", "ȿ", "Ⱥ")) {
+                    // Include mappings that shrink or grow the UTF-8 encoding before a word write.
+                    String text = prefix + word.repeat(3);
+                    byte[] padded = ("aZ" + text + "Az").getBytes(UTF_8);
+                    byte[] original = padded.clone();
+                    Slice view = wrappedBuffer(padded, 2, padded.length - 4);
+                    Slice upper = utf8Slice(upperByCodePoint(text));
+                    Slice lower = utf8Slice(lowerByCodePoint(text));
+                    assertThat(toUpperCase(view)).isEqualTo(upper);
+                    assertThat(toLowerCase(view)).isEqualTo(lower);
+                    assertThat(toUpperCase(padded, 2, padded.length - 4)).isEqualTo(upper);
+                    assertThat(toLowerCase(padded, 2, padded.length - 4)).isEqualTo(lower);
+                    assertThat(padded).isEqualTo(original);
+                }
+            }
+        }
+        for (int position = 0; position < Long.BYTES; position++) {
+            assertCaseChange("A".repeat(position) + "é" + "z".repeat(24));
+        }
+        for (byte[] invalid : INVALID_SEQUENCES) {
+            byte[] input = concat("aZ".repeat(16).getBytes(UTF_8), invalid, "Za".repeat(16).getBytes(UTF_8));
+            assertThat(toUpperCase(wrappedBuffer(input)))
+                    .isEqualTo(wrappedBuffer(concat("AZ".repeat(16).getBytes(UTF_8), invalid, "ZA".repeat(16).getBytes(UTF_8))));
+            assertThat(toLowerCase(wrappedBuffer(input)))
+                    .isEqualTo(wrappedBuffer(concat("az".repeat(16).getBytes(UTF_8), invalid, "za".repeat(16).getBytes(UTF_8))));
+        }
+    }
+
+    @Test
     public void testToUpperCaseNoOpWrapsInputRange()
     {
         byte[] bytes = "HELLO".getBytes(UTF_8);
