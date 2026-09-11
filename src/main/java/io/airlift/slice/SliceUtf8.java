@@ -26,6 +26,8 @@ import static java.lang.Character.MIN_SURROGATE;
 import static java.lang.Integer.toHexString;
 import static java.lang.invoke.MethodHandles.byteArrayViewVarHandle;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Locale.ROOT;
 import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.checkIndex;
 
@@ -47,15 +49,21 @@ public final class SliceUtf8
     private static final long TOP_MASK64 = 0x8080_8080_8080_8080L;
 
     private static final int[] LOWER_CODE_POINTS;
+    private static final byte[][][] FULL_LOWER_CODE_POINTS;
     private static final int[] UPPER_CODE_POINTS;
+    private static final byte[][][] FULL_UPPER_CODE_POINTS;
     private static final int[] TITLE_CODE_POINTS;
     private static final boolean[] WHITESPACE_CODE_POINTS;
+    private static final byte CASED = 1;
+    private static final byte CASE_IGNORABLE = 2;
+    private static final byte[] CASE_PROPERTIES;
 
     static {
         LOWER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         UPPER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         TITLE_CODE_POINTS = new int[MAX_CODE_POINT + 1];
         WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
+        CASE_PROPERTIES = new byte[MAX_CODE_POINT + 1];
         for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
             int type = Character.getType(codePoint);
             if (type != Character.SURROGATE) {
@@ -63,12 +71,23 @@ public final class SliceUtf8
                 UPPER_CODE_POINTS[codePoint] = Character.toUpperCase(codePoint);
                 TITLE_CODE_POINTS[codePoint] = Character.toTitleCase(codePoint);
                 WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
+                if (Character.isLowerCase(codePoint) || Character.isUpperCase(codePoint) || Character.isTitleCase(codePoint)) {
+                    CASE_PROPERTIES[codePoint] = CASED;
+                }
             }
             else {
                 LOWER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 UPPER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 TITLE_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
                 WHITESPACE_CODE_POINTS[codePoint] = false;
+            }
+        }
+        FULL_UPPER_CODE_POINTS = createFullUpperCaseMappings();
+        FULL_LOWER_CODE_POINTS = createFullLowerCaseMappings();
+        boolean[] caseIgnorable = createCaseIgnorableCodePoints();
+        for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
+            if (caseIgnorable[codePoint]) {
+                CASE_PROPERTIES[codePoint] = CASE_IGNORABLE;
             }
         }
     }
@@ -535,6 +554,52 @@ public final class SliceUtf8
     }
 
     /**
+     * Converts UTF-8 to uppercase using the running JDK's full root-locale case mappings.
+     * Mappings can expand one code point into several.
+     * Invalid UTF-8 sequences are copied directly to the output.
+     * <p>
+     * Mappings are extracted from {@link String#toUpperCase(java.util.Locale)} using
+     * {@link java.util.Locale#ROOT}. If no bytes change, the result wraps the input.
+     */
+    public static Slice toUpperCaseFull(Slice utf8)
+    {
+        return toUpperCaseFull(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Applies {@link #toUpperCaseFull(Slice)} to a byte array range.
+     */
+    public static Slice toUpperCaseFull(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return toUpperCaseFullAsciiOrCodePoints(utf8, offset, length);
+    }
+
+    /**
+     * Converts UTF-8 to lowercase using the running JDK's full root-locale case mappings
+     * and Unicode's Final_Sigma rule, evaluated directly against the original UTF-8 input.
+     * Invalid UTF-8 sequences are copied directly to the output and break casing context.
+     * <p>
+     * Contextual results can differ from JDKs affected by JDK-8133167. Case mappings
+     * are extracted during class initialization; caller input is never converted to a String.
+     * If no bytes change, the result wraps the input.
+     */
+    public static Slice toLowerCaseFull(Slice utf8)
+    {
+        return toLowerCaseFull(utf8.byteArray(), utf8.byteArrayOffset(), utf8.length());
+    }
+
+    /**
+     * Applies {@link #toLowerCaseFull(Slice)} to a byte array range.
+     * Bytes outside the range do not participate in casing context.
+     */
+    public static Slice toLowerCaseFull(byte[] utf8, int offset, int length)
+    {
+        checkFromIndexSize(offset, length, utf8.length);
+        return toLowerCaseFullAsciiOrCodePoints(utf8, offset, length);
+    }
+
+    /**
      * Converts slice to title case code point by code point. The first cased
      * code point of every whitespace-delimited word is title cased and the
      * remaining code points of the word are lower cased. This method does not
@@ -849,6 +914,353 @@ public final class SliceUtf8
         return translatedUtf8.slice(0, translatedPosition);
     }
 
+    private static Slice toUpperCaseFullAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        int position = 0;
+
+        // Fast scan until the first ASCII byte that needs translation.
+        while (position < utf8Length) {
+            if (position <= utf8Length - Long.BYTES) {
+                long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                if ((word & TOP_MASK64) == 0) {
+                    if (upperCaseAsciiWord(word) != word) {
+                        break;
+                    }
+                    position += Long.BYTES;
+                    continue;
+                }
+            }
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateUpperCaseFullCodePoints(utf8, utf8Offset, utf8Length, position, null, position);
+            }
+
+            if (value >= 'a' && value <= 'z') {
+                break;
+            }
+            position++;
+        }
+
+        // Nothing to translate in the entire input.
+        if (position == utf8Length) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+
+        Slice translated = Slices.allocate(utf8Length);
+        translated.setBytes(0, utf8, utf8Offset, position);
+
+        // Continue with a single tight loop once output exists.
+        while (position < utf8Length) {
+            if (position <= utf8Length - Long.BYTES) {
+                long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                if ((word & TOP_MASK64) == 0) {
+                    translated.setLongUnchecked(position, upperCaseAsciiWord(word));
+                    position += Long.BYTES;
+                    continue;
+                }
+            }
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateUpperCaseFullCodePoints(utf8, utf8Offset, utf8Length, position, translated, position);
+            }
+
+            if (value >= 'a' && value <= 'z') {
+                translated.setByteUnchecked(position, value - ('a' - 'A'));
+            }
+            else {
+                translated.setByteUnchecked(position, value);
+            }
+            position++;
+        }
+
+        return translated;
+    }
+
+    private static Slice toLowerCaseFullAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        int position = 0;
+        boolean previousNonIgnorableWasCased = false;
+
+        // Fast scan until the first ASCII byte that needs translation.
+        while (position < utf8Length) {
+            if (position <= utf8Length - Long.BYTES) {
+                long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                if ((word & TOP_MASK64) == 0) {
+                    if (lowerCaseAsciiWord(word) != word) {
+                        break;
+                    }
+                    previousNonIgnorableWasCased = lastNonIgnorableWasCased(word, previousNonIgnorableWasCased);
+                    position += Long.BYTES;
+                    continue;
+                }
+            }
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateLowerCaseFullCodePoints(utf8, utf8Offset, utf8Length, position, null, position, previousNonIgnorableWasCased);
+            }
+
+            if (value >= 'A' && value <= 'Z') {
+                break;
+            }
+            byte properties = CASE_PROPERTIES[value];
+            if (properties != CASE_IGNORABLE) {
+                previousNonIgnorableWasCased = properties == CASED;
+            }
+            position++;
+        }
+
+        // Nothing to translate in the entire input.
+        if (position == utf8Length) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+
+        Slice translated = Slices.allocate(utf8Length);
+        translated.setBytes(0, utf8, utf8Offset, position);
+
+        // Continue with a single tight loop once output exists.
+        while (position < utf8Length) {
+            if (position <= utf8Length - Long.BYTES) {
+                long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                if ((word & TOP_MASK64) == 0) {
+                    previousNonIgnorableWasCased = lastNonIgnorableWasCased(word, previousNonIgnorableWasCased);
+                    translated.setLongUnchecked(position, lowerCaseAsciiWord(word));
+                    position += Long.BYTES;
+                    continue;
+                }
+            }
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80) {
+                return translateLowerCaseFullCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, previousNonIgnorableWasCased);
+            }
+
+            if (value >= 'A' && value <= 'Z') {
+                translated.setByteUnchecked(position, value + ('a' - 'A'));
+            }
+            else {
+                translated.setByteUnchecked(position, value);
+            }
+            byte properties = CASE_PROPERTIES[value];
+            if (properties != CASE_IGNORABLE) {
+                previousNonIgnorableWasCased = properties == CASED;
+            }
+            position++;
+        }
+
+        return translated;
+    }
+
+    private static Slice translateUpperCaseFullCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition)
+    {
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position];
+            if (value >= 0) {
+                if (position <= utf8Length - Long.BYTES) {
+                    long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                    if ((word & TOP_MASK64) == 0) {
+                        long mapping = upperCaseAsciiWord(word);
+                        if (translatedUtf8 == null && mapping != word) {
+                            translatedUtf8 = Slices.allocate(utf8Length);
+                            translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                            translatedPosition = position;
+                        }
+                        if (translatedUtf8 != null) {
+                            int nextPosition = Math.addExact(translatedPosition, Long.BYTES);
+                            if (nextPosition > translatedUtf8.length()) {
+                                translatedUtf8 = Slices.ensureSize(translatedUtf8, nextPosition);
+                            }
+                            translatedUtf8.setLongUnchecked(translatedPosition, mapping);
+                            translatedPosition = nextPosition;
+                        }
+                        position += Long.BYTES;
+                        continue;
+                    }
+                }
+                int mapping = value;
+                if (value >= 'a' && value <= 'z') {
+                    mapping -= 'a' - 'A';
+                }
+                if (translatedUtf8 == null && mapping != value) {
+                    translatedUtf8 = Slices.allocate(utf8Length);
+                    translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                    translatedPosition = position;
+                }
+                if (translatedUtf8 != null) {
+                    int nextPosition = Math.addExact(translatedPosition, 1);
+                    if (nextPosition > translatedUtf8.length()) {
+                        translatedUtf8 = Slices.ensureSize(translatedUtf8, nextPosition);
+                    }
+                    translatedUtf8.setByteUnchecked(translatedPosition, mapping);
+                    translatedPosition = nextPosition;
+                }
+                position++;
+                continue;
+            }
+
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+            boolean valid = codePoint >= 0;
+            int inputLength = valid ? lengthOfCodePoint(codePoint) : -codePoint;
+            int mapping = valid ? UPPER_CODE_POINTS[codePoint] : codePoint;
+            byte[] fullMapping = valid ? getFullUpperCaseMapping(codePoint) : null;
+
+            if (translatedUtf8 == null && (mapping != codePoint || fullMapping != null)) {
+                translatedUtf8 = Slices.allocate(utf8Length);
+                translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                translatedPosition = position;
+            }
+
+            if (translatedUtf8 != null) {
+                int outputLength = inputLength;
+                if (valid) {
+                    outputLength = fullMapping != null ? fullMapping.length : lengthOfCodePoint(mapping);
+                }
+                int nextPosition = Math.addExact(translatedPosition, outputLength);
+                if (nextPosition > translatedUtf8.length()) {
+                    translatedUtf8 = Slices.ensureSize(translatedUtf8, nextPosition);
+                }
+                if (fullMapping != null) {
+                    translatedUtf8.setBytes(translatedPosition, fullMapping);
+                }
+                else if (!valid || mapping == codePoint) {
+                    copyUtf8SequenceUnsafe(utf8, utf8Offset, position, translatedUtf8, translatedPosition, inputLength);
+                }
+                else {
+                    setCodePointAt(mapping, translatedUtf8, translatedPosition);
+                }
+                translatedPosition = nextPosition;
+            }
+            position += inputLength;
+        }
+        if (translatedUtf8 == null) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+        return translatedUtf8.slice(0, translatedPosition);
+    }
+
+    private static Slice translateLowerCaseFullCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, boolean previousNonIgnorableWasCased)
+    {
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position];
+            if (value >= 0) {
+                if (position <= utf8Length - Long.BYTES) {
+                    long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                    if ((word & TOP_MASK64) == 0) {
+                        long mapping = lowerCaseAsciiWord(word);
+                        previousNonIgnorableWasCased = lastNonIgnorableWasCased(word, previousNonIgnorableWasCased);
+                        if (translatedUtf8 == null && mapping != word) {
+                            translatedUtf8 = Slices.allocate(utf8Length);
+                            translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                            translatedPosition = position;
+                        }
+                        if (translatedUtf8 != null) {
+                            int nextPosition = Math.addExact(translatedPosition, Long.BYTES);
+                            if (nextPosition > translatedUtf8.length()) {
+                                translatedUtf8 = Slices.ensureSize(translatedUtf8, nextPosition);
+                            }
+                            translatedUtf8.setLongUnchecked(translatedPosition, mapping);
+                            translatedPosition = nextPosition;
+                        }
+                        position += Long.BYTES;
+                        continue;
+                    }
+                }
+                int mapping = value;
+                if (value >= 'A' && value <= 'Z') {
+                    mapping += 'a' - 'A';
+                }
+                byte properties = CASE_PROPERTIES[value];
+                if (properties != CASE_IGNORABLE) {
+                    previousNonIgnorableWasCased = properties == CASED;
+                }
+                if (translatedUtf8 == null && mapping != value) {
+                    translatedUtf8 = Slices.allocate(utf8Length);
+                    translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                    translatedPosition = position;
+                }
+                if (translatedUtf8 != null) {
+                    int nextPosition = Math.addExact(translatedPosition, 1);
+                    if (nextPosition > translatedUtf8.length()) {
+                        translatedUtf8 = Slices.ensureSize(translatedUtf8, nextPosition);
+                    }
+                    translatedUtf8.setByteUnchecked(translatedPosition, mapping);
+                    translatedPosition = nextPosition;
+                }
+                position++;
+                continue;
+            }
+
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+            boolean valid = codePoint >= 0;
+            int inputLength = valid ? lengthOfCodePoint(codePoint) : -codePoint;
+            int mapping = valid ? LOWER_CODE_POINTS[codePoint] : codePoint;
+            byte[] fullMapping = valid ? getFullLowerCaseMapping(codePoint) : null;
+
+            if (!valid) {
+                previousNonIgnorableWasCased = false;
+            }
+            else {
+                if (codePoint == 0x03A3 && previousNonIgnorableWasCased && !hasFollowingCasedCodePoint(utf8, utf8Offset, utf8Length, position + inputLength)) {
+                    mapping = 0x03C2;
+                }
+                // Evaluate context on the original input. Some cased characters are
+                // also case-ignorable, so ignorable characters must be skipped first.
+                byte properties = CASE_PROPERTIES[codePoint];
+                if (properties != CASE_IGNORABLE) {
+                    previousNonIgnorableWasCased = properties == CASED;
+                }
+            }
+
+            if (translatedUtf8 == null && (mapping != codePoint || fullMapping != null)) {
+                translatedUtf8 = Slices.allocate(utf8Length);
+                translatedUtf8.setBytes(0, utf8, utf8Offset, position);
+                translatedPosition = position;
+            }
+
+            if (translatedUtf8 != null) {
+                int outputLength = inputLength;
+                if (valid) {
+                    outputLength = fullMapping != null ? fullMapping.length : lengthOfCodePoint(mapping);
+                }
+                int nextPosition = Math.addExact(translatedPosition, outputLength);
+                if (nextPosition > translatedUtf8.length()) {
+                    translatedUtf8 = Slices.ensureSize(translatedUtf8, nextPosition);
+                }
+                if (fullMapping != null) {
+                    translatedUtf8.setBytes(translatedPosition, fullMapping);
+                }
+                else if (!valid || mapping == codePoint) {
+                    copyUtf8SequenceUnsafe(utf8, utf8Offset, position, translatedUtf8, translatedPosition, inputLength);
+                }
+                else {
+                    setCodePointAt(mapping, translatedUtf8, translatedPosition);
+                }
+                translatedPosition = nextPosition;
+            }
+            position += inputLength;
+        }
+        if (translatedUtf8 == null) {
+            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
+        }
+        return translatedUtf8.slice(0, translatedPosition);
+    }
+
+    private static boolean hasFollowingCasedCodePoint(byte[] utf8, int utf8Offset, int utf8Length, int position)
+    {
+        // Sigma is not case-ignorable, so lookaheads from different sigmas cannot
+        // overlap. The total work remains linear even for long combining sequences.
+        while (position < utf8Length) {
+            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+            if (codePoint < 0) {
+                return false;
+            }
+            byte properties = CASE_PROPERTIES[codePoint];
+            if (properties != CASE_IGNORABLE) {
+                return properties == CASED;
+            }
+            position += lengthOfCodePoint(codePoint);
+        }
+        return false;
+    }
+
     private static long upperCaseAsciiWord(long word)
     {
         // The caller has checked that every byte is ASCII. These additions cannot
@@ -862,6 +1274,118 @@ public final class SliceUtf8
         // Identify bytes in ['A', 'Z'] and set their lowercase bit.
         long upperCase = (word + 0x3F3F_3F3F_3F3F_3F3FL) & ~(word + 0x2525_2525_2525_2525L) & TOP_MASK64;
         return word | (upperCase >>> 2);
+    }
+
+    private static boolean lastNonIgnorableWasCased(long asciiWord, boolean previousNonIgnorableWasCased)
+    {
+        // Update context from the last non-ignorable byte already loaded in this
+        // word. If all eight bytes are ignorable, retain the preceding context.
+        for (int shift = Long.SIZE - Byte.SIZE; shift >= 0; shift -= Byte.SIZE) {
+            byte properties = CASE_PROPERTIES[(int) (asciiWord >>> shift) & 0x7F];
+            if (properties != CASE_IGNORABLE) {
+                return properties == CASED;
+            }
+        }
+        return previousNonIgnorableWasCased;
+    }
+
+    private static byte[] getFullLowerCaseMapping(int codePoint)
+    {
+        byte[][] page = FULL_LOWER_CODE_POINTS[codePoint >>> 8];
+        return page == null ? null : page[codePoint & 0xFF];
+    }
+
+    private static byte[] getFullUpperCaseMapping(int codePoint)
+    {
+        byte[][] page = FULL_UPPER_CODE_POINTS[codePoint >>> 8];
+        return page == null ? null : page[codePoint & 0xFF];
+    }
+
+    private static byte[][][] createFullUpperCaseMappings()
+    {
+        // Only exceptions to Character.toUpperCase need storage. Pages and entries
+        // are allocated only where String.toUpperCase(ROOT) produces a different result.
+        byte[][][] mappings = new byte[(MAX_CODE_POINT >>> 8) + 1][][];
+        for (int codePoint = 0x80; codePoint <= MAX_CODE_POINT; codePoint++) {
+            int type = Character.getType(codePoint);
+            if (type == Character.UNASSIGNED || type == Character.SURROGATE) {
+                continue;
+            }
+            String upper = Character.toString(codePoint).toUpperCase(ROOT);
+            int simpleMapping = UPPER_CODE_POINTS[codePoint];
+            if (upper.length() == Character.charCount(simpleMapping) && upper.codePointAt(0) == simpleMapping) {
+                continue;
+            }
+            int pageIndex = codePoint >>> 8;
+            if (mappings[pageIndex] == null) {
+                mappings[pageIndex] = new byte[256][];
+            }
+            mappings[pageIndex][codePoint & 0xFF] = upper.getBytes(UTF_8);
+        }
+        return mappings;
+    }
+
+    private static byte[][][] createFullLowerCaseMappings()
+    {
+        // Only exceptions to Character.toLowerCase need storage. Pages and entries
+        // are allocated only where String.toLowerCase(ROOT) produces a different result.
+        byte[][][] mappings = new byte[(MAX_CODE_POINT >>> 8) + 1][][];
+        for (int codePoint = 0x80; codePoint <= MAX_CODE_POINT; codePoint++) {
+            int type = Character.getType(codePoint);
+            if (type == Character.UNASSIGNED || type == Character.SURROGATE) {
+                continue;
+            }
+            String lower = Character.toString(codePoint).toLowerCase(ROOT);
+            int simpleMapping = LOWER_CODE_POINTS[codePoint];
+            if (lower.length() == Character.charCount(simpleMapping) && lower.codePointAt(0) == simpleMapping) {
+                continue;
+            }
+            int pageIndex = codePoint >>> 8;
+            if (mappings[pageIndex] == null) {
+                mappings[pageIndex] = new byte[256][];
+            }
+            mappings[pageIndex][codePoint & 0xFF] = lower.getBytes(UTF_8);
+        }
+        return mappings;
+    }
+
+    private static boolean[] createCaseIgnorableCodePoints()
+    {
+        // JDK-8133167: older JDKs use word boundaries instead of Unicode's Final_Sigma.
+        // Check behavior rather than a version number, so corrected backports work too.
+        boolean supportsFinalSigma = "AΣ:A".toLowerCase(ROOT).equals("aσ:a") &&
+                "AΣ-A".toLowerCase(ROOT).equals("aς-a") &&
+                "AΣ1A".toLowerCase(ROOT).equals("aς1a");
+        boolean[] caseIgnorable = new boolean[MAX_CODE_POINT + 1];
+        for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
+            int type = Character.getType(codePoint);
+            if (type == Character.UNASSIGNED || type == Character.SURROGATE) {
+                continue;
+            }
+            // Unicode section 3.13, D136: these categories are always case-ignorable.
+            if (type == Character.NON_SPACING_MARK || type == Character.ENCLOSING_MARK ||
+                    type == Character.FORMAT || type == Character.MODIFIER_LETTER || type == Character.MODIFIER_SYMBOL) {
+                caseIgnorable[codePoint] = true;
+            }
+            else if (supportsFinalSigma) {
+                // Synthetic probes at class initialization only. Both outcomes are
+                // needed to distinguish ignorable characters from cased characters.
+                String character = Character.toString(codePoint);
+                caseIgnorable[codePoint] = ("AΣ" + character + "A").toLowerCase(ROOT).charAt(1) == 'σ' &&
+                        ("AΣ" + character).toLowerCase(ROOT).charAt(1) == 'ς';
+            }
+        }
+        if (!supportsFinalSigma) {
+            // Unicode 17.0 Case_Ignorable punctuation not covered by D136's categories:
+            // Word_Break=MidLetter, MidNumLet, or Single_Quote. Java 25/26 cannot expose
+            // these through probing because of JDK-8133167. Keep this fallback confined
+            // to that missing property; all case mappings and categories come from Java.
+            // https://www.unicode.org/Public/17.0.0/ucd/DerivedCoreProperties.txt
+            for (int codePoint : new int[] {0x0027, 0x002E, 0x003A, 0x00B7, 0x0387, 0x055F, 0x05F4, 0x2018, 0x2019, 0x2024, 0x2027, 0xFE13, 0xFE52, 0xFE55, 0xFF07, 0xFF0E, 0xFF1A}) {
+                caseIgnorable[codePoint] = Character.isDefined(codePoint);
+            }
+        }
+        return caseIgnorable;
     }
 
     private static Slice toTitleCaseCodePoints(byte[] utf8, int utf8Offset, int utf8Length)

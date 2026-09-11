@@ -45,8 +45,10 @@ import static io.airlift.slice.SliceUtf8.setCodePointAt;
 import static io.airlift.slice.SliceUtf8.substring;
 import static io.airlift.slice.SliceUtf8.toCodePoints;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
+import static io.airlift.slice.SliceUtf8.toLowerCaseFull;
 import static io.airlift.slice.SliceUtf8.toTitleCase;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
+import static io.airlift.slice.SliceUtf8.toUpperCaseFull;
 import static io.airlift.slice.SliceUtf8.trim;
 import static io.airlift.slice.SliceUtf8.tryGetCodePointAt;
 import static io.airlift.slice.Slices.EMPTY_SLICE;
@@ -783,6 +785,18 @@ public class TestSliceUtf8
 
     private static void assertCaseChangeWithInvalidSequence(byte[] invalidSequence)
     {
+        assertThat(toUpperCaseFull(wrappedBuffer(invalidSequence))).isEqualTo(wrappedBuffer(invalidSequence));
+        assertThat(toLowerCaseFull(wrappedBuffer(invalidSequence))).isEqualTo(wrappedBuffer(invalidSequence));
+        byte[] fullInput = concat("aßİAΣ".getBytes(UTF_8), invalidSequence, "Σﬃ".getBytes(UTF_8));
+        assertThat(toUpperCaseFull(wrappedBuffer(fullInput)))
+                .isEqualTo(wrappedBuffer(concat("ASSİAΣ".getBytes(UTF_8), invalidSequence, "ΣFFI".getBytes(UTF_8))));
+        assertThat(toLowerCaseFull(wrappedBuffer(fullInput)))
+                .isEqualTo(wrappedBuffer(concat("aßi\u0307aς".getBytes(UTF_8), invalidSequence, "σﬃ".getBytes(UTF_8))));
+        assertThat(toLowerCaseFull(wrappedBuffer(concat("a".getBytes(UTF_8), invalidSequence, "Σ".getBytes(UTF_8)))))
+                .isEqualTo(wrappedBuffer(concat("a".getBytes(UTF_8), invalidSequence, "σ".getBytes(UTF_8))));
+        assertThat(toLowerCaseFull(wrappedBuffer(concat("a".repeat(24).getBytes(UTF_8), invalidSequence, "Σ".getBytes(UTF_8)))))
+                .isEqualTo(wrappedBuffer(concat("a".repeat(24).getBytes(UTF_8), invalidSequence, "σ".getBytes(UTF_8))));
+
         assertThat(toLowerCase(wrappedBuffer(invalidSequence)))
                 .isEqualTo(wrappedBuffer(invalidSequence));
         assertThat(toUpperCase(wrappedBuffer(invalidSequence)))
