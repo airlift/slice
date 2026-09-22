@@ -1,3 +1,45 @@
+Full UTF-8 Case Mapping
+======================
+
+`BenchmarkFullCaseMapping` compares the existing simple uppercase/lowercase functions
+with the full mappings. It covers ASCII, mixed UTF-8, supplementary letters, expansions,
+contextual sigma, and malformed input at approximately 32 bytes and 1 KiB.
+
+Every fork exercises both APIs in both directions on all workloads before JMH warmup,
+so shared code sees both APIs and varied input. The measured methods call
+each API directly. Some full mappings produce different output from simple mappings;
+their timings compare the cost of the two behaviors.
+
+Build the harness with JDK 25 or later:
+
+```sh
+mvn -DskipTests test-compile dependency:build-classpath -Dmdep.outputFile=target/benchmark-classpath.txt
+javac --release 25 -cp "target/classes:$(cat target/benchmark-classpath.txt)" \
+    -processor org.openjdk.jmh.generators.BenchmarkProcessor \
+    -d target/test-classes -s target/generated-test-sources/benchmark \
+    src/test/java/io/airlift/slice/BenchmarkFullCaseMapping.java
+```
+
+Run on an otherwise idle host. On Linux, prefix the Java command with `taskset -c 1`
+to pin the benchmark and its forked JVMs to one CPU:
+
+```sh
+java -cp "target/classes:target/test-classes:$(cat target/benchmark-classpath.txt)" \
+    org.openjdk.jmh.Main 'BenchmarkFullCaseMapping.*' \
+    -t 1 -f 2 -wi 4 -w 500ms -i 4 -r 500ms -prof gc \
+    -jvmArgs '-Xms512m -Xmx512m -XX:+UseG1GC -XX:ActiveProcessorCount=1' \
+    -rf json -rff target/full-case-mapping.json
+```
+
+Both simple and full conversions use eight-byte ASCII casing, including ASCII runs
+inside mixed input. Compare these equally optimized functions to measure the cost
+of full mappings. Keep results from the original simple implementation as a separate
+historical baseline.
+
+These are steady-state microbenchmarks; they exclude class initialization. Retain the
+raw fork/iteration results and compare uncertainty before treating small differences
+as performance changes.
+
 Memory Copy Microbenchmark
 ==========================
 
