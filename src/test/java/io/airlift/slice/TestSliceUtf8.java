@@ -861,6 +861,22 @@ public class TestSliceUtf8
         assertCaseChange(STRING_NAIVE);
         assertCaseChange(STRING_OO);
         assertCaseChange(STRING_ASCII_CODE_POINTS);
+        // Start translation before the ASCII range and keep every byte in a full word.
+        assertCaseChange("a" + STRING_ASCII_CODE_POINTS + "aaaaaaaa");
+        assertCaseChange("A" + STRING_ASCII_CODE_POINTS + "AAAAAAAA");
+        // A multibyte character at each position of a word, after ASCII words that change in both
+        // directions, so the conversion falls back mid-word with part of the output already written.
+        for (String prefix : new String[] {"", "aAaAaAaA", "aAaAaAaAAaAaAaAa"}) {
+            for (String letter : new String[] {"a", "A"}) {
+                for (int position = 0; position < Long.BYTES; position++) {
+                    for (String multibyte : new String[] {"\u00E9", "\u20AC", "\uD83D\uDE00"}) {
+                        String string = prefix + letter.repeat(position) + multibyte + "bCdEfGhIjK";
+                        assertCaseChange(string);
+                        assertCaseChangeAtOffset(string);
+                    }
+                }
+            }
+        }
         assertCaseChange(STRING_ALL_CODE_POINTS);
         assertCaseChange(STRING_ALL_CODE_POINTS_RANDOM);
 
@@ -927,6 +943,20 @@ public class TestSliceUtf8
         // invalid sequence in middle should not start a new word
         assertThat(toTitleCase(wrappedBuffer(concat(new byte[] {'F', 'O', 'O'}, invalidSequence, new byte[] {'B', 'A', 'R'}))))
                 .isEqualTo(wrappedBuffer(concat(new byte[] {'F', 'o', 'o'}, invalidSequence, new byte[] {'b', 'a', 'r'})));
+    }
+
+    // Converts a slice that starts at a nonzero offset into a larger array, whose neighbouring bytes
+    // would change the result if they were read or written.
+    private static void assertCaseChangeAtOffset(String string)
+    {
+        byte[] bytes = string.getBytes(UTF_8);
+        byte[] padded = new byte[bytes.length + 8];
+        Arrays.fill(padded, (byte) 'z');
+        System.arraycopy(bytes, 0, padded, 3, bytes.length);
+        Slice slice = wrappedBuffer(padded, 3, bytes.length);
+
+        assertThat(toLowerCase(slice)).isEqualTo(wrappedBuffer(lowerByCodePoint(string).getBytes(UTF_8)));
+        assertThat(toUpperCase(slice)).isEqualTo(wrappedBuffer(upperByCodePoint(string).getBytes(UTF_8)));
     }
 
     private static void assertCaseChange(String string)
