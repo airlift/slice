@@ -301,6 +301,13 @@ public abstract class SliceOutput
             throws IOException;
 
     /**
+     * Zero-fill runs at or above this many bytes are written with a bulk {@code Arrays.fill} by the
+     * concrete {@link SliceOutput} implementations; shorter runs use the loop below. {@code Arrays.fill}
+     * has a fixed per-call setup cost, so it only pays off once the run is long enough (measured).
+     */
+    static final int BULK_ZERO_FILL_THRESHOLD = 8192;
+
+    /**
      * Fills this buffer with <tt>NUL (0x00)</tt> starting at the current
      * {@code writerIndex} and increases the {@code writerIndex} by the
      * specified {@code length}.
