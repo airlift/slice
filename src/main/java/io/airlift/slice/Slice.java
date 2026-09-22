@@ -1140,6 +1140,14 @@ public final class Slice
     }
 
     /**
+     * Minimum scan length (in bytes) at which {@link #indexOfAnyByte} delegates to the static
+     * {@link #scanForAnyByte} helper. Below this threshold the inline loop is marginally faster and
+     * avoids the extra call; above it the inline loop's throughput collapses (see the note on
+     * {@link #scanForAnyByte}), so the helper wins by a large and growing margin. Chosen empirically.
+     */
+    private static final int LONG_SCAN_THRESHOLD = 4096;
+
+    /**
      * Returns the index of the first occurrence of any of the given bytes at or after {@code offset},
      * or {@code -1} if none occurs in the remainder of this slice.
      * The returned index is absolute, not relative to {@code offset}.
@@ -1147,6 +1155,14 @@ public final class Slice
     public int indexOfAnyByte(byte first, byte second, int offset)
     {
         checkFromIndexSize(offset, 0, size);
+
+        // Long scans go through the static helper, which operates on the backing array as a
+        // parameter; short scans use the inline loop below.
+        if (size - offset >= LONG_SCAN_THRESHOLD) {
+            int arrayOffset = baseOffset;
+            int found = scanForAnyByte(base, arrayOffset + offset, arrayOffset + size, first, second);
+            return found < 0 ? -1 : found - arrayOffset;
+        }
 
         long firstPattern = repeat(first);
         long secondPattern = repeat(second);
@@ -1162,6 +1178,38 @@ public final class Slice
             byte current = getByteUnchecked(offset);
             if (current == first || current == second) {
                 return offset;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Scans {@code array} in {@code [index, limit)} for the first occurrence of either {@code first}
+     * or {@code second}, returning the absolute array index or {@code -1}.
+     *
+     * <p>Kept as a {@code static} method taking the array as a parameter on purpose: the two-needle
+     * SWAR loop is ALU-heavy, and when it runs inside the instance method C2 stops eliminating the
+     * per-access array range check once the loop has iterated enough times, collapsing throughput by
+     * more than 2x beyond a few kilobytes. Passing the array as a parameter keeps range-check
+     * elimination in effect, so the scan stays linear.
+     */
+    private static int scanForAnyByte(byte[] array, int index, int limit, byte first, byte second)
+    {
+        long firstPattern = repeat(first);
+        long secondPattern = repeat(second);
+
+        for (; index <= limit - 8; index += 8) {
+            long value = (long) LONG_HANDLE.get(array, index);
+            long matches = match(value, firstPattern) | match(value, secondPattern);
+            if (matches != 0) {
+                return index + (numberOfTrailingZeros(matches) >>> 3);
+            }
+        }
+
+        for (; index < limit; index++) {
+            byte current = array[index];
+            if (current == first || current == second) {
+                return index;
             }
         }
         return -1;
@@ -1212,6 +1260,17 @@ public final class Slice
             return indexOfBruteForce(pattern, offset);
         }
 
+        // For long haystacks, delegate to the static helper: operating on the backing array as a
+        // parameter keeps C2 range-check elimination in effect for the whole scan, whereas the
+        // inline loop below (which reads through the instance fields) loses throughput past a few
+        // hundred bytes. Short haystacks keep the inline loop, which is faster for them.
+        if (size - offset >= INDEX_OF_SCAN_THRESHOLD) {
+            int arrayOffset = baseOffset;
+            int found = scanIndexOf(base, arrayOffset + offset, arrayOffset + size,
+                    pattern.byteArray(), pattern.byteArrayOffset(), pattern.length());
+            return found < 0 ? -1 : found - arrayOffset;
+        }
+
         // Using the first four bytes for faster search. We are not using eight bytes for long
         // because we want more strings to get use of fast search.
         int head = pattern.getIntUnchecked(0);
@@ -1240,6 +1299,56 @@ public final class Slice
 
             // Try fast match of head and the rest
             if (value == head && equalsUnchecked(index, pattern.byteArray(), pattern.byteArrayOffset(), pattern.length())) {
+                return index;
+            }
+
+            index++;
+        }
+
+        return -1;
+    }
+
+    /**
+     * Minimum haystack scan length (in bytes) at which {@link #indexOf(Slice, int)} delegates to this
+     * helper. Below it the inline loop is faster; above it this helper wins by 15-30% and the margin
+     * grows with length. Chosen empirically (the crossover sits between 256 and 512 bytes).
+     */
+    private static final int INDEX_OF_SCAN_THRESHOLD = 512;
+
+    /**
+     * Scans {@code base} in {@code [index, end)} for the first occurrence of {@code pattern}, returning
+     * the absolute array index or {@code -1}. See {@link #scanForAnyByte} for why the scan lives in a
+     * {@code static} method operating on parameter arrays.
+     */
+    private static int scanIndexOf(byte[] base, int index, int end, byte[] pattern, int patternOffset, int patternLength)
+    {
+        // Using the first four bytes for faster search. We are not using eight bytes for long
+        // because we want more strings to get use of fast search.
+        int head = (int) INT_HANDLE.get(pattern, patternOffset);
+
+        // Take the first byte of head for faster skipping
+        int firstByteMask = head & 0xff;
+        firstByteMask |= firstByteMask << 8;
+        firstByteMask |= firstByteMask << 16;
+
+        int lastValidIndex = end - patternLength;
+        while (index <= lastValidIndex) {
+            // Read four bytes in sequence
+            int value = (int) INT_HANDLE.get(base, index);
+
+            // Compare all bytes of value with the first byte of search data
+            // see https://graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
+            int valueXor = value ^ firstByteMask;
+            int hasZeroBytes = (valueXor - 0x01010101) & ~valueXor & 0x80808080;
+
+            // If valueXor doesn't have any zero bytes, then there is no match and we can advance
+            if (hasZeroBytes == 0) {
+                index += SIZE_OF_INT;
+                continue;
+            }
+
+            // Try fast match of head and the rest
+            if (value == head && Arrays.equals(base, index, index + patternLength, pattern, patternOffset, patternOffset + patternLength)) {
                 return index;
             }
 
