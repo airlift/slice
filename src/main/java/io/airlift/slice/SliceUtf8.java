@@ -1255,10 +1255,19 @@ public final class SliceUtf8
 
     private static int tryGetCodePointAtRaw(byte[] utf8, int utf8Offset, int utf8Length, int position)
     {
-        //
-        // Process first byte
+        // Fast path for ASCII (0xxx_xxxx), which is a signed byte >= 0. Keeping this method tiny
+        // (well under HotSpot's inlining limits) lets the common ASCII case inline into hot
+        // per-code-point loops; the multi-byte handling below is over the 325-byte FreqInlineSize
+        // limit, so it is split into a separate method that never blocks inlining of this one.
         byte firstByte = utf8[utf8Offset + position];
+        if (firstByte >= 0) {
+            return firstByte;
+        }
+        return tryGetMultibyteCodePointAtRaw(utf8, utf8Offset, utf8Length, position, firstByte);
+    }
 
+    private static int tryGetMultibyteCodePointAtRaw(byte[] utf8, int utf8Offset, int utf8Length, int position, byte firstByte)
+    {
         int length = lengthOfCodePointFromStartByteSafe(firstByte);
         if (length < 0) {
             return length;
