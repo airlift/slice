@@ -668,42 +668,38 @@ public final class SliceUtf8
 
     private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        int position = 0;
+        // Find the first byte that is non-ASCII or an ASCII lowercase letter. Nothing before it
+        // changes, so allocation (and the copy of that prefix) is deferred; an input that is already
+        // upper case / has no letters returns the input wrapped, with no allocation.
+        int position = firstAsciiUpperCaseChange(utf8, utf8Offset, utf8Length);
 
-        // Fast scan until the first ASCII byte that needs translation.
-        while (position < utf8Length) {
-            int value = utf8[utf8Offset + position] & 0xFF;
-            if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, UPPER_CODE_POINTS);
-            }
-
-            if (value >= 'a' && value <= 'z') {
-                break;
-            }
-            position++;
-        }
-
-        // Nothing to translate in the entire input.
         if (position == utf8Length) {
             return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
         }
+        if ((utf8[utf8Offset + position] & 0xFF) >= 0x80) {
+            return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, UPPER_CODE_POINTS);
+        }
 
         Slice translated = Slices.allocate(utf8Length);
-        translated.setBytes(0, utf8, utf8Offset, position);
+        byte[] output = translated.byteArray();
+        System.arraycopy(utf8, utf8Offset, output, 0, position);
 
-        // Continue with a single tight loop once output exists.
+        // Translate 8 ASCII bytes at a time with a branch-free SWAR kernel; fall back to the full
+        // code point translator as soon as a non-ASCII byte appears.
+        while (position + Long.BYTES <= utf8Length) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            if ((word & TOP_MASK64) != 0) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, UPPER_CODE_POINTS);
+            }
+            LONG_HANDLE.set(output, position, asciiWordToUpperCase(word));
+            position += Long.BYTES;
+        }
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
                 return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, UPPER_CODE_POINTS);
             }
-
-            if (value >= 'a' && value <= 'z') {
-                translated.setByteUnchecked(position, value - ('a' - 'A'));
-            }
-            else {
-                translated.setByteUnchecked(position, value);
-            }
+            output[position] = (value >= 'a' && value <= 'z') ? (byte) (value - ('a' - 'A')) : (byte) value;
             position++;
         }
 
@@ -712,46 +708,103 @@ public final class SliceUtf8
 
     private static Slice toLowerCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        int position = 0;
+        int position = firstAsciiLowerCaseChange(utf8, utf8Offset, utf8Length);
 
-        // Fast scan until the first ASCII byte that needs translation.
-        while (position < utf8Length) {
-            int value = utf8[utf8Offset + position] & 0xFF;
-            if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, LOWER_CODE_POINTS);
-            }
-
-            if (value >= 'A' && value <= 'Z') {
-                break;
-            }
-            position++;
-        }
-
-        // Nothing to translate in the entire input.
         if (position == utf8Length) {
             return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
         }
+        if ((utf8[utf8Offset + position] & 0xFF) >= 0x80) {
+            return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, LOWER_CODE_POINTS);
+        }
 
         Slice translated = Slices.allocate(utf8Length);
-        translated.setBytes(0, utf8, utf8Offset, position);
+        byte[] output = translated.byteArray();
+        System.arraycopy(utf8, utf8Offset, output, 0, position);
 
-        // Continue with a single tight loop once output exists.
+        while (position + Long.BYTES <= utf8Length) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            if ((word & TOP_MASK64) != 0) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, LOWER_CODE_POINTS);
+            }
+            LONG_HANDLE.set(output, position, asciiWordToLowerCase(word));
+            position += Long.BYTES;
+        }
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
                 return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, LOWER_CODE_POINTS);
             }
-
-            if (value >= 'A' && value <= 'Z') {
-                translated.setByteUnchecked(position, value + ('a' - 'A'));
-            }
-            else {
-                translated.setByteUnchecked(position, value);
-            }
+            output[position] = (value >= 'A' && value <= 'Z') ? (byte) (value + ('a' - 'A')) : (byte) value;
             position++;
         }
 
         return translated;
+    }
+
+    // Index of the first byte that is non-ASCII or an ASCII lowercase letter, or utf8Length if none.
+    private static int firstAsciiUpperCaseChange(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        int position = 0;
+        while (position + Long.BYTES <= utf8Length) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            if ((word & TOP_MASK64) != 0) {
+                break;
+            }
+            long changed = asciiWordToUpperCase(word) ^ word;
+            if (changed != 0) {
+                return position + (Long.numberOfTrailingZeros(changed) >>> 3);
+            }
+            position += Long.BYTES;
+        }
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80 || (value >= 'a' && value <= 'z')) {
+                break;
+            }
+            position++;
+        }
+        return position;
+    }
+
+    // Index of the first byte that is non-ASCII or an ASCII uppercase letter, or utf8Length if none.
+    private static int firstAsciiLowerCaseChange(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        int position = 0;
+        while (position + Long.BYTES <= utf8Length) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            if ((word & TOP_MASK64) != 0) {
+                break;
+            }
+            long changed = asciiWordToLowerCase(word) ^ word;
+            if (changed != 0) {
+                return position + (Long.numberOfTrailingZeros(changed) >>> 3);
+            }
+            position += Long.BYTES;
+        }
+        while (position < utf8Length) {
+            int value = utf8[utf8Offset + position] & 0xFF;
+            if (value >= 0x80 || (value >= 'A' && value <= 'Z')) {
+                break;
+            }
+            position++;
+        }
+        return position;
+    }
+
+    // Branch-free ASCII case folding for one 8-byte word. Caller guarantees no byte has bit 7 set.
+    private static long asciiWordToUpperCase(long word)
+    {
+        // Subtract 0x20 from every byte in ['a','z'] (Hacker's Delight range test producing a 0x80
+        // marker per in-range byte, shifted to 0x20).
+        long inRange = (word + 0x1F1F1F1F1F1F1F1FL) & ~(word + 0x0505050505050505L) & TOP_MASK64;
+        return word - (inRange >>> 2);
+    }
+
+    private static long asciiWordToLowerCase(long word)
+    {
+        // Add 0x20 to every byte in ['A','Z'].
+        long inRange = (word + 0x3F3F3F3F3F3F3F3FL) & ~(word + 0x2525252525252525L) & TOP_MASK64;
+        return word + (inRange >>> 2);
     }
 
     private static Slice toTitleCaseCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
