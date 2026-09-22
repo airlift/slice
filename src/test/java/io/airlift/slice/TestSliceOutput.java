@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestSliceOutput
 {
@@ -90,6 +91,45 @@ public class TestSliceOutput
         output.appendShort(0);
         assertThat(output.getRetainedSize()).isEqualTo(originalRetainedSize);
         assertThat(output.size()).isEqualTo(10);
+    }
+
+    @Test
+    public void testWriteZeroBeyondCapacityThrowsIndexOutOfBounds()
+    {
+        // length >= BULK_ZERO_FILL_THRESHOLD exercises the bulk Arrays.fill path in BasicSliceOutput.
+        int bulk = SliceOutput.BULK_ZERO_FILL_THRESHOLD;
+
+        // Backing offset is nonzero, so (baseOffset + size + length) overflows to a negative end
+        // index. Must still be reported as IndexOutOfBoundsException, not IllegalArgumentException.
+        BasicSliceOutput subSliceOutput = (BasicSliceOutput) Slices.allocate(100).slice(1, 99).getOutput();
+        assertThatThrownBy(() -> subSliceOutput.writeZero(Integer.MAX_VALUE))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+
+        // Nonzero writer position (size) after prior writes also overflows the end index.
+        BasicSliceOutput output = (BasicSliceOutput) Slices.allocate(100).getOutput();
+        output.writeLong(0);
+        Slice underlying = output.getUnderlyingSlice();
+        underlying.setByte(50, 0x7F);
+        assertThatThrownBy(() -> output.writeZero(Integer.MAX_VALUE))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+        // the failed capacity check must not advance the writer or modify the slice
+        assertThat(output.size()).isEqualTo(8);
+        assertThat(underlying.getByte(50)).isEqualTo((byte) 0x7F);
+
+        // A non-overflowing length that still exceeds capacity throws IndexOutOfBoundsException too.
+        BasicSliceOutput small = (BasicSliceOutput) Slices.allocate(100).getOutput();
+        assertThatThrownBy(() -> small.writeZero(bulk))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+
+        // A large in-bounds run still works through the bulk path.
+        BasicSliceOutput inBounds = (BasicSliceOutput) Slices.allocate(bulk + 16).getOutput();
+        inBounds.writeShort(0x0102);
+        inBounds.writeZero(bulk);
+        assertThat(inBounds.size()).isEqualTo(2 + bulk);
+        Slice result = inBounds.getUnderlyingSlice();
+        for (int i = 2; i < 2 + bulk; i++) {
+            assertThat(result.getByte(i)).isEqualTo((byte) 0);
+        }
     }
 
     @Test

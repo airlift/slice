@@ -207,8 +207,19 @@ public class DynamicSliceOutput
     @Override
     public void writeZero(int length)
     {
+        if (length < 0) {
+            throw new IllegalArgumentException("length must be 0 or greater than 0.");
+        }
         slice = Slices.ensureSize(slice, size + length);
-        super.writeZero(length);
+        if (length >= BULK_ZERO_FILL_THRESHOLD) {
+            // Bulk zero-fill (Arrays.fill) for long runs; for shorter runs the writeLong/writeByte
+            // loop is faster (Arrays.fill carries a fixed setup cost). See SliceOutput.writeZero.
+            slice.clear(size, length);
+            size += length;
+        }
+        else {
+            super.writeZero(length);
+        }
     }
 
     @Override

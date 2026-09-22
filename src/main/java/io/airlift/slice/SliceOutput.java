@@ -308,6 +308,13 @@ public abstract class SliceOutput
      * @param length the number of <tt>NUL</tt>s to write to the buffer
      * @throws IndexOutOfBoundsException if {@code length} is greater than {@code this.writableBytes}
      */
+    /**
+     * Zero-fill runs at or above this many bytes are written with a bulk {@code Arrays.fill} by the
+     * concrete {@link SliceOutput} implementations; shorter runs use the loop below. {@code Arrays.fill}
+     * has a fixed per-call setup cost, so it only pays off once the run is long enough (measured).
+     */
+    static final int BULK_ZERO_FILL_THRESHOLD = 8192;
+
     public void writeZero(int length)
     {
         if (length == 0) {
