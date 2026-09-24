@@ -46,31 +46,119 @@ public final class SliceUtf8
     private static final int TOP_MASK32 = 0x8080_8080;
     private static final long TOP_MASK64 = 0x8080_8080_8080_8080L;
 
-    private static final int[] LOWER_CODE_POINTS;
-    private static final int[] UPPER_CODE_POINTS;
-    private static final int[] TITLE_CODE_POINTS;
-    private static final boolean[] WHITESPACE_CODE_POINTS;
+    // Adding these to a word of ASCII bytes sets each byte's high bit according to the
+    // comparison in the constant name, e.g. adding 0x80 - 'a' sets it for bytes >= 'a'.
+    private static final long ASCII_GE_LOWER_A = 0x1F1F_1F1F_1F1F_1F1FL; // 0x80 - 'a'
+    private static final long ASCII_GT_LOWER_Z = 0x0505_0505_0505_0505L; // 0x7F - 'z'
+    private static final long ASCII_GE_UPPER_A = 0x3F3F_3F3F_3F3F_3F3FL; // 0x80 - 'A'
+    private static final long ASCII_GT_UPPER_Z = 0x2525_2525_2525_2525L; // 0x7F - 'Z'
+
+    private static final int PAGE_SHIFT = 8;
+    private static final int PAGE_SIZE = 1 << PAGE_SHIFT;
+
+    // Case mappings and whitespace flags are stored in 256-entry pages indexed by the high
+    // bits of the code point. Case pages hold deltas from the code point, so all pages
+    // without any mapping share the single zero page, and whitespace pages without any
+    // whitespace share the single empty page, keeping the tables small and cache friendly.
+    private static final int[][] LOWER_DELTA_PAGES;
+    private static final int[][] UPPER_DELTA_PAGES;
+    private static final int[][] TITLE_DELTA_PAGES;
+    private static final boolean[][] WHITESPACE_PAGES;
 
     static {
-        LOWER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
-        UPPER_CODE_POINTS = new int[MAX_CODE_POINT + 1];
-        TITLE_CODE_POINTS = new int[MAX_CODE_POINT + 1];
-        WHITESPACE_CODE_POINTS = new boolean[MAX_CODE_POINT + 1];
-        for (int codePoint = 0; codePoint <= MAX_CODE_POINT; codePoint++) {
-            int type = Character.getType(codePoint);
-            if (type != Character.SURROGATE) {
-                LOWER_CODE_POINTS[codePoint] = Character.toLowerCase(codePoint);
-                UPPER_CODE_POINTS[codePoint] = Character.toUpperCase(codePoint);
-                TITLE_CODE_POINTS[codePoint] = Character.toTitleCase(codePoint);
-                WHITESPACE_CODE_POINTS[codePoint] = Character.isWhitespace(codePoint);
+        int pageCount = (MAX_CODE_POINT + 1) >> PAGE_SHIFT;
+        LOWER_DELTA_PAGES = new int[pageCount][];
+        UPPER_DELTA_PAGES = new int[pageCount][];
+        TITLE_DELTA_PAGES = new int[pageCount][];
+        WHITESPACE_PAGES = new boolean[pageCount][];
+
+        int[] zeroDeltas = new int[PAGE_SIZE];
+        boolean[] noWhitespace = new boolean[PAGE_SIZE];
+
+        for (int page = 0; page < pageCount; page++) {
+            int[] lowerDeltas = zeroDeltas;
+            int[] upperDeltas = zeroDeltas;
+            int[] titleDeltas = zeroDeltas;
+            boolean[] whitespace = noWhitespace;
+
+            int pageStart = page << PAGE_SHIFT;
+            for (int index = 0; index < PAGE_SIZE; index++) {
+                int codePoint = pageStart + index;
+                int lowerCodePoint = REPLACEMENT_CODE_POINT;
+                int upperCodePoint = REPLACEMENT_CODE_POINT;
+                int titleCodePoint = REPLACEMENT_CODE_POINT;
+                if (Character.getType(codePoint) != Character.SURROGATE) {
+                    lowerCodePoint = Character.toLowerCase(codePoint);
+                    upperCodePoint = Character.toUpperCase(codePoint);
+                    titleCodePoint = Character.toTitleCase(codePoint);
+                    if (Character.isWhitespace(codePoint)) {
+                        if (whitespace == noWhitespace) {
+                            whitespace = new boolean[PAGE_SIZE];
+                        }
+                        whitespace[index] = true;
+                    }
+                }
+
+                if (lowerCodePoint != codePoint) {
+                    if (lowerDeltas == zeroDeltas) {
+                        lowerDeltas = new int[PAGE_SIZE];
+                    }
+                    lowerDeltas[index] = lowerCodePoint - codePoint;
+                }
+                if (upperCodePoint != codePoint) {
+                    if (upperDeltas == zeroDeltas) {
+                        upperDeltas = new int[PAGE_SIZE];
+                    }
+                    upperDeltas[index] = upperCodePoint - codePoint;
+                }
+                if (titleCodePoint != codePoint) {
+                    if (titleDeltas == zeroDeltas) {
+                        titleDeltas = new int[PAGE_SIZE];
+                    }
+                    titleDeltas[index] = titleCodePoint - codePoint;
+                }
             }
-            else {
-                LOWER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
-                UPPER_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
-                TITLE_CODE_POINTS[codePoint] = REPLACEMENT_CODE_POINT;
-                WHITESPACE_CODE_POINTS[codePoint] = false;
+
+            LOWER_DELTA_PAGES[page] = lowerDeltas;
+            UPPER_DELTA_PAGES[page] = upperDeltas;
+            TITLE_DELTA_PAGES[page] = titleDeltas;
+            WHITESPACE_PAGES[page] = whitespace;
+        }
+    }
+
+    private static int translateCodePoint(int[][] deltaPages, int codePoint)
+    {
+        return codePoint + deltaPages[codePoint >>> PAGE_SHIFT][codePoint & (PAGE_SIZE - 1)];
+    }
+
+    private static boolean isWhitespaceCodePoint(int codePoint)
+    {
+        return WHITESPACE_PAGES[codePoint >>> PAGE_SHIFT][codePoint & (PAGE_SIZE - 1)];
+    }
+
+    // Runs of each ASCII whitespace byte, used to skip homogeneous whitespace stretches
+    // with the vectorized Arrays.mismatch
+    private static final byte[][] WHITESPACE_RUNS = new byte[0x21][];
+
+    static {
+        for (int value = 0; value <= 0x20; value++) {
+            if (Character.isWhitespace(value)) {
+                byte[] run = new byte[256];
+                Arrays.fill(run, (byte) value);
+                WHITESPACE_RUNS[value] = run;
             }
         }
+    }
+
+    // A stop bit is set in the high bit of each byte that is neither ASCII whitespace
+    // (0x09 to 0x0D, 0x1C to 0x20) nor ASCII at all. Carries from non-ASCII bytes can
+    // corrupt bits of higher lanes, but the lowest set bit is always exact, and a zero
+    // result exactly means eight bytes of ASCII whitespace.
+    private static long asciiWhitespaceStopBits(long word)
+    {
+        long controlWhitespace = (word + 0x7777_7777_7777_7777L) & ~(word + 0x7272_7272_7272_7272L); // 0x09 to 0x0D
+        long separatorOrSpace = (word + 0x6464_6464_6464_6464L) & ~(word + 0x5F5F_5F5F_5F5F_5F5FL); // 0x1C to 0x20
+        return (~(controlWhitespace | separatorOrSpace) | word) & TOP_MASK64;
     }
 
     /**
@@ -559,13 +647,14 @@ public final class SliceUtf8
         return toTitleCaseCodePoints(utf8, offset, length);
     }
 
-    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[] codePointTranslationMap)
+    private static Slice translateCodePoints(byte[] utf8, int utf8Offset, int utf8Length, int position, Slice translatedUtf8, int translatedPosition, int[][] codePointDeltaPages)
     {
+        int[] asciiDeltas = codePointDeltaPages[0];
         while (position < utf8Length) {
             int asciiStart = position;
             while (position < utf8Length) {
                 int value = utf8[utf8Offset + position] & 0xFF;
-                if (value >= 0x80 || codePointTranslationMap[value] != value) {
+                if (value >= 0x80 || asciiDeltas[value] != 0) {
                     break;
                 }
                 position++;
@@ -598,7 +687,7 @@ public final class SliceUtf8
                     translatedPosition = position;
                 }
 
-                int translatedCodePoint = codePointTranslationMap[value];
+                int translatedCodePoint = value + asciiDeltas[value];
                 int nextTranslatedPosition = translatedPosition + lengthOfCodePoint(translatedCodePoint);
                 if (nextTranslatedPosition > utf8Length) {
                     translatedUtf8 = Slices.ensureSize(translatedUtf8, nextTranslatedPosition);
@@ -612,7 +701,7 @@ public final class SliceUtf8
 
             int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
             if (codePoint >= 0) {
-                int translatedCodePoint = codePointTranslationMap[codePoint];
+                int translatedCodePoint = translateCodePoint(codePointDeltaPages, codePoint);
                 int codePointLength = lengthOfCodePoint(codePoint);
 
                 if (translatedCodePoint == codePoint) {
@@ -668,60 +757,42 @@ public final class SliceUtf8
 
     private static Slice toUpperCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
-        int position = 0;
-
-        // Fast scan until the first ASCII byte that needs translation.
-        while (position < utf8Length) {
-            int value = utf8[utf8Offset + position] & 0xFF;
-            if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, UPPER_CODE_POINTS);
-            }
-
-            if (value >= 'a' && value <= 'z') {
-                break;
-            }
-            position++;
-        }
-
-        // Nothing to translate in the entire input.
-        if (position == utf8Length) {
-            return Slices.wrappedBuffer(utf8, utf8Offset, utf8Length);
-        }
-
-        Slice translated = Slices.allocate(utf8Length);
-        translated.setBytes(0, utf8, utf8Offset, position);
-
-        // Continue with a single tight loop once output exists.
-        while (position < utf8Length) {
-            int value = utf8[utf8Offset + position] & 0xFF;
-            if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, UPPER_CODE_POINTS);
-            }
-
-            if (value >= 'a' && value <= 'z') {
-                translated.setByteUnchecked(position, value - ('a' - 'A'));
-            }
-            else {
-                translated.setByteUnchecked(position, value);
-            }
-            position++;
-        }
-
-        return translated;
+        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_LOWER_A, ASCII_GT_LOWER_Z, UPPER_DELTA_PAGES);
     }
 
     private static Slice toLowerCaseAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length)
     {
+        return translateAsciiOrCodePoints(utf8, utf8Offset, utf8Length, ASCII_GE_UPPER_A, ASCII_GT_UPPER_Z, LOWER_DELTA_PAGES);
+    }
+
+    private static Slice translateAsciiOrCodePoints(byte[] utf8, int utf8Offset, int utf8Length, long geAddend, long gtAddend, int[][] codePointDeltaPages)
+    {
+        int geByteAddend = (int) (geAddend & 0xFF);
+        int gtByteAddend = (int) (gtAddend & 0xFF);
         int position = 0;
 
-        // Fast scan until the first ASCII byte that needs translation.
+        // Fast scan until the first byte that is non-ASCII or needs translation, eight bytes at a time.
+        while (position <= utf8Length - Long.BYTES) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            long caseBits = (word + geAddend) & ~(word + gtAddend) & TOP_MASK64;
+            long needsChange = (word & TOP_MASK64) | caseBits;
+            if (needsChange != 0) {
+                // Non-ASCII bytes can carry into the case bits of higher lanes, but all bits
+                // below the lowest non-ASCII byte are exact, so the lowest set bit is reliable.
+                position += Long.numberOfTrailingZeros(needsChange) >>> 3;
+                break;
+            }
+            position += Long.BYTES;
+        }
+
+        // Scan the remaining tail bytes and dispatch on the byte found by the fast scan.
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, LOWER_CODE_POINTS);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, null, position, codePointDeltaPages);
             }
 
-            if (value >= 'A' && value <= 'Z') {
+            if (((value + geByteAddend) & ~(value + gtByteAddend) & 0x80) != 0) {
                 break;
             }
             position++;
@@ -735,19 +806,27 @@ public final class SliceUtf8
         Slice translated = Slices.allocate(utf8Length);
         translated.setBytes(0, utf8, utf8Offset, position);
 
-        // Continue with a single tight loop once output exists.
+        // Translate eight ASCII bytes at a time by flipping the case bit of bytes in the range.
+        while (position <= utf8Length - Long.BYTES) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+            if ((word & TOP_MASK64) != 0) {
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointDeltaPages);
+            }
+
+            long caseBits = (word + geAddend) & ~(word + gtAddend) & TOP_MASK64;
+            translated.setLongUnchecked(position, word ^ (caseBits >>> 2));
+            position += Long.BYTES;
+        }
+
+        // Translate the remaining tail bytes branchlessly.
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value >= 0x80) {
-                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, LOWER_CODE_POINTS);
+                return translateCodePoints(utf8, utf8Offset, utf8Length, position, translated, position, codePointDeltaPages);
             }
 
-            if (value >= 'A' && value <= 'Z') {
-                translated.setByteUnchecked(position, value + ('a' - 'A'));
-            }
-            else {
-                translated.setByteUnchecked(position, value);
-            }
+            int caseBit = (value + geByteAddend) & ~(value + gtByteAddend) & 0x80;
+            translated.setByteUnchecked(position, value ^ (caseBit >>> 2));
             position++;
         }
 
@@ -785,12 +864,12 @@ public final class SliceUtf8
                 // Invalid UTF-8 sequences are copied verbatim and do not start a new word.
                 translatedCodePoint = codePoint;
             }
-            else if (WHITESPACE_CODE_POINTS[codePoint]) {
+            else if (isWhitespaceCodePoint(codePoint)) {
                 wordStart = true;
                 translatedCodePoint = codePoint;
             }
             else {
-                translatedCodePoint = wordStart ? TITLE_CODE_POINTS[codePoint] : LOWER_CODE_POINTS[codePoint];
+                translatedCodePoint = translateCodePoint(wordStart ? TITLE_DELTA_PAGES : LOWER_DELTA_PAGES, codePoint);
                 wordStart = false;
             }
 
@@ -899,19 +978,49 @@ public final class SliceUtf8
         while (position < utf8Length) {
             int value = utf8[utf8Offset + position] & 0xFF;
             if (value < 0x80) {
-                if (!WHITESPACE_CODE_POINTS[value]) {
+                if (!isWhitespaceCodePoint(value)) {
                     break;
                 }
                 position++;
+
+                // A run of ASCII whitespace may follow: scan it eight bytes at a time,
+                // skipping homogeneous stretches with the vectorized mismatch. A single
+                // whitespace byte before a multi-byte code point skips the scan entirely.
+                if (position >= utf8Length || utf8[utf8Offset + position] < 0) {
+                    continue;
+                }
+                while (position <= utf8Length - Long.BYTES) {
+                    long word = (long) LONG_HANDLE.get(utf8, utf8Offset + position);
+                    long stopBits = asciiWhitespaceStopBits(word);
+                    if (stopBits != 0) {
+                        position += Long.numberOfTrailingZeros(stopBits) >>> 3;
+                        break;
+                    }
+
+                    if (word == Long.rotateLeft(word, 8)) {
+                        // all eight bytes are the same whitespace, skip the whole run of it
+                        byte[] run = WHITESPACE_RUNS[(int) (word & 0xFF)];
+                        int limit = Math.min(utf8Length - position, run.length);
+                        int mismatch = Arrays.mismatch(utf8, utf8Offset + position, utf8Offset + position + limit, run, 0, limit);
+                        position += (mismatch < 0) ? limit : mismatch;
+                    }
+                    else {
+                        position += Long.BYTES;
+                    }
+                }
                 continue;
             }
 
-            int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
-            if (codePoint < 0 || !WHITESPACE_CODE_POINTS[codePoint]) {
-                break;
-            }
+            // Consume consecutive non-ASCII whitespace code points without re-probing the
+            // fast scan, which cannot help until ASCII bytes reappear
+            while (position < utf8Length && (utf8[utf8Offset + position] & 0x80) != 0) {
+                int codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position);
+                if (codePoint < 0 || !isWhitespaceCodePoint(codePoint)) {
+                    return position;
+                }
 
-            position += lengthOfCodePoint(codePoint);
+                position += lengthOfCodePoint(codePoint);
+            }
         }
         return position;
     }
@@ -1028,38 +1137,53 @@ public final class SliceUtf8
         while (minPosition < position) {
             int value = utf8[utf8Offset + position - 1] & 0xFF;
             if (value < 0x80) {
-                if (!WHITESPACE_CODE_POINTS[value]) {
+                if (!isWhitespaceCodePoint(value)) {
                     break;
                 }
                 position--;
+
+                // A run of ASCII whitespace may precede: skip whole windows of it eight
+                // bytes at a time. A single whitespace byte after a multi-byte code point
+                // skips the scan entirely.
+                if (position <= minPosition || utf8[utf8Offset + position - 1] < 0) {
+                    continue;
+                }
+                while (position - Long.BYTES >= minPosition
+                        && asciiWhitespaceStopBits((long) LONG_HANDLE.get(utf8, utf8Offset + position - Long.BYTES)) == 0) {
+                    position -= Long.BYTES;
+                }
                 continue;
             }
 
-            // decode the code point before position if possible
-            int codePoint;
-            int codePointLength;
-            if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
-                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
-                codePointLength = 2;
+            // Consume consecutive non-ASCII whitespace code points without re-probing the
+            // fast scan, which cannot help until ASCII bytes reappear
+            while (position > minPosition && (utf8[utf8Offset + position - 1] & 0x80) != 0) {
+                // decode the code point before position if possible
+                int codePoint;
+                int codePointLength;
+                if (minPosition <= position - 2 && !isContinuationByte(utf8[utf8Offset + position - 2])) {
+                    codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 2);
+                    codePointLength = 2;
+                }
+                else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
+                    codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
+                    codePointLength = 3;
+                }
+                else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
+                    codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
+                    codePointLength = 4;
+                }
+                else {
+                    return position;
+                }
+                if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
+                    return position;
+                }
+                if (!isWhitespaceCodePoint(codePoint)) {
+                    return position;
+                }
+                position -= codePointLength;
             }
-            else if (minPosition <= position - 3 && !isContinuationByte(utf8[utf8Offset + position - 3])) {
-                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 3);
-                codePointLength = 3;
-            }
-            else if (minPosition <= position - 4 && !isContinuationByte(utf8[utf8Offset + position - 4])) {
-                codePoint = tryGetCodePointAtRaw(utf8, utf8Offset, utf8Length, position - 4);
-                codePointLength = 4;
-            }
-            else {
-                break;
-            }
-            if (codePoint < 0 || codePointLength != lengthOfCodePoint(codePoint)) {
-                break;
-            }
-            if (!WHITESPACE_CODE_POINTS[codePoint]) {
-                break;
-            }
-            position -= codePointLength;
         }
         return position;
     }

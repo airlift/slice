@@ -83,7 +83,7 @@ public final class BasicSliceInput
         if (position >= slice.length()) {
             return -1;
         }
-        int result = slice.getByte(position) & 0xFF;
+        int result = slice.getByteUnchecked(position) & 0xFF;
         position++;
         return result;
     }
@@ -91,11 +91,12 @@ public final class BasicSliceInput
     @Override
     public byte readByte()
     {
-        int value = read();
-        if (value == -1) {
+        if (position >= slice.length()) {
             throw new IndexOutOfBoundsException();
         }
-        return (byte) value;
+        byte result = slice.getByteUnchecked(position);
+        position++;
+        return result;
     }
 
     @Override

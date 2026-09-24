@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestSliceOutput
 {
@@ -90,6 +91,40 @@ public class TestSliceOutput
         output.appendShort(0);
         assertThat(output.getRetainedSize()).isEqualTo(originalRetainedSize);
         assertThat(output.size()).isEqualTo(10);
+    }
+
+    @Test
+    public void testWriteZero()
+    {
+        // zeroing must overwrite stale buffer content left behind by reset
+        DynamicSliceOutput output = new DynamicSliceOutput(16);
+        output.writeBytes(new byte[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+        output.reset();
+        output.writeByte(42);
+        output.writeZero(9);
+        output.writeByte(43);
+        byte[] expected = new byte[11];
+        expected[0] = 42;
+        expected[10] = 43;
+        assertThat(output.slice()).isEqualTo(Slices.wrappedBuffer(expected));
+
+        // zeroing across a growth boundary
+        output = new DynamicSliceOutput(4);
+        output.writeByte(7);
+        output.writeZero(1000);
+        output.writeByte(8);
+        Slice result = output.slice();
+        assertThat(result.length()).isEqualTo(1002);
+        assertThat(result.getByte(0)).isEqualTo((byte) 7);
+        assertThat(result.slice(1, 1000)).isEqualTo(Slices.allocate(1000));
+        assertThat(result.getByte(1001)).isEqualTo((byte) 8);
+
+        output = new DynamicSliceOutput(4);
+        output.writeZero(0);
+        assertThat(output.size()).isEqualTo(0);
+
+        assertThatThrownBy(() -> new DynamicSliceOutput(4).writeZero(-1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
