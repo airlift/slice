@@ -69,7 +69,7 @@ public final class InputStreamSliceInput
     @Override
     public long position()
     {
-        return checkedCast(bufferOffset + bufferPosition);
+        return bufferOffset + bufferPosition;
     }
 
     @Override
@@ -408,12 +408,5 @@ public final class InputStreamSliceInput
         }
 
         return bufferFill;
-    }
-
-    private static int checkedCast(long value)
-    {
-        int result = (int) value;
-        checkArgument(result == value, "Size is greater than maximum int value");
-        return result;
     }
 }
