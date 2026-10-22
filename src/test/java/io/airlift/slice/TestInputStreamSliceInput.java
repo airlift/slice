@@ -16,6 +16,7 @@ package io.airlift.slice;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 
 import static io.airlift.slice.SizeOf.instanceSize;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
@@ -42,6 +43,32 @@ public class TestInputStreamSliceInput
     {
         SliceInput input = buildSliceInput(new byte[0]);
         assertThat(input.position()).isEqualTo(0);
+    }
+
+    @Test
+    public void testPositionBeyondIntegerMaxValue()
+    {
+        InputStream stream = new InputStream()
+        {
+            @Override
+            public int read()
+            {
+                return 0;
+            }
+
+            @Override
+            public long skip(long length)
+            {
+                return length;
+            }
+        };
+        SliceInput input = new InputStreamSliceInput(stream);
+        assertThat(input.skip(Integer.MAX_VALUE)).isEqualTo(Integer.MAX_VALUE);
+        assertThat(input.position()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(input.read()).isZero();
+        assertThat(input.position()).isEqualTo((long) Integer.MAX_VALUE + 1);
+        assertThat(input.skip(4096)).isEqualTo(4096);
+        assertThat(input.position()).isEqualTo((long) Integer.MAX_VALUE + 4097);
     }
 
     @Test
