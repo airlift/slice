@@ -51,7 +51,9 @@ import static io.airlift.slice.SliceUtf8.setCodePointAt;
 import static io.airlift.slice.SliceUtf8.substring;
 import static io.airlift.slice.SliceUtf8.toCodePoints;
 import static io.airlift.slice.SliceUtf8.toLowerCase;
+import static io.airlift.slice.SliceUtf8.toLowerCaseFull;
 import static io.airlift.slice.SliceUtf8.toUpperCase;
+import static io.airlift.slice.SliceUtf8.toUpperCaseFull;
 import static io.airlift.slice.SliceUtf8.trim;
 import static io.airlift.slice.SliceUtf8.tryGetCodePointAt;
 import static java.lang.Character.MAX_CODE_POINT;
@@ -509,6 +511,18 @@ public class SliceUtf8Benchmark
     }
 
     @Benchmark
+    public Slice benchmarkToUpperCaseFullTargeted(UpperCaseData data)
+    {
+        return toUpperCaseFull(data.getUtf8(), data.getOffset(), data.getByteLength());
+    }
+
+    @Benchmark
+    public Slice benchmarkToLowerCaseFullTargeted(LowerCaseData data)
+    {
+        return toLowerCaseFull(data.getUtf8(), data.getOffset(), data.getByteLength());
+    }
+
+    @Benchmark
     public Slice benchmarkLeftTrim(WhitespaceData data)
     {
         return leftTrim(data.getLeftWhitespace(), 0, data.getLeftWhitespace().length);
@@ -719,17 +733,20 @@ public class SliceUtf8Benchmark
     public static class LowerCaseData
             extends CaseChangeData
     {
-        @Param({"ascii_change", "non_ascii_noop", "mixed_non_ascii_ascii_noop", "mixed_non_ascii_ascii_change"})
+        @Param({"ascii_noop", "ascii_change", "non_ascii_noop", "mixed_non_ascii_ascii_noop", "mixed_non_ascii_ascii_change", "expansion", "sigma"})
         private String inputKind;
 
         @Override
         protected byte[] createInput()
         {
             return switch (inputKind) {
+                case "ascii_noop" -> repeatUtf8("hello", getRepeatCount());
                 case "ascii_change" -> repeatUtf8("HELLO", getRepeatCount());
                 case "non_ascii_noop" -> repeatUtf8("ö", getRepeatCount());
                 case "mixed_non_ascii_ascii_noop" -> repeatUtf8("öhello", getRepeatCount());
                 case "mixed_non_ascii_ascii_change" -> repeatUtf8("éHELLO", getRepeatCount());
+                case "expansion" -> repeatUtf8("İHELLO", getRepeatCount());
+                case "sigma" -> repeatUtf8("AΣ\u0301 AΣA ", getRepeatCount());
                 default -> throw new IllegalArgumentException("Unknown inputKind: " + inputKind);
             };
         }
@@ -739,17 +756,19 @@ public class SliceUtf8Benchmark
     public static class UpperCaseData
             extends CaseChangeData
     {
-        @Param({"ascii_change", "non_ascii_noop", "mixed_non_ascii_ascii_noop", "mixed_non_ascii_ascii_change"})
+        @Param({"ascii_noop", "ascii_change", "non_ascii_noop", "mixed_non_ascii_ascii_noop", "mixed_non_ascii_ascii_change", "expansion"})
         private String inputKind;
 
         @Override
         protected byte[] createInput()
         {
             return switch (inputKind) {
+                case "ascii_noop" -> repeatUtf8("HELLO", getRepeatCount());
                 case "ascii_change" -> repeatUtf8("hello", getRepeatCount());
                 case "non_ascii_noop" -> repeatUtf8("Ö", getRepeatCount());
                 case "mixed_non_ascii_ascii_noop" -> repeatUtf8("ÖHELLO", getRepeatCount());
                 case "mixed_non_ascii_ascii_change" -> repeatUtf8("Éhello", getRepeatCount());
+                case "expansion" -> repeatUtf8("ßΐﬃhello", getRepeatCount());
                 default -> throw new IllegalArgumentException("Unknown inputKind: " + inputKind);
             };
         }
