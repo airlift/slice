@@ -27,6 +27,7 @@ import static io.airlift.slice.SizeOf.SIZE_OF_INT;
 import static io.airlift.slice.SizeOf.SIZE_OF_LONG;
 import static io.airlift.slice.SizeOf.SIZE_OF_SHORT;
 import static io.airlift.slice.SizeOf.instanceSize;
+import static java.util.Objects.checkFromIndexSize;
 import static java.util.Objects.requireNonNull;
 
 public class BasicSliceOutput
@@ -189,6 +190,24 @@ public class BasicSliceOutput
     {
         slice.setBytes(size, in, length);
         size += length;
+    }
+
+    @Override
+    public void writeZero(int length)
+    {
+        if (length >= BULK_ZERO_FILL_THRESHOLD) {
+            // Validate capacity before the bulk clear: this throws IndexOutOfBoundsException (as the
+            // contract requires) instead of letting an overflowed end index reach Arrays.fill, which
+            // would throw IllegalArgumentException. The check does not modify the slice.
+            checkFromIndexSize(size, length, slice.length());
+            // Bulk zero-fill (Arrays.fill) for long runs; for shorter runs the writeLong/writeByte
+            // loop is faster (Arrays.fill carries a fixed setup cost). See SliceOutput.writeZero.
+            slice.clear(size, length);
+            size += length;
+        }
+        else {
+            super.writeZero(length);
+        }
     }
 
     @Override
