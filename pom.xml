@@ -34,6 +34,9 @@
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
 
+        <!-- UTF-8 validation uses the Vector API -->
+        <air.test.jvm.additional-arguments>--add-modules jdk.incubator.vector</air.test.jvm.additional-arguments>
+
         <!-- do not run tests on release -->
         <air.release.preparation-goals>clean verify -DskipTests</air.release.preparation-goals>
     </properties>
@@ -100,6 +103,33 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>--add-modules</arg>
+                        <arg>jdk.incubator.vector</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <configuration>
+                            <additionalOptions combine.self="override">
+                                <additionalOption>--add-modules</additionalOption>
+                                <additionalOption>jdk.incubator.vector</additionalOption>
+                            </additionalOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>com.mycila</groupId>
                 <artifactId>license-maven-plugin</artifactId>

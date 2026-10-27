@@ -46,6 +46,10 @@ public final class SliceUtf8
     private static final int TOP_MASK32 = 0x8080_8080;
     private static final long TOP_MASK64 = 0x8080_8080_8080_8080L;
 
+    // Inputs at least this long are validated with the Vector API; shorter inputs use SWAR.
+    // This is the smallest vector length; inputs shorter than the actual vector length also use SWAR.
+    private static final int VECTOR_UTF8_THRESHOLD = 16;
+
     private static final int[] LOWER_CODE_POINTS;
     private static final int[] UPPER_CODE_POINTS;
     private static final int[] TITLE_CODE_POINTS;
@@ -117,6 +121,134 @@ public final class SliceUtf8
         }
 
         return true;
+    }
+
+    /**
+     * Returns whether the slice contains valid UTF-8, rejecting overlong encodings,
+     * surrogate code points, and code points above U+10FFFF.
+     * <p>
+     * Slices of at least 16 bytes are validated with the Vector API, which requires
+     * the {@code jdk.incubator.vector} module to be added to the JVM.
+     */
+    public static boolean isUtf8(Slice utf8)
+    {
+        int length = utf8.length();
+        if (length < VECTOR_UTF8_THRESHOLD) {
+            return isUtf8Raw(utf8.byteArray(), utf8.byteArrayOffset(), length);
+        }
+        return Utf8Vector.isUtf8(utf8.byteArray(), utf8.byteArrayOffset(), length);
+    }
+
+    static boolean isUtf8Raw(byte[] utf8, int utf8Offset, int utf8Length)
+    {
+        // Single pass over 8-byte words. Multibyte sequences that cross a word boundary are handled by
+        // carrying the lanes that still expect continuation bytes over to the next word.
+        int tailOffset = utf8Length & ~(Long.BYTES - 1);
+        long expected = 0;
+        for (int offset = 0; offset < tailOffset; offset += Long.BYTES) {
+            long word = (long) LONG_HANDLE.get(utf8, utf8Offset + offset);
+            // ASCII words need no validation unless the previous word left a sequence open.
+            if (((word & TOP_MASK64) | expected) != 0) {
+                expected = validateUtf8Word(word, previousByte(utf8, utf8Offset, offset), expected);
+                if (expected < 0) {
+                    return false;
+                }
+            }
+        }
+
+        // Validate the remaining bytes as a zero padded word. Padding bytes are ASCII, so a
+        // sequence truncated by the end of the input fails the continuation check.
+        int remaining = utf8Length - tailOffset;
+        if (remaining == 0) {
+            return expected == 0;
+        }
+        long word;
+        if (utf8Length >= Long.BYTES) {
+            // Re-read the last word and shift out the bytes that were already validated.
+            word = (long) LONG_HANDLE.get(utf8, utf8Offset + utf8Length - Long.BYTES) >>> ((Long.BYTES - remaining) * Byte.SIZE);
+        }
+        else {
+            word = loadPartialWord(utf8, utf8Offset, remaining);
+        }
+        return ((word & TOP_MASK64) | expected) == 0 || validateUtf8Word(word, previousByte(utf8, utf8Offset, tailOffset), expected) >= 0;
+    }
+
+    private static long previousByte(byte[] utf8, int utf8Offset, int offset)
+    {
+        return offset == 0 ? 0 : utf8[utf8Offset + offset - 1] & 0xFFL;
+    }
+
+    private static long loadPartialWord(byte[] bytes, int offset, int length)
+    {
+        long word = 0;
+        int shift = 0;
+        if (length >= Integer.BYTES) {
+            word = (int) INT_HANDLE.get(bytes, offset) & 0xFFFF_FFFFL;
+            offset += Integer.BYTES;
+            shift = Integer.SIZE;
+        }
+        if ((length & 2) != 0) {
+            word |= ((short) SHORT_HANDLE.get(bytes, offset) & 0xFFFFL) << shift;
+            offset += Short.BYTES;
+            shift += Short.SIZE;
+        }
+        if ((length & 1) != 0) {
+            word |= (bytes[offset] & 0xFFL) << shift;
+        }
+        return word;
+    }
+
+    /**
+     * Validates eight bytes of UTF-8 at once, in the style of the Keiser and Lemire lookup algorithm
+     * but with SWAR bit tricks instead of vector table lookups. Words are little endian, so lane
+     * {@code i} holds byte {@code i} and the preceding byte is in the lower lane.
+     *
+     * @param previousByte the byte preceding the word, or zero at the start of the input
+     * @param expected top bits of the lanes that must hold continuation bytes because of leading
+     * bytes before the word
+     * @return a negative value if the word is invalid, otherwise the {@code expected} mask for the next word
+     */
+    private static long validateUtf8Word(long word, long previousByte, long expected)
+    {
+        // Classify every byte: continuation 10xx_xxxx, leading 11xx_xxxx, 111x_xxxx and 1111_xxxx.
+        long continuation = word & ~(word << 1) & TOP_MASK64;
+        long lead = word & (word << 1) & TOP_MASK64;
+        long lead3 = lead & (word << 2);
+        long lead4 = lead3 & (word << 3);
+
+        // Structure: a byte must be a continuation byte exactly when it is the second byte after a
+        // leading byte, the third byte after a three or four byte leading byte, or the fourth byte
+        // after a four byte leading byte.
+        expected |= (lead << 8) | (lead3 << 16) | (lead4 << 24);
+        long error = continuation ^ expected;
+
+        // Ranges: reject overlong encodings, surrogates and code points above U+10FFFF.
+        // Leading bytes C0, C1 and F5..FF are always invalid.
+        error |= zeroBytes((word & 0xFEFE_FEFE_FEFE_FEFEL) ^ 0xC0C0_C0C0_C0C0_C0C0L);
+        error |= lead4 & (((word & 0x0F0F_0F0F_0F0F_0F0FL) + 0x0B0B_0B0B_0B0B_0B0BL) << 3);
+        // Leading bytes E0, ED, F0 and F4 restrict the continuation byte that follows: E0 rejects
+        // 80..9F (overlong), ED rejects A0..BF (surrogate), F0 rejects 80..8F (overlong) and F4
+        // rejects 90..BF (above U+10FFFF). For each lane build the leading byte that its continuation
+        // byte would make invalid, and compare it with the preceding byte.
+        long prev1 = (word << 8) | previousByte;
+        long atLeast0xA0 = (word >>> 5) & 0x0101_0101_0101_0101L;
+        long atLeast0x90 = atLeast0xA0 | ((word >>> 4) & 0x0101_0101_0101_0101L);
+        error |= zeroBytes(prev1 ^ (0xE0E0_E0E0_E0E0_E0E0L | (atLeast0xA0 * 0x0D)));
+        error |= zeroBytes(prev1 ^ (0xF0F0_F0F0_F0F0_F0F0L | (atLeast0x90 * 0x04)));
+
+        if (error != 0) {
+            return -1;
+        }
+        // Lanes of the next word that must hold continuation bytes of sequences started in this word.
+        return (lead >>> 56) | (lead3 >>> 48) | (lead4 >>> 40);
+    }
+
+    /**
+     * Returns the top bit of every lane whose byte is zero.
+     */
+    private static long zeroBytes(long word)
+    {
+        return ~(((word & 0x7F7F_7F7F_7F7F_7F7FL) + 0x7F7F_7F7F_7F7F_7F7FL) | word) & TOP_MASK64;
     }
 
     /**

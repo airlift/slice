@@ -13,6 +13,7 @@
  */
 package io.airlift.slice;
 
+import com.google.common.base.Utf8;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -30,6 +31,7 @@ import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.OptionalInt;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
@@ -40,6 +42,7 @@ import static io.airlift.slice.SliceUtf8.countCodePoints;
 import static io.airlift.slice.SliceUtf8.fixInvalidUtf8;
 import static io.airlift.slice.SliceUtf8.fromCodePoints;
 import static io.airlift.slice.SliceUtf8.getCodePointAt;
+import static io.airlift.slice.SliceUtf8.isUtf8;
 import static io.airlift.slice.SliceUtf8.leftTrim;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePoint;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePointFromStartByte;
@@ -71,6 +74,31 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @Measurement(iterations = 5, time = 500, timeUnit = MILLISECONDS)
 public class SliceUtf8Benchmark
 {
+    @Benchmark
+    public boolean benchmarkIsUtf8(BenchmarkData data)
+    {
+        return isUtf8(data.getSlice());
+    }
+
+    @Benchmark
+    public boolean benchmarkIsUtf8Guava(BenchmarkData data)
+    {
+        return Utf8.isWellFormed(data.getUtf8(), data.getOffset(), data.getByteLength());
+    }
+
+    @Benchmark
+    public boolean benchmarkIsUtf8Text(Utf8TextData data)
+    {
+        return isUtf8(data.getSlice());
+    }
+
+    @Benchmark
+    public boolean benchmarkIsUtf8TextGuava(Utf8TextData data)
+    {
+        Slice slice = data.getSlice();
+        return Utf8.isWellFormed(slice.byteArray(), slice.byteArrayOffset(), slice.length());
+    }
+
     @Benchmark
     public int benchmarkLengthOfCodePointFromStartByte(BenchmarkData data)
     {
@@ -600,6 +628,70 @@ public class SliceUtf8Benchmark
             checksum = (31 * checksum) ^ value;
         }
         return checksum;
+    }
+
+    @State(Thread)
+    public static class Utf8TextData
+    {
+        // 12 is a whole number of two, three and four byte sequences, so it stays below the
+        // vector threshold for every text; 7 and 15 round up for some texts (reported by setup)
+        @Param({"7", "12", "15", "16", "100", "1000"})
+        private int length;
+
+        @Param({"ascii", "latin", "cjk", "emoji", "mixed"})
+        private String text;
+
+        private Slice slice;
+
+        @Setup
+        public void setup()
+        {
+            // Seeded so that every implementation under comparison sees identical input
+            Random random = new Random(length * 31L + text.hashCode());
+            StringBuilder builder = new StringBuilder();
+            byte[] utf8;
+            while (true) {
+                int codePoint = switch (text) {
+                    case "ascii" -> 'a' + random.nextInt(26);
+                    // mostly ASCII with occasional two byte characters, like western European text
+                    case "latin" -> random.nextInt(10) == 0 ? 0xC0 + random.nextInt(0x7FF - 0xC0) : 'a' + random.nextInt(26);
+                    // three byte characters with occasional ASCII punctuation
+                    case "cjk" -> random.nextInt(10) == 0 ? ' ' : 0x4E00 + random.nextInt(0x9FFF - 0x4E00);
+                    case "emoji" -> 0x1F300 + random.nextInt(0x1FAFF - 0x1F300);
+                    // every sequence length equally likely
+                    case "mixed" -> switch (random.nextInt(4)) {
+                        case 0 -> 'a' + random.nextInt(26);
+                        case 1 -> 0xC0 + random.nextInt(0x7FF - 0xC0);
+                        case 2 -> 0x4E00 + random.nextInt(0x9FFF - 0x4E00);
+                        default -> 0x1F300 + random.nextInt(0x1FAFF - 0x1F300);
+                    };
+                    default -> throw new IllegalArgumentException(text);
+                };
+                builder.appendCodePoint(codePoint);
+                utf8 = builder.toString().getBytes(StandardCharsets.UTF_8);
+                if (utf8.length >= length) {
+                    break;
+                }
+            }
+            // place the data at an odd offset within a larger array, like a slice of a bigger buffer
+            byte[] bytes = new byte[utf8.length + 16];
+            System.arraycopy(utf8, 0, bytes, 7, utf8.length);
+            // trim to the requested length on a code point boundary so the data stays valid
+            int end = length;
+            while (end < utf8.length && (utf8[end] & 0xC0) == 0x80) {
+                end++;
+            }
+            if (end != length) {
+                // visible in the JMH log, so results for this configuration can be attributed to the actual length
+                System.out.printf("Utf8TextData: length=%d text=%s rounded up to %d bytes to end on a code point boundary%n", length, text, end);
+            }
+            slice = Slices.wrappedBuffer(bytes, 7, end);
+        }
+
+        public Slice getSlice()
+        {
+            return slice;
+        }
     }
 
     @State(Thread)
