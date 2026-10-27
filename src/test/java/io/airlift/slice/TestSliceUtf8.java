@@ -18,6 +18,9 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.junit.jupiter.api.Test;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CharsetDecoder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +37,7 @@ import static io.airlift.slice.SliceUtf8.fromCodePoints;
 import static io.airlift.slice.SliceUtf8.getCodePointAt;
 import static io.airlift.slice.SliceUtf8.getCodePointBefore;
 import static io.airlift.slice.SliceUtf8.isAscii;
+import static io.airlift.slice.SliceUtf8.isUtf8;
 import static io.airlift.slice.SliceUtf8.leftTrim;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePoint;
 import static io.airlift.slice.SliceUtf8.lengthOfCodePointFromStartByte;
@@ -61,6 +65,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.IntStream.concat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
 
 public class TestSliceUtf8
 {
@@ -615,6 +620,148 @@ public class TestSliceUtf8
         assertThat(isAscii(utf8Slice(STRING_OO))).isFalse();
         assertThat(isAscii(utf8Slice(STRING_ASCII_CODE_POINTS))).isTrue();
         assertThat(isAscii(utf8Slice(STRING_ALL_CODE_POINTS))).isFalse();
+    }
+
+    @Test
+    public void testIsUtf8()
+    {
+        for (String string : List.of(
+                STRING_EMPTY,
+                STRING_HELLO,
+                STRING_QUADRATICALLY,
+                STRING_OESTERREICH,
+                STRING_DULIOE_DULIOE,
+                STRING_FAITH_HOPE_LOVE,
+                STRING_NAIVE,
+                STRING_OO,
+                STRING_ASCII_CODE_POINTS,
+                STRING_ALL_CODE_POINTS,
+                STRING_ALL_CODE_POINTS_RANDOM)) {
+            assertThat(isUtf8(utf8Slice(string))).isTrue();
+        }
+    }
+
+    @Test
+    public void testIsUtf8Boundaries()
+    {
+        for (int codePoint : new int[] {0, 0x7F, 0x80, 0x7FF, 0x800, 0xD7FF, 0xE000, 0xFFFF, 0x10000, 0x10FFFF}) {
+            byte[] sequence = new String(Character.toChars(codePoint)).getBytes(UTF_8);
+            assertUtf8AtOffsets(sequence, true);
+            for (int length = 1; length < sequence.length; length++) {
+                assertUtf8AtOffsets(Arrays.copyOf(sequence, length), false);
+            }
+            for (int continuation = 1; continuation < sequence.length; continuation++) {
+                byte[] invalid = sequence.clone();
+                invalid[continuation] = X_CHAR;
+                assertUtf8AtOffsets(invalid, false);
+            }
+        }
+        for (byte[] sequence : INVALID_SEQUENCES) {
+            assertUtf8AtOffsets(sequence, false);
+        }
+        assertUtf8AtOffsets(new byte[] {INVALID_FE_BYTE}, false);
+        assertUtf8AtOffsets(new byte[] {(byte) 0xF4, (byte) 0x90, (byte) 0x80, (byte) 0x80}, false);
+    }
+
+    private static void assertUtf8AtOffsets(byte[] sequence, boolean valid)
+    {
+        for (int prefixLength = 0; prefixLength <= 16; prefixLength++) {
+            for (int suffixLength = 0; suffixLength <= 16; suffixLength++) {
+                // Invalid bytes outside the slice must not affect validation.
+                byte[] bytes = new byte[1 + prefixLength + sequence.length + suffixLength + 1];
+                Arrays.fill(bytes, X_CHAR);
+                bytes[0] = INVALID_FF_BYTE;
+                bytes[bytes.length - 1] = INVALID_FF_BYTE;
+                System.arraycopy(sequence, 0, bytes, 1 + prefixLength, sequence.length);
+                assertThat(isUtf8(wrappedBuffer(bytes, 1, bytes.length - 2))).isEqualTo(valid);
+            }
+        }
+    }
+
+    @Test
+    public void testIsUtf8AgainstDecoder()
+    {
+        CharsetDecoder decoder = UTF_8.newDecoder();
+        for (int first = 0; first < 256; first++) {
+            assertUtf8MatchesDecoder(decoder, new byte[] {(byte) first});
+            for (int second = 0; second < 256; second++) {
+                assertUtf8MatchesDecoder(decoder, new byte[] {(byte) first, (byte) second});
+            }
+        }
+
+        Random random = new Random(0);
+        for (int iteration = 0; iteration < 10_000; iteration++) {
+            byte[] bytes = new byte[random.nextInt(65)];
+            random.nextBytes(bytes);
+            assertUtf8MatchesDecoder(decoder, bytes);
+
+            int[] codePoints = random.ints(random.nextInt(32) + 1, 0, ALL_CODE_POINTS.length)
+                    .map(index -> ALL_CODE_POINTS[index])
+                    .toArray();
+            byte[] utf8 = new String(codePoints, 0, codePoints.length).getBytes(UTF_8);
+            assertUtf8MatchesDecoder(decoder, utf8);
+            utf8[random.nextInt(utf8.length)] = (byte) random.nextInt(256);
+            assertUtf8MatchesDecoder(decoder, utf8);
+        }
+    }
+
+    @Test
+    public void testIsUtf8InvalidSequenceInsideLongAscii()
+    {
+        // Long ASCII runs are skipped several vectors at a time, so an invalid sequence must be
+        // detected wherever it lands: in the first block, inside a skipped run, just after one,
+        // or in the trailing bytes.
+        byte[] ascii = new byte[1000];
+        Arrays.fill(ascii, X_CHAR);
+        assertThat(isUtf8(wrappedBuffer(ascii))).isTrue();
+
+        byte[] loneContinuation = {CONTINUATION_BYTE};
+        byte[] truncatedThreeByteSequence = {(byte) 0xE2, (byte) 0x82};
+        byte[] truncatedFourByteSequence = {(byte) 0xF0, (byte) 0x9F, (byte) 0x98};
+        byte[] overlongTwoByteSequence = {(byte) 0xC0, (byte) 0x80};
+        byte[] overlongThreeByteSequence = {(byte) 0xE0, (byte) 0x80, (byte) 0x80};
+        byte[] validThreeByteSequence = "\u20AC".getBytes(UTF_8);
+
+        for (int offset = 0; offset < ascii.length; offset++) {
+            assertUtf8PlantedAt(ascii, loneContinuation, offset, false);
+            assertUtf8PlantedAt(ascii, truncatedThreeByteSequence, offset, false);
+            assertUtf8PlantedAt(ascii, truncatedFourByteSequence, offset, false);
+            assertUtf8PlantedAt(ascii, overlongTwoByteSequence, offset, false);
+            assertUtf8PlantedAt(ascii, overlongThreeByteSequence, offset, false);
+            assertUtf8PlantedAt(ascii, validThreeByteSequence, offset, true);
+        }
+    }
+
+    private static void assertUtf8PlantedAt(byte[] ascii, byte[] sequence, int offset, boolean valid)
+    {
+        if (offset + sequence.length > ascii.length) {
+            return;
+        }
+        byte[] bytes = ascii.clone();
+        System.arraycopy(sequence, 0, bytes, offset, sequence.length);
+        if (isUtf8(wrappedBuffer(bytes)) != valid) {
+            fail("isUtf8 %s %s sequence %s at offset %d of %d ASCII bytes",
+                    valid ? "rejected" : "accepted",
+                    valid ? "valid" : "invalid",
+                    Arrays.toString(sequence),
+                    offset,
+                    ascii.length);
+        }
+    }
+
+    private static void assertUtf8MatchesDecoder(CharsetDecoder decoder, byte[] bytes)
+    {
+        try {
+            decoder.decode(ByteBuffer.wrap(bytes));
+            if (!isUtf8(wrappedBuffer(bytes))) {
+                fail("isUtf8 rejected valid UTF-8: %s", Arrays.toString(bytes));
+            }
+        }
+        catch (CharacterCodingException e) {
+            if (isUtf8(wrappedBuffer(bytes))) {
+                fail("isUtf8 accepted invalid UTF-8: %s", Arrays.toString(bytes));
+            }
+        }
     }
 
     @Test

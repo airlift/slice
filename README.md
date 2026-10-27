@@ -9,6 +9,9 @@ methods such as read a `long` at an index without having to assemble the `long` 
 In addition to reading and writing single private values, there are methods to bulk transfer data to and 
 from primitive arrays. 
 
+Slice uses the Vector API for UTF-8 validation, so the JVM must be started with
+`--add-modules jdk.incubator.vector`.
+
 ## IO Streams
 
 Slice provides classes for interacting with InputStreams and OutputStreams. The classes support the same
