@@ -8,6 +8,8 @@ jobs:
     strategy:
       matrix:
         java: ['25']
+        compact-headers: ['+', '-']
+        compressed-oops: ['+', '-']
     steps:
     - uses: actions/checkout@v4
     - name: Setup JDK ${{ matrix.java }}
@@ -19,4 +21,4 @@ jobs:
     - name: Maven Install Dependencies
       run: ./mvnw install -B -V -DskipTests -Dair.check.skip-all
     - name: Maven Test
-      run: ./mvnw install -B
+      run: ./mvnw install -B "-Dtest.jvm.arguments=-XX:${{ matrix.compact-headers }}UseCompactObjectHeaders -XX:${{ matrix.compressed-oops }}UseCompressedOops"
