@@ -14,12 +14,23 @@
 package io.airlift.slice;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.lang.reflect.Array;
+import java.util.function.ToLongFunction;
+import java.util.stream.IntStream;
 
 import static io.airlift.slice.SizeOf.instanceSize;
+import static io.airlift.slice.SizeOf.sizeOfBooleanArray;
 import static io.airlift.slice.SizeOf.sizeOfByteArray;
+import static io.airlift.slice.SizeOf.sizeOfCharArray;
+import static io.airlift.slice.SizeOf.sizeOfDoubleArray;
+import static io.airlift.slice.SizeOf.sizeOfFloatArray;
 import static io.airlift.slice.SizeOf.sizeOfIntArray;
 import static io.airlift.slice.SizeOf.sizeOfLongArray;
 import static io.airlift.slice.SizeOf.sizeOfObjectArray;
+import static io.airlift.slice.SizeOf.sizeOfShortArray;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSizeOf
@@ -68,6 +79,37 @@ public class TestSizeOf
         // Test 8 elements difference
         long elementSizeTotal = sizeOfObjectArray(108) - sizeOfObjectArray(100);
         assertThat(elementSizeTotal).isIn(8 * 4L, 8 * 8L);
+    }
+
+    @ParameterizedTest
+    @MethodSource("arrayLengths")
+    public void testArraySizesAgainstJvm(int length)
+    {
+        assertArraySize(new boolean[length], sizeOfBooleanArray(length), SizeOf::sizeOf);
+        assertArraySize(new byte[length], sizeOfByteArray(length), SizeOf::sizeOf);
+        assertArraySize(new short[length], sizeOfShortArray(length), SizeOf::sizeOf);
+        assertArraySize(new char[length], sizeOfCharArray(length), SizeOf::sizeOf);
+        assertArraySize(new int[length], sizeOfIntArray(length), SizeOf::sizeOf);
+        assertArraySize(new float[length], sizeOfFloatArray(length), SizeOf::sizeOf);
+        assertArraySize(new long[length], sizeOfLongArray(length), SizeOf::sizeOf);
+        assertArraySize(new double[length], sizeOfDoubleArray(length), SizeOf::sizeOf);
+        assertArraySize(new Object[length], sizeOfObjectArray(length), SizeOf::sizeOf);
+    }
+
+    private static IntStream arrayLengths()
+    {
+        return IntStream.concat(IntStream.rangeClosed(0, 257), IntStream.of(1023, 1024, 1025, 16383, 16384, 16385));
+    }
+
+    private static <T> void assertArraySize(T array, long sizeByLength, ToLongFunction<T> sizeOf)
+    {
+        long expectedSize = ObjectSizeAgent.getObjectSize(array);
+        assertThat(sizeOf.applyAsLong(array))
+                .as("sizeOf(%s), length %s", array.getClass().getSimpleName(), Array.getLength(array))
+                .isEqualTo(expectedSize);
+        assertThat(sizeByLength)
+                .as("size by length of %s, length %s", array.getClass().getSimpleName(), Array.getLength(array))
+                .isEqualTo(expectedSize);
     }
 
     @SuppressWarnings("unused")

@@ -34,8 +34,9 @@
         <air.check.skip-spotbugs>true</air.check.skip-spotbugs>
         <air.check.skip-pmd>true</air.check.skip-pmd>
 
-        <!-- UTF-8 validation uses the Vector API -->
-        <air.test.jvm.additional-arguments>--add-modules jdk.incubator.vector</air.test.jvm.additional-arguments>
+        <!-- UTF-8 validation uses the Vector API; array size tests measure allocations through a startup agent. -->
+        <air.test.jvm.additional-arguments>--add-modules jdk.incubator.vector "-javaagent:${project.build.directory}/${project.build.finalName}-size-agent.jar" ${test.jvm.arguments}</air.test.jvm.additional-arguments>
+        <test.jvm.arguments />
 
         <!-- do not run tests on release -->
         <air.release.preparation-goals>clean verify -DskipTests</air.release.preparation-goals>
@@ -112,6 +113,32 @@
                         <arg>jdk.incubator.vector</arg>
                     </compilerArgs>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>size-agent</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                        <phase>process-test-classes</phase>
+                        <configuration>
+                            <classifier>size-agent</classifier>
+                            <attach>false</attach>
+                            <includes>
+                                <include>io/airlift/slice/ObjectSizeAgent.class</include>
+                            </includes>
+                            <archive>
+                                <manifestEntries>
+                                    <Premain-Class>io.airlift.slice.ObjectSizeAgent</Premain-Class>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>
