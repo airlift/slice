@@ -30,11 +30,13 @@ public class FnvHash
 
     public static int hash32(Slice data)
     {
-        int hash = FNV_32_OFFSET_BASIS;
+        byte[] base = data.byteArray();
+        int offset = data.byteArrayOffset();
+        int length = data.length();
 
-        for (int i = 0; i < data.length(); ++i) {
-            byte dataByte = data.getByte(i);
-            hash ^= dataByte;
+        int hash = FNV_32_OFFSET_BASIS;
+        for (int i = 0; i < length; i++) {
+            hash ^= base[offset + i];
             hash *= FNV_32_PRIME;
         }
 
@@ -43,11 +45,13 @@ public class FnvHash
 
     public static long hash64(Slice data)
     {
-        long hash = FNV_64_OFFSET_BASIS;
+        byte[] base = data.byteArray();
+        int offset = data.byteArrayOffset();
+        int length = data.length();
 
-        for (int i = 0; i < data.length(); ++i) {
-            byte dataByte = data.getByte(i);
-            hash ^= dataByte;
+        long hash = FNV_64_OFFSET_BASIS;
+        for (int i = 0; i < length; i++) {
+            hash ^= base[offset + i];
             hash *= FNV_64_PRIME;
         }
 
