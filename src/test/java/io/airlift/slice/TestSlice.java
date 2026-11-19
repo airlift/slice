@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import static io.airlift.slice.SizeOf.SIZE_OF_BYTE;
 import static io.airlift.slice.SizeOf.SIZE_OF_DOUBLE;
@@ -136,6 +137,90 @@ public class TestSlice
                 .isInstanceOf(IndexOutOfBoundsException.class);
         assertThatThrownBy(() -> EMPTY_SLICE.compareTo(0, size, slice, 0, size))
                 .isInstanceOf(IndexOutOfBoundsException.class);
+    }
+
+    @Test
+    public void testEqualsValidatesRangeRegardlessOfContent()
+    {
+        // an invalid range must throw even when the bytes that are read first already differ
+        for (int length = 2; length <= 40; length++) {
+            byte[] left = new byte[length - 1];
+            byte[] right = new byte[length - 1];
+            right[0] = 1;
+            Slice leftSlice = Slices.wrappedBuffer(left);
+            Slice rightSlice = Slices.wrappedBuffer(right);
+            int invalidLength = length;
+            assertThatThrownBy(() -> leftSlice.equals(0, invalidLength, rightSlice, 0, invalidLength))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> rightSlice.equals(0, invalidLength, leftSlice, 0, invalidLength))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+            assertThatThrownBy(() -> leftSlice.equals(0, invalidLength, right, 0, invalidLength))
+                    .isInstanceOf(IndexOutOfBoundsException.class);
+        }
+
+        // one byte slices that differ, with a range of two
+        Slice zero = Slices.wrappedBuffer((byte) 0);
+        Slice one = Slices.wrappedBuffer((byte) 1);
+        assertThatThrownBy(() -> zero.equals(0, 2, one, 0, 2))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+
+        // length 9 where the first word differs and only the final word is out of range
+        Slice eightBytes = Slices.wrappedBuffer(new byte[8]);
+        Slice eightOtherBytes = Slices.wrappedBuffer(new byte[] {1, 0, 0, 0, 0, 0, 0, 0});
+        assertThatThrownBy(() -> eightBytes.equals(0, 9, eightOtherBytes, 0, 9))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+    }
+
+    @Test
+    public void testCompareAndEqualsMatchByteArrayOperations()
+    {
+        Random random = new Random(831);
+        for (int iteration = 0; iteration < 200_000; iteration++) {
+            int length = random.nextInt(80);
+            int otherLength = random.nextInt(4) == 0 ? random.nextInt(80) : length;
+            // shared prefix of a random size exercises the tie then continue paths
+            int sharedPrefix = random.nextInt(Math.min(length, otherLength) + 1);
+            int offset = random.nextInt(9);
+            int otherOffset = random.nextInt(9);
+
+            byte[] left = new byte[offset + length + random.nextInt(9)];
+            byte[] right = new byte[otherOffset + otherLength + random.nextInt(9)];
+            random.nextBytes(left);
+            random.nextBytes(right);
+            if (random.nextInt(4) == 0) {
+                // restrict to a few distinct bytes so long equal runs are common
+                for (int i = 0; i < left.length; i++) {
+                    left[i] = (byte) (left[i] & 0x81);
+                }
+                for (int i = 0; i < right.length; i++) {
+                    right[i] = (byte) (right[i] & 0x81);
+                }
+            }
+            System.arraycopy(left, offset, right, otherOffset, sharedPrefix);
+            if (random.nextInt(3) == 0 && length == otherLength) {
+                System.arraycopy(left, offset, right, otherOffset, length);
+            }
+
+            Slice leftSlice = Slices.wrappedBuffer(left);
+            Slice rightSlice = Slices.wrappedBuffer(right);
+
+            int expectedCompare = Integer.signum(Arrays.compareUnsigned(left, offset, offset + length, right, otherOffset, otherOffset + otherLength));
+            assertThat(Integer.signum(leftSlice.compareTo(offset, length, rightSlice, otherOffset, otherLength))).isEqualTo(expectedCompare);
+            assertThat(Integer.signum(rightSlice.compareTo(otherOffset, otherLength, leftSlice, offset, length))).isEqualTo(-expectedCompare);
+
+            boolean expectedEquals = Arrays.equals(left, offset, offset + length, right, otherOffset, otherOffset + otherLength);
+            assertThat(leftSlice.equals(offset, length, rightSlice, otherOffset, otherLength)).isEqualTo(expectedEquals);
+            assertThat(leftSlice.equals(offset, length, right, otherOffset, otherLength)).isEqualTo(expectedEquals);
+
+            // sub-slices have a non-zero base offset, and cover equals(Object) and compareTo(Slice)
+            Slice leftRegion = Slices.wrappedBuffer(left, offset, length);
+            Slice rightRegion = Slices.wrappedBuffer(right, otherOffset, otherLength);
+            assertThat(leftRegion.equals(rightRegion)).isEqualTo(expectedEquals);
+            assertThat(rightRegion.equals(leftRegion)).isEqualTo(expectedEquals);
+            assertThat(Integer.signum(leftRegion.compareTo(rightRegion))).isEqualTo(expectedCompare);
+            assertThat(Integer.signum(rightRegion.compareTo(leftRegion))).isEqualTo(-expectedCompare);
+            assertThat(leftRegion.equals(0, length, rightRegion, 0, otherLength)).isEqualTo(expectedEquals);
+        }
     }
 
     @Test
