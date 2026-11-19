@@ -888,6 +888,25 @@ public class TestSliceUtf8
     }
 
     @Test
+    public void testCaseChangeWrapsUnchangedInput()
+    {
+        for (String text : List.of("", "123", "HELLO", "Ö", "😀", "HELLO, WORLD 0123456789", "ÖHELLO, WORLD", "HELLO, WÖRLD 0123456789", "HELLO, WORLD 0123456789Ö", "😀HELLO, WORLD😀")) {
+            Slice input = utf8Slice("xx" + text + "xx").slice(2, utf8Slice(text).length());
+            Slice result = toUpperCase(input);
+            assertThat(result).as("toUpperCase(%s)", text).isEqualTo(input);
+            assertThat(result.byteArray()).as("toUpperCase(%s)", text).isSameAs(input.byteArray());
+            assertThat(result.byteArrayOffset()).as("toUpperCase(%s)", text).isEqualTo(input.byteArrayOffset());
+        }
+        for (String text : List.of("", "123", "hello", "ö", "😀", "hello, world 0123456789", "öhello, world", "hello, wörld 0123456789", "hello, world 0123456789ö", "😀hello, world😀")) {
+            Slice input = utf8Slice("xx" + text + "xx").slice(2, utf8Slice(text).length());
+            Slice result = toLowerCase(input);
+            assertThat(result).as("toLowerCase(%s)", text).isEqualTo(input);
+            assertThat(result.byteArray()).as("toLowerCase(%s)", text).isSameAs(input.byteArray());
+            assertThat(result.byteArrayOffset()).as("toLowerCase(%s)", text).isEqualTo(input.byteArrayOffset());
+        }
+    }
+
+    @Test
     public void testSimpleCaseAsciiWords()
     {
         for (int value = 0; value < 128; value++) {
@@ -911,6 +930,13 @@ public class TestSliceUtf8
         }
         for (int position = 0; position < Long.BYTES; position++) {
             assertCaseChange("A".repeat(position) + "é" + "z".repeat(24));
+        }
+        for (int length = 0; length <= 2 * Long.BYTES; length++) {
+            // The output outgrows the input before an ASCII tail of every length.
+            assertCaseChange("ȿ" + "a".repeat(length));
+            assertCaseChange("ȿ" + "A".repeat(length));
+            assertCaseChange("Ⱥ" + "a".repeat(length));
+            assertCaseChange("Ⱥ" + "A".repeat(length));
         }
         for (byte[] invalid : INVALID_SEQUENCES) {
             byte[] input = concat("aZ".repeat(16).getBytes(UTF_8), invalid, "Za".repeat(16).getBytes(UTF_8));

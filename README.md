@@ -24,24 +24,23 @@ functions to count code points, substring, trim, case change, and so on.
 
 `SliceUtf8.toUpperCase` and `toLowerCase` use simple case mappings from the running JDK,
 mapping each input code point to one output code point. `toUpperCaseFull` and
-`toLowerCaseFull` use the running JDK's full root-locale case mappings.
-For example, full uppercase maps `ß` to `SS`, and full lowercase maps `İ`
-to `i` followed by a combining dot above. Full lowercase also handles Greek final sigma
-using the original input range as context. Both full functions preserve invalid UTF-8
-bytes; invalid sequences break lowercase context.
+`toLowerCaseFull` use the running JDK's full root-locale case mappings, which can map
+one code point to several, so the result can be longer than the input. For example,
+full uppercase maps `ß` to `SS`, and full lowercase maps `İ` to `i` followed by a
+combining dot above. None of these functions apply locale-specific rules, so results
+are incorrect for Lithuanian, Turkish, and Azeri. All of them copy invalid UTF-8
+bytes to the output unchanged.
 
-Both full functions build their exception tables from synthetic strings using Java's
-`String.toUpperCase(Locale.ROOT)` and `String.toLowerCase(Locale.ROOT)` during
-`SliceUtf8` class initialization, alongside the simple-mapping tables. Conversion calls
-read the completed tables and process UTF-8 directly, without converting input to Java strings.
+Full lowercase also applies Unicode's Final_Sigma rule within the input range: `Σ`
+becomes `ς` when it is preceded by a cased letter and not followed by one, ignoring
+case-ignorable characters such as combining marks and apostrophes, and `σ` otherwise.
+Invalid sequences break that context. The rule is applied as Unicode defines it, so
+results can differ from `String.toLowerCase(Locale.ROOT)`, which approximates it
+([JDK-8133167](https://bugs.openjdk.org/browse/JDK-8133167)).
 
-Full lowercase tracks whether the preceding non-ignorable input character was cased.
-For sigma, it scans forward past ignorable characters to decide between `σ` and `ς`.
-This follows Unicode's Final_Sigma rule, so contextual results can differ from JDKs
-affected by [JDK-8133167](https://bugs.openjdk.org/browse/JDK-8133167).
-Character categories come from Java. On JDKs with corrected sigma behavior, initialization
-probes derive the remaining Case_Ignorable characters. Older JDKs use a documented
-17-character Unicode punctuation fallback for that property.
+Case mappings and character categories come from the running JDK, so results follow
+its Unicode version. The one exception is a fixed list of 17 punctuation characters
+that Unicode treats as case-ignorable and Java does not expose.
 
 ## Byte Order and Platform Compatibility
 

@@ -22,6 +22,11 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.VerboseMode;
 
 import java.util.Arrays;
 
@@ -34,9 +39,9 @@ import static org.openjdk.jmh.annotations.Scope.Thread;
 @State(Thread)
 @BenchmarkMode(AverageTime)
 @OutputTimeUnit(NANOSECONDS)
-@Warmup(iterations = 3, time = 500, timeUnit = MILLISECONDS)
+@Warmup(iterations = 4, time = 500, timeUnit = MILLISECONDS)
 @Measurement(iterations = 4, time = 500, timeUnit = MILLISECONDS)
-@Fork(3)
+@Fork(2)
 public class BenchmarkFullCaseMapping
 {
     private static volatile Slice sink;
@@ -139,5 +144,15 @@ public class BenchmarkFullCaseMapping
             }
         }
         return result;
+    }
+
+    static void main()
+            throws RunnerException
+    {
+        Options options = new OptionsBuilder()
+                .verbosity(VerboseMode.NORMAL)
+                .include(".*" + BenchmarkFullCaseMapping.class.getSimpleName() + ".*")
+                .build();
+        new Runner(options).run();
     }
 }

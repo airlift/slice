@@ -101,6 +101,25 @@ public class TestFullCaseMapping
         assertLower("𐐀Σ", "𐐨ς");
         assertLower("AΣ𐐀", "aσ𐐨");
         assertLower("İΣ", "i\u0307ς");
+
+        // Modifier symbols (Sk), modifier letters (Lm), and enclosing marks (Me) are case-ignorable.
+        assertLower("A^Σ", "a^ς");
+        assertLower("AΣ^A", "aσ^a");
+        assertLower("A`Σ", "a`ς");
+        assertLower("AΣ`A", "aσ`a");
+        assertLower("^Σ", "^σ");
+        assertLower("A\u02B0Σ", "a\u02B0ς");
+        assertLower("\u02B0Σ", "\u02B0σ");
+        assertLower("AΣ\u02B0", "aς\u02B0");
+        assertLower("AΣ\u02B0A", "aσ\u02B0a");
+        assertLower("A\u20DDΣ", "a\u20DDς");
+        assertLower("AΣ\u20DD", "aς\u20DD");
+        assertLower("AΣ\u20DDA", "aσ\u20DDa");
+
+        // Titlecase letters are cased.
+        assertLower("ǅΣ", "ǆς");
+        assertLower("AΣǅ", "aσǆ");
+        assertLower("ǅΣA", "ǆσa");
     }
 
     @Test
@@ -142,6 +161,13 @@ public class TestFullCaseMapping
             String text = "A".repeat(position) + "é" + "z".repeat(16);
             assertUpper(text, text.toUpperCase(ROOT));
             assertLower(text, text.toLowerCase(ROOT));
+        }
+        for (int length = 0; length <= 2 * Long.BYTES; length++) {
+            // The output outgrows the input before an ASCII tail of every length.
+            assertUpper("ΐ" + "a".repeat(length), "Ι\u0308\u0301" + "A".repeat(length));
+            assertUpper("ΐ" + "A".repeat(length), "Ι\u0308\u0301" + "A".repeat(length));
+            assertLower("İ" + "A".repeat(length), "i\u0307" + "a".repeat(length));
+            assertLower("İ" + "a".repeat(length), "i\u0307" + "a".repeat(length));
         }
         assertUpper("ß" + "a".repeat(32), "SS" + "A".repeat(32));
         assertUpper("ΐ" + "a".repeat(32), "Ι\u0308\u0301" + "A".repeat(32));
@@ -195,14 +221,14 @@ public class TestFullCaseMapping
     @Test
     public void testUnchangedRangesShareStorage()
     {
-        for (String text : List.of("", "123", "HELLO", "Ö", "\u0301", "😀")) {
+        for (String text : List.of("", "123", "HELLO", "Ö", "\u0301", "😀", "HELLO, WORLD", "HELLO, WORLD 0123456789", "ÖHELLO, WORLD", "HELLO, WÖRLD 0123456789", "HELLO, WORLD 0123456789Ö", "😀HELLO, WORLD😀")) {
             Slice input = utf8Slice("xx" + text + "xx").slice(2, utf8Slice(text).length());
             Slice result = toUpperCaseFull(input);
             assertThat(result).isEqualTo(input);
             assertThat(result.byteArray()).isSameAs(input.byteArray());
             assertThat(result.byteArrayOffset()).isEqualTo(input.byteArrayOffset());
         }
-        for (String text : List.of("", "123", "hello", "ö", "\u0301", "😀")) {
+        for (String text : List.of("", "123", "hello", "ö", "\u0301", "😀", "hello, world", "hello, world 0123456789", "öhello, world", "hello, wörld 0123456789", "hello, world 0123456789ö", "😀hello, world😀", "οσα hello, world")) {
             Slice input = utf8Slice("xx" + text + "xx").slice(2, utf8Slice(text).length());
             Slice result = toLowerCaseFull(input);
             assertThat(result).isEqualTo(input);
@@ -225,22 +251,22 @@ public class TestFullCaseMapping
 
     private static void assertUpper(String input, String expected)
     {
-        assertThat(toUpperCaseFull(utf8Slice(input)).toStringUtf8()).isEqualTo(expected);
+        assertThat(toUpperCaseFull(utf8Slice(input)).toStringUtf8()).as("toUpperCaseFull(%s)", input).isEqualTo(expected);
         byte[] range = ("a" + input + "z").getBytes(UTF_8);
         byte[] original = range.clone();
-        assertThat(toUpperCaseFull(range, 1, range.length - 2).toStringUtf8()).isEqualTo(expected);
-        assertThat(toUpperCaseFull(wrappedBuffer(range, 1, range.length - 2)).toStringUtf8()).isEqualTo(expected);
-        assertThat(range).isEqualTo(original);
+        assertThat(toUpperCaseFull(range, 1, range.length - 2).toStringUtf8()).as("toUpperCaseFull(%s) as a range", input).isEqualTo(expected);
+        assertThat(toUpperCaseFull(wrappedBuffer(range, 1, range.length - 2)).toStringUtf8()).as("toUpperCaseFull(%s) as a slice view", input).isEqualTo(expected);
+        assertThat(range).as("input of toUpperCaseFull(%s)", input).isEqualTo(original);
     }
 
     private static void assertLower(String input, String expected)
     {
-        assertThat(toLowerCaseFull(utf8Slice(input)).toStringUtf8()).isEqualTo(expected);
+        assertThat(toLowerCaseFull(utf8Slice(input)).toStringUtf8()).as("toLowerCaseFull(%s)", input).isEqualTo(expected);
         // Outside cased characters must not affect sigma at either range boundary.
         byte[] range = ("A" + input + "Z").getBytes(UTF_8);
         byte[] original = range.clone();
-        assertThat(toLowerCaseFull(range, 1, range.length - 2).toStringUtf8()).isEqualTo(expected);
-        assertThat(toLowerCaseFull(wrappedBuffer(range, 1, range.length - 2)).toStringUtf8()).isEqualTo(expected);
-        assertThat(range).isEqualTo(original);
+        assertThat(toLowerCaseFull(range, 1, range.length - 2).toStringUtf8()).as("toLowerCaseFull(%s) as a range", input).isEqualTo(expected);
+        assertThat(toLowerCaseFull(wrappedBuffer(range, 1, range.length - 2)).toStringUtf8()).as("toLowerCaseFull(%s) as a slice view", input).isEqualTo(expected);
+        assertThat(range).as("input of toLowerCaseFull(%s)", input).isEqualTo(original);
     }
 }
