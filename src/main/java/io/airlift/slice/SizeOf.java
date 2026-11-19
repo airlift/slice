@@ -72,12 +72,14 @@ public final class SizeOf
             OBJECT_HEADER_SIZE = 8 + (compressedClassPointers ? 4 : 8);
         }
 
-        // Array header: object header + 4 bytes for length field, aligned
-        // With compressed class pointers: 12 + 4 = 16 bytes
-        // Without compressed class pointers: 16 + 4 = 20 bytes, aligned to 24
-        // With compact headers: 8 + 4 = 12 bytes, potentially aligned to 16
-        int rawArrayHeader = OBJECT_HEADER_SIZE + 4;
-        ARRAY_HEADER_SIZE = (int) alignSize(rawArrayHeader);
+        // Do not align the header separately: elements can occupy its trailing padding.
+        // Align the total size after adding the elements instead.
+        // HotSpot's arrayOopDesc::base_offset_in_bytes aligns the first element only when its type needs it.
+        // https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/arrayOop.hpp#L56-L93
+        // typeArrayOopDesc::object_size adds the elements before applying object alignment.
+        // https://github.com/openjdk/jdk/blob/jdk-25%2B36/src/hotspot/share/oops/typeArrayOop.hpp#L119-L131
+        // For eight-byte elements, the final alignment also accounts for padding before the elements.
+        ARRAY_HEADER_SIZE = OBJECT_HEADER_SIZE + Integer.BYTES;
     }
 
     private static boolean getBooleanVmOption(HotSpotDiagnosticMXBean bean, String option, boolean defaultValue)
