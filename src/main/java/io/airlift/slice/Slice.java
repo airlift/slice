@@ -41,6 +41,7 @@ import static java.lang.invoke.MethodHandles.byteArrayViewVarHandle;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.checkFromIndexSize;
+import static java.util.Objects.checkIndex;
 import static java.util.Objects.requireNonNull;
 
 public final class Slice
@@ -141,6 +142,23 @@ public final class Slice
     }
 
     /**
+     * Same check as {@code checkFromIndexSize(index, width, length)} for the width of a primitive.
+     * {@code checkIndex} compiles to a range check that loops hoist or eliminate, which the sign
+     * test in {@code checkFromIndexSize} prevents.
+     */
+    private static void checkIndexSize(int index, int width, int length)
+    {
+        try {
+            checkIndex(index, length - width + 1);
+        }
+        catch (IndexOutOfBoundsException e) {
+            // fails the same way, but reports the range that was asked for
+            checkFromIndexSize(index, width, length);
+            throw e;
+        }
+    }
+
+    /**
      * Length of this slice.
      */
     public int length()
@@ -212,7 +230,7 @@ public final class Slice
      */
     public byte getByte(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_BYTE, length());
+        checkIndexSize(index, SIZE_OF_BYTE, length());
         return getByteUnchecked(index);
     }
 
@@ -242,7 +260,7 @@ public final class Slice
      */
     public short getShort(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_SHORT, length());
+        checkIndexSize(index, SIZE_OF_SHORT, length());
         return getShortUnchecked(index);
     }
 
@@ -272,7 +290,7 @@ public final class Slice
      */
     public int getInt(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_INT, length());
+        checkIndexSize(index, SIZE_OF_INT, length());
         return getIntUnchecked(index);
     }
 
@@ -302,7 +320,7 @@ public final class Slice
      */
     public long getLong(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_LONG, length());
+        checkIndexSize(index, SIZE_OF_LONG, length());
         return getLongUnchecked(index);
     }
 
@@ -320,7 +338,7 @@ public final class Slice
      */
     public float getFloat(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_FLOAT, length());
+        checkIndexSize(index, SIZE_OF_FLOAT, length());
         return getFloatUnchecked(index);
     }
 
@@ -338,7 +356,7 @@ public final class Slice
      */
     public double getDouble(int index)
     {
-        checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
+        checkIndexSize(index, SIZE_OF_DOUBLE, length());
         return getDoubleUnchecked(index);
     }
 
@@ -707,7 +725,7 @@ public final class Slice
      */
     public void setByte(int index, int value)
     {
-        checkFromIndexSize(index, SIZE_OF_BYTE, length());
+        checkIndexSize(index, SIZE_OF_BYTE, length());
         setByteUnchecked(index, value);
     }
 
@@ -726,7 +744,7 @@ public final class Slice
      */
     public void setShort(int index, int value)
     {
-        checkFromIndexSize(index, SIZE_OF_SHORT, length());
+        checkIndexSize(index, SIZE_OF_SHORT, length());
         setShortUnchecked(index, value);
     }
 
@@ -744,7 +762,7 @@ public final class Slice
      */
     public void setInt(int index, int value)
     {
-        checkFromIndexSize(index, SIZE_OF_INT, length());
+        checkIndexSize(index, SIZE_OF_INT, length());
         setIntUnchecked(index, value);
     }
 
@@ -762,7 +780,7 @@ public final class Slice
      */
     public void setLong(int index, long value)
     {
-        checkFromIndexSize(index, SIZE_OF_LONG, length());
+        checkIndexSize(index, SIZE_OF_LONG, length());
         setLongUnchecked(index, value);
     }
 
@@ -780,7 +798,7 @@ public final class Slice
      */
     public void setFloat(int index, float value)
     {
-        checkFromIndexSize(index, SIZE_OF_FLOAT, length());
+        checkIndexSize(index, SIZE_OF_FLOAT, length());
         setFloatUnchecked(index, value);
     }
 
@@ -798,7 +816,7 @@ public final class Slice
      */
     public void setDouble(int index, double value)
     {
-        checkFromIndexSize(index, SIZE_OF_DOUBLE, length());
+        checkIndexSize(index, SIZE_OF_DOUBLE, length());
         setDoubleUnchecked(index, value);
     }
 
