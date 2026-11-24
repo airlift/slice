@@ -22,6 +22,26 @@ fast single primitive access and bulk transfer methods as the Slice class.
 Slice provides a library for interacting UTF-8 data stored in byte arrays. The UTF-8 library provides
 functions to count code points, substring, trim, case change, and so on.
 
+`SliceUtf8.toUpperCase` and `toLowerCase` use simple case mappings from the running JDK,
+mapping each input code point to one output code point. `toUpperCaseFull` and
+`toLowerCaseFull` use the running JDK's full root-locale case mappings, which can map
+one code point to several, so the result can be longer than the input. For example,
+full uppercase maps `ß` to `SS`, and full lowercase maps `İ` to `i` followed by a
+combining dot above. None of these functions apply locale-specific rules, so results
+are incorrect for Lithuanian, Turkish, and Azeri. All of them copy invalid UTF-8
+bytes to the output unchanged.
+
+Full lowercase also applies Unicode's Final_Sigma rule within the input range: `Σ`
+becomes `ς` when it is preceded by a cased letter and not followed by one, ignoring
+case-ignorable characters such as combining marks and apostrophes, and `σ` otherwise.
+Invalid sequences break that context. The rule is applied as Unicode defines it, so
+results can differ from `String.toLowerCase(Locale.ROOT)`, which approximates it
+([JDK-8133167](https://bugs.openjdk.org/browse/JDK-8133167)).
+
+Case mappings and character categories come from the running JDK, so results follow
+its Unicode version. The one exception is a fixed list of 17 punctuation characters
+that Unicode treats as case-ignorable and Java does not expose.
+
 ## Byte Order and Platform Compatibility
 
 This library stores multi-byte values in little-endian byte order. This is distinct from
