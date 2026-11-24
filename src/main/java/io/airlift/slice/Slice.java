@@ -124,17 +124,12 @@ public final class Slice
     }
 
     /**
-     * Creates a slice for directly accessing the base object.
+     * Creates a view of an existing slice. The caller has already checked the range
+     * against that slice, so nothing is validated here.
      */
     Slice(byte[] base, int baseOffset, int size, long retainedSize)
     {
-        requireNonNull(base, "base is null");
-        if (base.length == 0) {
-            throw new IllegalArgumentException("Empty array");
-        }
-        checkFromIndexSize(baseOffset, size, base.length);
-
-        this.base = requireNonNull(base, "base is null");
+        this.base = base;
         this.baseOffset = baseOffset;
         this.size = size;
         // INSTANCE_SIZE is not included, as the caller is responsible for including it.
