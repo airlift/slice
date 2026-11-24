@@ -212,6 +212,19 @@ public class TestSliceUtf8
                         .isEqualTo(countCodePoints(utf8.slice(offset, length)));
             }
         }
+
+        // Verify non-zero offsets, exact 4-byte/8-byte remainders, and >248-byte chunks
+        Slice allAscii = utf8Slice(STRING_ASCII_CODE_POINTS.repeat(4));
+        for (int offset = 0; offset < 16; offset++) {
+            for (int length = 0; length <= 300; length++) {
+                assertThat(countCodePoints(allAscii, offset, length)).isEqualTo(length);
+            }
+        }
+        Slice multiByte = utf8Slice(STRING_FAITH_HOPE_LOVE.repeat(40));
+        int expectedTotal = (int) STRING_FAITH_HOPE_LOVE.repeat(40).codePoints().count();
+        assertThat(countCodePoints(multiByte, 0, multiByte.length())).isEqualTo(expectedTotal);
+        Slice padded = wrappedBuffer(concat(new byte[] {'a', 'b', 'c', 'd', 'e'}, multiByte.getBytes(), new byte[] {'x', 'y', 'z'}));
+        assertThat(countCodePoints(padded, 5, multiByte.length())).isEqualTo(expectedTotal);
     }
 
     @Test

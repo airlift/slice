@@ -296,13 +296,31 @@ public final class SliceUtf8
 
         int end = offset + length;
         int continuationBytesCount = 0;
-        int lastLongStart = end - 8;
-        for (; offset <= lastLongStart; offset += 8) {
-            // Count bytes which are NOT the start of a code point
-            continuationBytesCount += countContinuationBytes((long) LONG_HANDLE.get(utf8, utf8Offset + offset));
+
+        // Process 8 bytes at a time, accumulating up to 31 words (248 bytes) per GPR reduction
+        // to avoid AArch64 GPR<->SIMD popcount transfers on every word.
+        int end8 = offset + (length & 0x7FFF_FFF8);
+        if (end8 - offset <= 31 * 8) {
+            long acc = 0;
+            for (; offset < end8; offset += 8) {
+                long word = (long) LONG_HANDLE.get(utf8, utf8Offset + offset);
+                acc += ((word >>> 1) & (~word & 0x4040_4040_4040_4040L)) >>> 6;
+            }
+            continuationBytesCount = (int) ((acc * 0x0101_0101_0101_0101L) >>> 56);
+        }
+        else {
+            while (offset < end8) {
+                int chunkEnd = offset + Math.min(end8 - offset, 31 * 8);
+                long acc = 0;
+                for (; offset < chunkEnd; offset += 8) {
+                    long word = (long) LONG_HANDLE.get(utf8, utf8Offset + offset);
+                    acc += ((word >>> 1) & (~word & 0x4040_4040_4040_4040L)) >>> 6;
+                }
+                continuationBytesCount += (int) ((acc * 0x0101_0101_0101_0101L) >>> 56);
+            }
         }
         // Enough bytes left for 32 bits?
-        if (offset <= end - 4) {
+        if (end - offset >= 4) {
             // Count bytes which are NOT the start of a code point
             continuationBytesCount += countContinuationBytes((int) INT_HANDLE.get(utf8, utf8Offset + offset));
 
@@ -2282,21 +2300,20 @@ public final class SliceUtf8
 
     private static int countContinuationBytes(int i32)
     {
-        // see below
-        i32 = ((i32 & TOP_MASK32) >>> 1) & (~i32);
-        return Integer.bitCount(i32);
+        // Each byte becomes 1 if it matches 0b10xx_xxxx, else 0.
+        // Sum the 4 bytes in GPR via multiply-shift (avoids AArch64 GPR<->SIMD popcount).
+        int continuationBytes = ((i32 >>> 1) & (~i32 & 0x4040_4040)) >>> 6;
+        return (continuationBytes * 0x0101_0101) >>> 24;
     }
 
     private static int countContinuationBytes(long i64)
     {
         // Count the number of bytes that match 0b10xx_xxxx as follows:
-        // 1. Mask off the 8th bit of every byte and shift it into the 7th position.
-        // 2. Then invert the bytes, which turns the 0 in the 7th bit to a one.
-        // 3. And together the results of step 1 and 2, giving us a one in the 7th
-        //    position if the byte matched.
-        // 4. Count the number of bits in the result, which is the number of bytes
-        //    that matched.
-        i64 = ((i64 & TOP_MASK64) >>> 1) & (~i64);
-        return Long.bitCount(i64);
+        // 1. Shift right by 1 so each byte's 8th bit moves into the 7th bit position.
+        // 2. Mask with (~i64 & 0x4040...) so bit 6 is 1 iff original bits 7..6 were 10.
+        // 3. Shift right by 6 so each matching byte is 1 and non-matching byte is 0.
+        // 4. Horizontally sum the 8 bytes in GPR via multiply-shift (avoids AArch64 GPR<->SIMD popcount).
+        long continuationBytes = ((i64 >>> 1) & (~i64 & 0x4040_4040_4040_4040L)) >>> 6;
+        return (int) ((continuationBytes * 0x0101_0101_0101_0101L) >>> 56);
     }
 }
