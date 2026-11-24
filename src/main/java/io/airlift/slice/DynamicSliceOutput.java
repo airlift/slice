@@ -79,52 +79,67 @@ public class DynamicSliceOutput
         return slice.length() - size;
     }
 
+    /**
+     * Returns the slice with room for {@code length} more bytes at {@code size}. The field is stored only
+     * when the slice is replaced: an unconditional store pays a GC write barrier on every write.
+     */
+    private Slice writableSlice(int size, int length)
+    {
+        Slice slice = this.slice;
+        int minSize = size + length;
+        if (minSize < 0 || minSize > slice.length()) {
+            slice = Slices.ensureSize(slice, minSize);
+            this.slice = slice;
+        }
+        return slice;
+    }
+
     @Override
     public void writeByte(int value)
     {
-        slice = Slices.ensureSize(slice, size + SIZE_OF_BYTE);
-        slice.setByteUnchecked(size, value);
-        size += SIZE_OF_BYTE;
+        int size = this.size;
+        writableSlice(size, SIZE_OF_BYTE).setByteUnchecked(size, value);
+        this.size = size + SIZE_OF_BYTE;
     }
 
     @Override
     public void writeShort(int value)
     {
-        slice = Slices.ensureSize(slice, size + SIZE_OF_SHORT);
-        slice.setShortUnchecked(size, value);
-        size += SIZE_OF_SHORT;
+        int size = this.size;
+        writableSlice(size, SIZE_OF_SHORT).setShortUnchecked(size, value);
+        this.size = size + SIZE_OF_SHORT;
     }
 
     @Override
     public void writeInt(int value)
     {
-        slice = Slices.ensureSize(slice, size + SIZE_OF_INT);
-        slice.setIntUnchecked(size, value);
-        size += SIZE_OF_INT;
+        int size = this.size;
+        writableSlice(size, SIZE_OF_INT).setIntUnchecked(size, value);
+        this.size = size + SIZE_OF_INT;
     }
 
     @Override
     public void writeLong(long value)
     {
-        slice = Slices.ensureSize(slice, size + SIZE_OF_LONG);
-        slice.setLongUnchecked(size, value);
-        size += SIZE_OF_LONG;
+        int size = this.size;
+        writableSlice(size, SIZE_OF_LONG).setLongUnchecked(size, value);
+        this.size = size + SIZE_OF_LONG;
     }
 
     @Override
     public void writeFloat(float value)
     {
-        slice = Slices.ensureSize(slice, size + SIZE_OF_FLOAT);
-        slice.setFloatUnchecked(size, value);
-        size += SIZE_OF_FLOAT;
+        int size = this.size;
+        writableSlice(size, SIZE_OF_FLOAT).setFloatUnchecked(size, value);
+        this.size = size + SIZE_OF_FLOAT;
     }
 
     @Override
     public void writeDouble(double value)
     {
-        slice = Slices.ensureSize(slice, size + SIZE_OF_DOUBLE);
-        slice.setDoubleUnchecked(size, value);
-        size += SIZE_OF_DOUBLE;
+        int size = this.size;
+        writableSlice(size, SIZE_OF_DOUBLE).setDoubleUnchecked(size, value);
+        this.size = size + SIZE_OF_DOUBLE;
     }
 
     @Override
@@ -136,49 +151,49 @@ public class DynamicSliceOutput
     @Override
     public void writeBytes(byte[] source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length);
-        slice.setBytes(size, source, sourceIndex, length);
-        size += length;
+        int size = this.size;
+        writableSlice(size, length).setBytes(size, source, sourceIndex, length);
+        this.size = size + length;
     }
 
     @Override
     public void writeShorts(short[] source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length * Short.BYTES);
-        slice.setShorts(size, source, sourceIndex, length);
-        size += length * Short.BYTES;
+        int size = this.size;
+        writableSlice(size, length * Short.BYTES).setShorts(size, source, sourceIndex, length);
+        this.size = size + length * Short.BYTES;
     }
 
     @Override
     public void writeInts(int[] source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length * Integer.BYTES);
-        slice.setInts(size, source, sourceIndex, length);
-        size += length * Integer.BYTES;
+        int size = this.size;
+        writableSlice(size, length * Integer.BYTES).setInts(size, source, sourceIndex, length);
+        this.size = size + length * Integer.BYTES;
     }
 
     @Override
     public void writeLongs(long[] source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length * Long.BYTES);
-        slice.setLongs(size, source, sourceIndex, length);
-        size += length * Long.BYTES;
+        int size = this.size;
+        writableSlice(size, length * Long.BYTES).setLongs(size, source, sourceIndex, length);
+        this.size = size + length * Long.BYTES;
     }
 
     @Override
     public void writeFloats(float[] source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length * Float.BYTES);
-        slice.setFloats(size, source, sourceIndex, length);
-        size += length * Float.BYTES;
+        int size = this.size;
+        writableSlice(size, length * Float.BYTES).setFloats(size, source, sourceIndex, length);
+        this.size = size + length * Float.BYTES;
     }
 
     @Override
     public void writeDoubles(double[] source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length * Double.BYTES);
-        slice.setDoubles(size, source, sourceIndex, length);
-        size += length * Double.BYTES;
+        int size = this.size;
+        writableSlice(size, length * Double.BYTES).setDoubles(size, source, sourceIndex, length);
+        this.size = size + length * Double.BYTES;
     }
 
     @Override
@@ -190,24 +205,24 @@ public class DynamicSliceOutput
     @Override
     public void writeBytes(Slice source, int sourceIndex, int length)
     {
-        slice = Slices.ensureSize(slice, size + length);
-        slice.setBytes(size, source, sourceIndex, length);
-        size += length;
+        int size = this.size;
+        writableSlice(size, length).setBytes(size, source, sourceIndex, length);
+        this.size = size + length;
     }
 
     @Override
     public void writeBytes(InputStream in, int length)
             throws IOException
     {
-        slice = Slices.ensureSize(slice, size + length);
-        slice.setBytes(size, in, length);
-        size += length;
+        int size = this.size;
+        writableSlice(size, length).setBytes(size, in, length);
+        this.size = size + length;
     }
 
     @Override
     public void writeZero(int length)
     {
-        slice = Slices.ensureSize(slice, size + length);
+        Slice slice = writableSlice(size, length);
         if (length >= BULK_ZERO_FILL_THRESHOLD) {
             // Bulk zero-fill (Arrays.fill) for long runs; for shorter runs the writeLong/writeByte
             // loop is faster (Arrays.fill carries a fixed setup cost). See SliceOutput.writeZero.
