@@ -71,6 +71,14 @@ public final class BasicSliceInput
         return slice.length() - position;
     }
 
+    // Plain comparisons rather than the range check in Slice.getX: that one makes loops driven by available() slower
+    private void checkReadable(int width)
+    {
+        if (position < 0 || position > slice.length() - width) {
+            throw new IndexOutOfBoundsException();
+        }
+    }
+
     @Override
     public boolean readBoolean()
     {
@@ -107,7 +115,8 @@ public final class BasicSliceInput
     @Override
     public short readShort()
     {
-        short v = slice.getShort(position);
+        checkReadable(SIZE_OF_SHORT);
+        short v = slice.getShortUnchecked(position);
         position += SIZE_OF_SHORT;
         return v;
     }
@@ -121,7 +130,8 @@ public final class BasicSliceInput
     @Override
     public int readInt()
     {
-        int v = slice.getInt(position);
+        checkReadable(SIZE_OF_INT);
+        int v = slice.getIntUnchecked(position);
         position += SIZE_OF_INT;
         return v;
     }
@@ -129,7 +139,8 @@ public final class BasicSliceInput
     @Override
     public long readLong()
     {
-        long v = slice.getLong(position);
+        checkReadable(SIZE_OF_LONG);
+        long v = slice.getLongUnchecked(position);
         position += SIZE_OF_LONG;
         return v;
     }
@@ -137,7 +148,8 @@ public final class BasicSliceInput
     @Override
     public float readFloat()
     {
-        float v = slice.getFloat(position);
+        checkReadable(SIZE_OF_FLOAT);
+        float v = slice.getFloatUnchecked(position);
         position += SIZE_OF_FLOAT;
         return v;
     }
@@ -145,7 +157,8 @@ public final class BasicSliceInput
     @Override
     public double readDouble()
     {
-        double v = slice.getDouble(position);
+        checkReadable(SIZE_OF_DOUBLE);
+        double v = slice.getDoubleUnchecked(position);
         position += SIZE_OF_DOUBLE;
         return v;
     }
