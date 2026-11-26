@@ -51,6 +51,7 @@ public final class Slice
     private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocate(0);
 
     private static final VarHandle SHORT_HANDLE = byteArrayViewVarHandle(short[].class, LITTLE_ENDIAN);
+    private static final int MAX_INLINE_COMPARE_BYTES = 32;
     private static final VarHandle INT_HANDLE = byteArrayViewVarHandle(int[].class, LITTLE_ENDIAN);
     private static final VarHandle LONG_HANDLE = byteArrayViewVarHandle(long[].class, LITTLE_ENDIAN);
     private static final VarHandle FLOAT_HANDLE = byteArrayViewVarHandle(float[].class, LITTLE_ENDIAN);
@@ -1399,13 +1400,62 @@ public final class Slice
         if ((this == that) && (offset == otherOffset) && (length == otherLength)) {
             return 0;
         }
-        return Arrays.compareUnsigned(
-                base,
-                baseOffset + offset,
-                baseOffset + offset + length,
-                that.base,
-                that.baseOffset + otherOffset,
-                that.baseOffset + otherOffset + otherLength);
+        int from = baseOffset + offset;
+        byte[] otherBase = that.base;
+        int otherFrom = that.baseOffset + otherOffset;
+        int common = Math.min(length, otherLength);
+
+        // Values that differ usually do so in the first bytes, so compare word by word from the
+        // start, which also avoids the fixed setup cost of the vectorized intrinsic for short values.
+        if (common >= SIZE_OF_LONG) {
+            long left = word(base, from);
+            long right = word(otherBase, otherFrom);
+            if (left != right) {
+                return compareWords(left, right);
+            }
+            if (common > MAX_INLINE_COMPARE_BYTES) {
+                // Long common prefix: the intrinsic is faster for the rest. It starts from the
+                // beginning to keep the compared length a multiple of the vector width.
+                return Arrays.compareUnsigned(base, from, from + length, otherBase, otherFrom, otherFrom + otherLength);
+            }
+            // Compare the remaining words. The last word overlaps the previous one when the
+            // length is not a multiple of 8, which is safe because the overlapped bytes are equal.
+            int last = common - SIZE_OF_LONG;
+            for (int i = SIZE_OF_LONG; i < last; i += SIZE_OF_LONG) {
+                left = word(base, from + i);
+                right = word(otherBase, otherFrom + i);
+                if (left != right) {
+                    return compareWords(left, right);
+                }
+            }
+            left = word(base, from + last);
+            right = word(otherBase, otherFrom + last);
+            if (left != right) {
+                return compareWords(left, right);
+            }
+            return length - otherLength;
+        }
+
+        for (int i = 0; i < common; i++) {
+            int left = base[from + i] & 0xFF;
+            int right = otherBase[otherFrom + i] & 0xFF;
+            if (left != right) {
+                return left - right;
+            }
+        }
+        return length - otherLength;
+    }
+
+    private static long word(byte[] bytes, int index)
+    {
+        return (long) LONG_HANDLE.get(bytes, index);
+    }
+
+    // Words are loaded as little endian, so reverse the bytes to make the unsigned long order the
+    // same as the unsigned lexicographic byte order. Only needed once two words are known to differ.
+    private static int compareWords(long left, long right)
+    {
+        return Long.compareUnsigned(Long.reverseBytes(left), Long.reverseBytes(right));
     }
 
     /**
@@ -1422,11 +1472,7 @@ public final class Slice
             return false;
         }
 
-        if (length() != that.length()) {
-            return false;
-        }
-
-        return equalsUnchecked(0, that.byteArray(), that.byteArrayOffset(), length());
+        return equals(0, length(), that, 0, that.length());
     }
 
     /**
@@ -1467,7 +1513,40 @@ public final class Slice
         if ((this == that) && (offset == otherOffset)) {
             return true;
         }
-        return equalsUnchecked(offset, that.byteArray(), that.byteArrayOffset() + otherOffset, length);
+
+        // This method deliberately calls only JDK intrinsics and small helpers, so that it is
+        // inlined into callers as one unit. A call to a larger method on a rarely taken path
+        // is not inlined and slows down the surrounding loop even when it is seldom executed.
+        int from = baseOffset + offset;
+        byte[] otherBase = that.base;
+        int otherFrom = that.baseOffset + otherOffset;
+        // Both ends of each range are always loaded before comparing, so an invalid range throws
+        // regardless of the content, as it does in Arrays.equals
+        if (length >= SIZE_OF_LONG) {
+            // Reject on the first and last word, which catches values that share a prefix
+            int last = length - SIZE_OF_LONG;
+            long left = word(base, from);
+            long right = word(otherBase, otherFrom);
+            long leftLast = word(base, from + last);
+            long rightLast = word(otherBase, otherFrom + last);
+            if (left != right || leftLast != rightLast) {
+                return false;
+            }
+            if (length <= 2 * SIZE_OF_LONG) {
+                // two overlapping words cover the whole value
+                return true;
+            }
+        }
+        else if (length >= SIZE_OF_INT) {
+            int last = length - SIZE_OF_INT;
+            int left = (int) INT_HANDLE.get(base, from);
+            int right = (int) INT_HANDLE.get(otherBase, otherFrom);
+            int leftLast = (int) INT_HANDLE.get(base, from + last);
+            int rightLast = (int) INT_HANDLE.get(otherBase, otherFrom + last);
+            return left == right && leftLast == rightLast;
+        }
+        // Values under 4 bytes, empty values and invalid ranges use Arrays.equals, which validates the range
+        return Arrays.equals(base, from, from + length, otherBase, otherFrom, otherFrom + length);
     }
 
     public boolean equals(int offset, int length, byte[] that, int otherOffset, int otherLength)
